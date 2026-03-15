@@ -130,11 +130,19 @@ export async function generateVisualExplanation(prompt: string, size: '1K' | '2K
 }
 
 export async function chatWithTutor(history: {role: string, text: string}[], message: string) {
+  if (!message || message.trim().length === 0) {
+    throw new Error('Message must not be empty.');
+  }
+
   const contents = history.map(h => ({
     role: h.role === 'user' ? 'user' : 'model',
     parts: [{ text: h.text }]
   }));
   
+  if (contents.length > 0 && contents[contents.length - 1].role === 'user') {
+    throw new Error('Invalid chat history: last turn must be a model response before sending a new user message.');
+  }
+
   contents.push({
     role: 'user',
     parts: [{ text: message }]
