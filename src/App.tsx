@@ -235,12 +235,13 @@ export default function App() {
     setIsChatLoading(true);
     
     try {
+      const initialContext = [
+        { role: 'user', text: `Please help me understand this problem.` },
+        { role: 'tutor', text: `Here is the solution I provided earlier:\n\n${solution}` }
+      ];
       const contextHistory = chatHistory.length === 0 
-        ? [
-            { role: 'user', text: `Please help me understand this problem.` },
-            { role: 'tutor', text: `Here is the solution I provided earlier:\n\n${solution}` }
-          ]
-        : chatHistory;
+        ? initialContext
+        : [...initialContext, ...chatHistory];
         
       const reply = await chatWithTutor(contextHistory, newMessage);
       setChatHistory([...newHistory, { role: 'tutor', text: reply }]);
