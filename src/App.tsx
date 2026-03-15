@@ -17,6 +17,10 @@ interface HistoryItem {
 
 const COPY_FEEDBACK_DURATION_MS = 2000;
 
+
+const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+
+
 export default function App() {
   const [appState, setAppState] = useState<AppState>('IDLE');
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -94,7 +98,7 @@ export default function App() {
   };
 
   const handleImageSelected = (file: File) => {
-    if (file.size > 10 * 1024 * 1024) {
+    if (file.size > MAX_FILE_SIZE_BYTES) {
       setErrorMsg("Image is too large. Try a cropped screenshot.");
       setAppState('ERROR');
       return;
@@ -147,13 +151,14 @@ export default function App() {
       setSolution(result);
       setAppState('SOLVED');
       saveToHistory({ id: Date.now().toString(), timestamp: Date.now(), solution: result, type: 'solve' });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      if (err.message?.includes('429') || err.message?.includes('quota')) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      if (errorMessage.includes('429') || errorMessage.includes('quota')) {
         setErrorMsg("We're getting too many requests right now. Please wait a moment and try again.");
-      } else if (err.message?.includes('offline') || err.message?.includes('fetch')) {
+      } else if (errorMessage.includes('offline') || errorMessage.includes('fetch')) {
         setErrorMsg("No internet connection detected. Please check your connection.");
-      } else if (err.message?.includes('API key')) {
+      } else if (errorMessage.includes('API key')) {
         setErrorMsg("Configuration error. Please check the API key setup.");
       } else {
         setErrorMsg("Something went wrong on our end. Please try again.");
@@ -183,7 +188,7 @@ export default function App() {
       setVisualUrl(image);
       setAppState('SOLVED');
       saveToHistory({ id: Date.now().toString(), timestamp: Date.now(), solution: text, type: 'grade', visualUrl: image });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
       setErrorMsg("Failed to grade work. Please try again.");
       setAppState('ERROR');
@@ -241,7 +246,7 @@ export default function App() {
         
       const reply = await chatWithTutor(contextHistory, newMessage);
       setChatHistory([...newHistory, { role: 'tutor', text: reply }]);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error(err);
       setChatHistory([...newHistory, { role: 'tutor', text: "Sorry, I couldn't process that right now. Please try again." }]);
     } finally {
@@ -261,7 +266,7 @@ export default function App() {
       } else {
         alert("Failed to generate visual explanation.");
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error(err);
       alert("Error generating visual explanation. Please check your API key and try again.");
     } finally {
