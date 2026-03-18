@@ -42,7 +42,9 @@ RESPONSE FORMAT:
 **Answer:** [final answer, clearly stated]
 
 If the image contains multiple questions, solve ALL of them.
-If it is a research question, provide a thorough, well-structured analysis with key concepts defined.`;
+If it is a research question, provide a thorough, well-structured analysis with key concepts defined.
+
+When using search grounding, always cite your sources using inline citations like [1](url) or [2](url). Include a "Sources:" section at the end with full URLs.`;
 
 function buildConfig(mode: SolveMode, subject: string, detailed: boolean) {
   let prompt = SYSTEM_PROMPT;
@@ -93,23 +95,6 @@ export async function solveTextQuestion(
     config: buildConfig(mode, subject, detailed),
   });
   return response.text ?? "";
-}
-
-export async function generateVisualExplanation(
-  prompt: string,
-): Promise<string | null> {
-  const response = await ai.models.generateContent({
-    model: "gemini-3-pro-image-preview",
-    contents: [{ text: prompt }],
-    config: { imageConfig: { aspectRatio: "1:1", imageSize: "1K" } },
-  });
-
-  for (const part of response.candidates?.[0]?.content?.parts ?? []) {
-    if (part.inlineData) {
-      return `data:image/png;base64,${part.inlineData.data}`;
-    }
-  }
-  return null;
 }
 
 export async function chatWithTutor(

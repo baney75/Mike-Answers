@@ -20,6 +20,7 @@ export function Header({ darkMode, onToggleDark, onOpenHistory }: HeaderProps) {
 
       <div className="flex items-center gap-2">
         <button
+          type="button"
           onClick={onOpenHistory}
           className="p-2 rounded-xl border-2 border-gray-900 dark:border-gray-100 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:-translate-y-0.5 hover:neo-shadow-sm transition-all"
           title="History"
@@ -27,6 +28,7 @@ export function Header({ darkMode, onToggleDark, onOpenHistory }: HeaderProps) {
           <History className="w-5 h-5" />
         </button>
         <button
+          type="button"
           onClick={onToggleDark}
           className="p-2 rounded-xl border-2 border-gray-900 dark:border-gray-100 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:-translate-y-0.5 hover:neo-shadow-sm transition-all"
           title="Toggle Dark Mode"

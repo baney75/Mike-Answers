@@ -10,7 +10,6 @@ import {
   solveQuestion,
   solveTextQuestion,
   chatWithTutor,
-  generateVisualExplanation,
   gradeWork,
 } from "./services/gemini";
 import { lookupWord, type DictionaryEntry } from "./services/dictionary";
@@ -21,7 +20,6 @@ import { InputPreview } from "./components/InputPreview";
 import { SolutionDisplay } from "./components/SolutionDisplay";
 import { ActionBar } from "./components/ActionBar";
 import { ChatPanel } from "./components/ChatPanel";
-import { VisualExplanation } from "./components/VisualExplanation";
 import { LoadingState } from "./components/LoadingState";
 import { ErrorState } from "./components/ErrorState";
 import { HistorySidebar } from "./components/HistorySidebar";
@@ -46,10 +44,8 @@ export default function App() {
   const [handwritingFile, setHandwritingFile] = useState<File | null>(null);
   const handwritingPreviewUrl = useFilePreview(handwritingFile);
 
-  // ── Solution state ──────────────────────────────────────────────────
+  // ── Solution state ───────────────────────────────────────────────────
   const [solution, setSolution] = useState<string | null>(null);
-  const [visualUrl, setVisualUrl] = useState<string | null>(null);
-  const [isVisualLoading, setIsVisualLoading] = useState(false);
 
   // ── Chat state ──────────────────────────────────────────────────────
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
@@ -77,23 +73,10 @@ export default function App() {
     setSolution(null);
     setErrorMsg(null);
     setChatHistory([]);
-    setVisualUrl(null);
     setHandwritingFile(null);
     setDictEntries(null);
     setDictWord("");
   }, []);
-
-  /** Classifies API errors into user-friendly messages. */
-  function friendlyError(err: unknown): string {
-    const msg = err instanceof Error ? err.message : String(err);
-    if (msg.includes("429") || msg.includes("quota"))
-      return "Too many requests — please wait a moment and try again.";
-    if (msg.includes("offline") || msg.includes("fetch"))
-      return "No internet connection. Please check your network.";
-    if (msg.includes("API key") || msg.includes("403"))
-      return "Invalid API key. Please check GEMINI_API_KEY in your .env.local file.";
-    return "Something went wrong. Please try again.";
-  }
 
   // ── Input handlers ──────────────────────────────────────────────────
 
@@ -132,7 +115,6 @@ export default function App() {
       setErrorMsg(null);
       setSolution(null);
       setChatHistory([]);
-      setVisualUrl(null);
       setLastMode(mode);
 
       try {
@@ -156,7 +138,15 @@ export default function App() {
         });
       } catch (err) {
         console.error(err);
-        setErrorMsg(friendlyError(err));
+        const msg = err instanceof Error ? err.message : String(err);
+        if (msg.includes("429") || msg.includes("quota"))
+          setErrorMsg("Too many requests — please wait a moment and try again.");
+        else if (msg.includes("offline") || msg.includes("fetch"))
+          setErrorMsg("No internet connection. Please check your network.");
+        else if (msg.includes("API key") || msg.includes("403"))
+          setErrorMsg("Invalid API key. Please check GEMINI_API_KEY in your .env.local file.");
+        else
+          setErrorMsg("Something went wrong. Please try again.");
         setAppState("ERROR");
       }
     },
@@ -169,22 +159,19 @@ export default function App() {
     setErrorMsg(null);
     setSolution(null);
     setChatHistory([]);
-    setVisualUrl(null);
 
     try {
       const base64 = await resizeImage(imageFile);
       const hw = handwritingFile ? await resizeImage(handwritingFile) : null;
-      const { text, image } = await gradeWork(base64, inkColor, hw);
+      const { text } = await gradeWork(base64, inkColor, hw);
 
       setSolution(text);
-      setVisualUrl(image);
       setAppState("SOLVED");
       history.push({
         id: Date.now().toString(),
         timestamp: Date.now(),
         solution: text,
         type: "grade",
-        visualUrl: image,
       });
     } catch (err) {
       console.error(err);
@@ -229,22 +216,6 @@ export default function App() {
     [solution, chatHistory],
   );
 
-  // ── Visual explanation handler ──────────────────────────────────────
-
-  const handleGenerateVisual = useCallback(async () => {
-    if (!solution) return;
-    setIsVisualLoading(true);
-    try {
-      const prompt = `Create a clear, educational diagram or visual explanation for the following solution:\n\n${solution.substring(0, 1000)}`;
-      const url = await generateVisualExplanation(prompt);
-      if (url) setVisualUrl(url);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsVisualLoading(false);
-    }
-  }, [solution]);
-
   // ── Dictionary handler ───────────────────────────────────────────────
 
   const handleDefine = useCallback(async () => {
@@ -268,7 +239,6 @@ export default function App() {
 
   const loadHistoryItem = useCallback((item: HistoryItem) => {
     setSolution(item.solution);
-    setVisualUrl(item.visualUrl ?? null);
     setAppState("SOLVED");
     setShowHistory(false);
     setImageFile(null);
@@ -299,11 +269,12 @@ export default function App() {
           {appState === "IDLE" && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="mb-4 flex items-center justify-end gap-2 no-print">
-                <label className="text-sm font-bold font-mono text-gray-900 dark:text-gray-100">
+                <label htmlFor="subject-select" className="text-sm font-bold font-mono text-gray-900 dark:text-gray-100">
                   SUBJECT:
                 </label>
                 <div className="relative">
                   <select
+                    id="subject-select"
                     value={subject}
                     onChange={(e) => setSubject(e.target.value)}
                     className="appearance-none bg-white dark:bg-gray-800 border-2 border-gray-900 dark:border-gray-100 rounded-lg pl-3 pr-8 py-1.5 text-sm font-medium dark:text-white focus:outline-none neo-shadow-sm"
@@ -341,6 +312,7 @@ export default function App() {
                   />
                 </div>
                 <button
+                  type="button"
                   onClick={handleDefine}
                   disabled={!dictWord.trim() || dictLoading}
                   className="px-4 py-2 text-sm font-bold bg-amber-400 dark:bg-amber-600 text-gray-900 dark:text-white border-2 border-gray-900 dark:border-gray-100 rounded-xl neo-shadow-sm hover:-translate-y-0.5 transition-all disabled:opacity-50"
@@ -358,6 +330,7 @@ export default function App() {
                   setErrorMsg(msg);
                   setAppState("ERROR");
                 }}
+                onVoiceInput={handleTextPasted}
               />
             </div>
           )}
@@ -396,15 +369,10 @@ export default function App() {
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <SolutionDisplay solution={solution} />
 
-              {visualUrl && <VisualExplanation url={visualUrl} />}
-
               <ActionBar
                 solution={solution}
                 lastMode={lastMode}
-                visualUrl={visualUrl}
-                isVisualLoading={isVisualLoading}
                 onSolveAgain={handleSolve}
-                onGenerateVisual={handleGenerateVisual}
                 onClear={resetAll}
               />
 
