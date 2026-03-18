@@ -154,7 +154,15 @@ const ImageSearchResult = ({ query }: { query: string }) => {
     );
   }
 
-  if (error || !imageUrl) {
+  if (error) {
+    return (
+      <div className="my-4 flex items-center justify-center p-4 bg-gray-100 dark:bg-gray-800 rounded-xl border-2 border-gray-300 dark:border-gray-600">
+        <span className="text-gray-500 dark:text-gray-400 text-sm">Could not load image for &quot;{query}&quot;</span>
+      </div>
+    );
+  }
+
+  if (!imageUrl) {
     return null;
   }
 
@@ -185,6 +193,11 @@ function processSolution(solution: string): { processed: string; elements: Array
     elements.push({ type: 'definition', id, content: content.trim() });
     return `\n\n__DEFINITION_MARKER_${id}__\n\n`;
   });
+
+  // Clean up malformed markers that weren't processed (prevents them appearing as literal text)
+  processed = processed.replace(/\[IMAGE_SEARCH:[^\]]*\]/g, '');
+  processed = processed.replace(/\[DEFINITION\](?!(\s|\S)*\[END_DEFINITION\])/g, '');
+  processed = processed.replace(/\[END_DEFINITION\]/g, '');
 
   return { processed, elements };
 }

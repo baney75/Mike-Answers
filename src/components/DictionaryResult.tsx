@@ -55,8 +55,8 @@ export function DictionaryResult({ entries }: DictionaryResultProps) {
                   {meaning.partOfSpeech}
                 </span>
                 <ol className="list-decimal list-inside space-y-2 ml-2">
-                  {meaning.definitions.slice(0, 4).map((def) => (
-                    <li key={def.definition.slice(0, 50)} className="text-gray-900 dark:text-gray-100">
+                  {meaning.definitions.slice(0, 4).map((def, k) => (
+                    <li key={`${meaning.partOfSpeech}-${entry.word}-def-${k}`} className="text-gray-900 dark:text-gray-100">
                       <span className="font-medium">{def.definition}</span>
                       {def.example && (
                         <p className="ml-6 mt-1 text-sm italic text-gray-600 dark:text-gray-400">
