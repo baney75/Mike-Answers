@@ -4,6 +4,7 @@ import {
   buildRequestPlan,
   extractReliableSources,
   getSourceIntent,
+  isRateLimitIssue,
   stripTrailingSourcesSection,
 } from "./gemini";
 
@@ -24,6 +25,12 @@ describe("gemini routing", () => {
     const cleaned = stripTrailingSourcesSection("Body text\n\nSources:\n1. https://example.edu\n2. https://nih.gov");
 
     expect(cleaned).toBe("Body text");
+  });
+
+  test("detects rate-limit style errors", () => {
+    expect(isRateLimitIssue("429 RESOURCE_EXHAUSTED: quota exceeded")).toBe(true);
+    expect(isRateLimitIssue("Too many requests, please slow down")).toBe(true);
+    expect(isRateLimitIssue("404 model not found")).toBe(false);
   });
 });
 

@@ -32,6 +32,8 @@ const MODEL_CANDIDATES = {
   grounded: [import.meta.env.GEMINI_GROUNDED_MODEL, "gemini-2.5-flash", "gemini-2.5-flash-lite"],
   pro: [import.meta.env.GEMINI_PRO_MODEL, "gemini-2.5-pro", "gemini-2.5-flash"],
 };
+const MAX_RATE_LIMIT_ATTEMPTS_PER_MODEL = 2;
+const RATE_LIMIT_BACKOFF_MS = 1200;
 
 type SourceIntent = "general" | "scholarly" | "news";
 
@@ -409,6 +411,35 @@ export function stripTrailingSourcesSection(text: string) {
     .trim();
 }
 
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function isModelAvailabilityIssue(message: string) {
+  return (
+    message.includes("404") ||
+    message.includes("not found") ||
+    message.includes("unsupported") ||
+    message.includes("Unknown model") ||
+    message.includes("not available")
+  );
+}
+
+export function isRateLimitIssue(message: string) {
+  const normalized = message.toLowerCase();
+  return (
+    normalized.includes("429") ||
+    normalized.includes("quota") ||
+    normalized.includes("rate limit") ||
+    normalized.includes("resource_exhausted") ||
+    normalized.includes("too many requests")
+  );
+}
+
+function wait(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
 async function generateWithFallback(
   modelCandidates: Array<string | undefined>,
   params: Omit<GenerateContentParameters, "model">,
@@ -422,22 +453,30 @@ async function generateWithFallback(
     }
 
     tried.add(candidate);
-    try {
-      return await getAiClient().models.generateContent({
-        ...params,
-        model: candidate,
-      });
-    } catch (error) {
-      lastError = error;
-      const message = error instanceof Error ? error.message : String(error);
-      const looksLikeModelAvailabilityIssue =
-        message.includes("404") ||
-        message.includes("not found") ||
-        message.includes("unsupported") ||
-        message.includes("Unknown model") ||
-        message.includes("not available");
+    for (let attempt = 0; attempt < MAX_RATE_LIMIT_ATTEMPTS_PER_MODEL; attempt += 1) {
+      try {
+        return await getAiClient().models.generateContent({
+          ...params,
+          model: candidate,
+        });
+      } catch (error) {
+        lastError = error;
+        const message = getErrorMessage(error);
 
-      if (!looksLikeModelAvailabilityIssue) {
+        if (isModelAvailabilityIssue(message)) {
+          break;
+        }
+
+        if (isRateLimitIssue(message)) {
+          const hasMoreAttemptsForCandidate = attempt < MAX_RATE_LIMIT_ATTEMPTS_PER_MODEL - 1;
+          if (hasMoreAttemptsForCandidate) {
+            await wait(RATE_LIMIT_BACKOFF_MS * (attempt + 1));
+            continue;
+          }
+
+          break;
+        }
+
         throw error;
       }
     }
