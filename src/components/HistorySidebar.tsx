@@ -1,4 +1,5 @@
-import { History, X } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { History, X, Search } from "lucide-react";
 import type { HistoryItem } from "../types";
 import { stripSolutionClientArtifacts } from "../utils/solution";
 
@@ -9,10 +10,32 @@ interface HistorySidebarProps {
 }
 
 export function HistorySidebar({ items, onSelect, onClose }: HistorySidebarProps) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    searchInputRef.current?.focus();
+  }, []);
+
+  const filteredItems = searchQuery.trim()
+    ? items.filter((item) => {
+        const cleanSolution = stripSolutionClientArtifacts(item.solution).toLowerCase();
+        const query = searchQuery.toLowerCase();
+        return cleanSolution.includes(query);
+      })
+    : items;
+
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex justify-end animate-in fade-in duration-200 no-print">
+    <div
+      className="fixed inset-0 bg-black/50 z-50 flex justify-end animate-in fade-in duration-200 no-print"
+      role="dialog"
+      aria-modal="true"
+      aria-label="History sidebar"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      onKeyDown={(e) => { if (e.key === "Escape") onClose(); }}
+    >
       <div className="bg-white dark:bg-gray-900 w-full max-w-md h-full overflow-y-auto p-6 shadow-xl border-l-2 border-gray-900 dark:border-gray-100 animate-in slide-in-from-right duration-300">
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex justify-between items-center mb-4">
           <h2 className="text-2xl font-bold dark:text-white flex items-center gap-2 font-sans tracking-tight">
             <History className="w-6 h-6" /> Recent Solutions
           </h2>
@@ -26,13 +49,25 @@ export function HistorySidebar({ items, onSelect, onClose }: HistorySidebarProps
           </button>
         </div>
 
-        {items.length === 0 ? (
+        <div className="relative mb-4">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+          <input
+            ref={searchInputRef}
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search history..."
+            className="w-full pl-10 pr-4 py-3 rounded-xl border-2 border-gray-900 dark:border-gray-100 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-mono text-sm focus:outline-none focus:border-[var(--aqs-accent)] focus:ring-4 focus:ring-[color:rgba(122,31,52,0.18)]"
+          />
+        </div>
+
+        {filteredItems.length === 0 ? (
           <p className="text-gray-500 dark:text-gray-400 text-center mt-10 font-mono text-sm">
-            No history yet.
+            {searchQuery ? "No matching results." : "No history yet."}
           </p>
         ) : (
           <div className="space-y-4">
-            {items.map((item) => {
+            {filteredItems.map((item) => {
               const cleanSolution = stripSolutionClientArtifacts(item.solution);
 
               return (

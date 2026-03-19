@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Mic, Square, UploadCloud } from 'lucide-react';
-import { shouldSubmitTextShortcut } from '../utils/input';
-import { transcribeAudio } from '../services/gemini';
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { Mic, Square, UploadCloud } from "lucide-react";
+import { shouldSubmitTextShortcut } from "../utils/input";
+import { transcribeAudio } from "../services/gemini";
 
 interface DropzoneProps {
   onImageSelected: (file: File) => void;
@@ -15,9 +15,9 @@ function isEditableTarget(target: EventTarget | null) {
   return (
     target instanceof HTMLElement &&
     (target.isContentEditable ||
-      target.tagName === 'INPUT' ||
-      target.tagName === 'TEXTAREA' ||
-      target.tagName === 'SELECT')
+      target.tagName === "INPUT" ||
+      target.tagName === "TEXTAREA" ||
+      target.tagName === "SELECT")
   );
 }
 
@@ -32,7 +32,7 @@ export function Dropzone({
   const [isListening, setIsListening] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [voiceStatus, setVoiceStatus] = useState("");
-  const [textInput, setTextInput] = useState('');
+  const [textInput, setTextInput] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -54,41 +54,46 @@ export function Dropzone({
     }
   }, []);
 
-  const handlePaste = useCallback((e: ClipboardEvent) => {
-    const items = e.clipboardData?.items;
-    if (!items) return;
+  const handlePaste = useCallback(
+    (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
 
-    const editableTarget = isEditableTarget(e.target);
-    let foundImage = false;
-    for (let i = 0; i < items.length; i++) {
-      if (items[i].type.startsWith('image/')) {
-        const file = items[i].getAsFile();
-        if (file) {
-          onImageSelected(file);
-          foundImage = true;
-          break;
+      const editableTarget = isEditableTarget(e.target);
+      let foundImage = false;
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.startsWith("image/")) {
+          const file = items[i].getAsFile();
+          if (file) {
+            onImageSelected(file);
+            foundImage = true;
+            break;
+          }
         }
       }
-    }
 
-    if (!foundImage) {
-      if (editableTarget) {
-        return;
-      }
+      if (!foundImage) {
+        if (editableTarget) {
+          return;
+        }
 
-      const textData = e.clipboardData?.getData('text');
-      if (textData) {
-        setTextInput(textData);
-        onTextPasted(textData);
-      } else {
-        onError("No image found. Try Cmd+Shift+4 (Mac) or Win+Shift+S (Windows) to screenshot.");
+        const textData = e.clipboardData?.getData("text");
+        if (textData) {
+          setTextInput(textData);
+          onTextPasted(textData);
+        } else {
+          onError(
+            "No image found. Try Cmd+Shift+4 (Mac) or Win+Shift+S (Windows) to screenshot.",
+          );
+        }
       }
-    }
-  }, [onImageSelected, onTextPasted, onError]);
+    },
+    [onImageSelected, onTextPasted, onError],
+  );
 
   useEffect(() => {
-    document.addEventListener('paste', handlePaste);
-    return () => document.removeEventListener('paste', handlePaste);
+    document.addEventListener("paste", handlePaste);
+    return () => document.removeEventListener("paste", handlePaste);
   }, [handlePaste]);
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -104,14 +109,16 @@ export function Dropzone({
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    
+
     const files = e.dataTransfer.files;
     if (files.length > 0) {
       const file = files[0];
-      if (file.type.startsWith('image/')) {
+      if (file.type.startsWith("image/")) {
         onImageSelected(file);
       } else {
-        onError("Only image files are supported. Try taking a screenshot of the page.");
+        onError(
+          "Only image files are supported. Try taking a screenshot of the page.",
+        );
       }
     }
   };
@@ -121,7 +128,7 @@ export function Dropzone({
     if (files && files.length > 0) {
       onImageSelected(files[0]);
     }
-    e.target.value = '';
+    e.target.value = "";
   };
 
   const handleTextSubmit = (submitFast = true) => {
@@ -137,11 +144,13 @@ export function Dropzone({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (shouldSubmitTextShortcut({
-      isComposing: e.nativeEvent.isComposing,
-      key: e.key,
-      shiftKey: e.shiftKey,
-    })) {
+    if (
+      shouldSubmitTextShortcut({
+        isComposing: e.nativeEvent.isComposing,
+        key: e.key,
+        shiftKey: e.shiftKey,
+      })
+    ) {
       e.preventDefault();
       handleTextSubmit();
     }
@@ -152,7 +161,10 @@ export function Dropzone({
       return;
     }
 
-    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+    if (
+      !navigator.mediaDevices?.getUserMedia ||
+      typeof MediaRecorder === "undefined"
+    ) {
       onError("Voice input is not supported in this browser.");
       return;
     }
@@ -161,20 +173,27 @@ export function Dropzone({
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     } catch {
-      onError("Microphone access is blocked. Allow microphone permission in your browser and try again.");
+      onError(
+        "Microphone access is blocked. Allow microphone permission in your browser and try again.",
+      );
       return;
     }
 
     const preferredMimeTypes = [
-      'audio/ogg;codecs=opus',
-      'audio/webm;codecs=opus',
-      'audio/ogg',
-      'audio/webm',
+      "audio/ogg;codecs=opus",
+      "audio/webm;codecs=opus",
+      "audio/ogg",
+      "audio/webm",
     ];
-    const mimeType = preferredMimeTypes.find((type) => MediaRecorder.isTypeSupported?.(type)) ?? '';
+    const mimeType =
+      preferredMimeTypes.find((type) =>
+        MediaRecorder.isTypeSupported?.(type),
+      ) ?? "";
 
     try {
-      const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+      const recorder = mimeType
+        ? new MediaRecorder(stream, { mimeType })
+        : new MediaRecorder(stream);
       mediaStreamRef.current = stream;
       mediaRecorderRef.current = recorder;
       recordedChunksRef.current = [];
@@ -192,14 +211,16 @@ export function Dropzone({
         setIsListening(false);
         setIsTranscribing(false);
         setVoiceStatus("");
-        onError("Voice recording failed. Try again or check microphone permissions.");
+        onError(
+          "Voice recording failed. Try again or check microphone permissions.",
+        );
       };
 
       recorder.onstop = async () => {
         clearRecordingTimeout();
         const chunks = [...recordedChunksRef.current];
         recordedChunksRef.current = [];
-        const outputMimeType = recorder.mimeType || mimeType || 'audio/webm';
+        const outputMimeType = recorder.mimeType || mimeType || "audio/webm";
 
         cleanupMediaStream();
         mediaRecorderRef.current = null;
@@ -208,14 +229,18 @@ export function Dropzone({
         if (!chunks.length) {
           setIsTranscribing(false);
           setVoiceStatus("");
-          onError("No speech was captured. Try again and speak a little closer to the microphone.");
+          onError(
+            "No speech was captured. Try again and speak a little closer to the microphone.",
+          );
           return;
         }
 
         setIsTranscribing(true);
         setVoiceStatus("Transcribing...");
         try {
-          const transcript = await transcribeAudio(new Blob(chunks, { type: outputMimeType }));
+          const transcript = await transcribeAudio(
+            new Blob(chunks, { type: outputMimeType }),
+          );
           if (!transcript) {
             throw new Error("Empty transcript");
           }
@@ -226,7 +251,9 @@ export function Dropzone({
         } catch {
           setIsTranscribing(false);
           setVoiceStatus("");
-          onError("Voice transcription failed. Try a shorter recording and speak clearly.");
+          onError(
+            "Voice transcription failed. Try a shorter recording and speak clearly.",
+          );
         }
       };
 
@@ -234,7 +261,10 @@ export function Dropzone({
       setIsListening(true);
       setVoiceStatus("Recording... tap the mic again to finish.");
       recordingTimeoutRef.current = window.setTimeout(() => {
-        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        if (
+          mediaRecorderRef.current &&
+          mediaRecorderRef.current.state !== "inactive"
+        ) {
           mediaRecorderRef.current.stop();
         }
       }, 45000);
@@ -242,7 +272,14 @@ export function Dropzone({
       cleanupMediaStream();
       onError("Voice recording could not start in this browser.");
     }
-  }, [cleanupMediaStream, clearRecordingTimeout, isListening, isTranscribing, onError, onVoiceInput]);
+  }, [
+    cleanupMediaStream,
+    clearRecordingTimeout,
+    isListening,
+    isTranscribing,
+    onError,
+    onVoiceInput,
+  ]);
 
   const startListening = useCallback(async () => {
     if (isListening || isTranscribing) {
@@ -253,7 +290,8 @@ export function Dropzone({
     liveTranscriptRef.current = "";
     deliveredTranscriptRef.current = false;
 
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
       await startRecordingFallback();
       return;
@@ -261,11 +299,15 @@ export function Dropzone({
 
     if (navigator.mediaDevices?.getUserMedia) {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+        });
         stream.getTracks().forEach((track) => track.stop());
       } catch {
         setVoiceStatus("");
-        onError("Microphone access is blocked. Allow microphone permission in your browser and try again.");
+        onError(
+          "Microphone access is blocked. Allow microphone permission in your browser and try again.",
+        );
         return;
       }
     }
@@ -273,7 +315,7 @@ export function Dropzone({
     const recognition = new SpeechRecognition();
     recognition.continuous = false;
     recognition.interimResults = true;
-    recognition.lang = 'en-US';
+    recognition.lang = "en-US";
 
     recognition.onstart = () => {
       setIsListening(true);
@@ -308,16 +350,25 @@ export function Dropzone({
       setIsListening(false);
       setVoiceStatus("");
 
-      if (event.error === "not-allowed" || event.error === "service-not-allowed") {
-        onError("Microphone access is blocked. Allow microphone permission in your browser and try again.");
+      if (
+        event.error === "not-allowed" ||
+        event.error === "service-not-allowed"
+      ) {
+        onError(
+          "Microphone access is blocked. Allow microphone permission in your browser and try again.",
+        );
         return;
       }
       if (event.error === "audio-capture") {
-        onError("No microphone was detected. Connect a microphone and try again.");
+        onError(
+          "No microphone was detected. Connect a microphone and try again.",
+        );
         return;
       }
       if (event.error === "no-speech") {
-        onError("No speech was detected. Try again and speak a little closer to the microphone.");
+        onError(
+          "No speech was detected. Try again and speak a little closer to the microphone.",
+        );
         return;
       }
       if (event.error === "network" || event.error === "aborted") {
@@ -325,7 +376,9 @@ export function Dropzone({
         return;
       }
 
-      onError("Live voice recognition failed in this browser. Try again or use the fallback recording flow.");
+      onError(
+        "Live voice recognition failed in this browser. Try again or use the fallback recording flow.",
+      );
     };
 
     recognition.onend = () => {
@@ -346,16 +399,27 @@ export function Dropzone({
 
     recognitionRef.current = recognition;
     recognition.start();
-  }, [isListening, isTranscribing, onError, onVoiceInput, startRecordingFallback]);
+  }, [
+    isListening,
+    isTranscribing,
+    onError,
+    onVoiceInput,
+    startRecordingFallback,
+  ]);
 
   const stopListening = useCallback(() => {
     if (recognitionRef.current) {
       recognitionRef.current.stop();
-      setVoiceStatus(liveTranscriptRef.current ? "Using what I heard..." : "Stopping...");
+      setVoiceStatus(
+        liveTranscriptRef.current ? "Using what I heard..." : "Stopping...",
+      );
       return;
     }
 
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+    if (
+      mediaRecorderRef.current &&
+      mediaRecorderRef.current.state !== "inactive"
+    ) {
       mediaRecorderRef.current.stop();
       setVoiceStatus("Transcribing...");
       return;
@@ -366,7 +430,10 @@ export function Dropzone({
     return () => {
       clearRecordingTimeout();
       recognitionRef.current?.abort();
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      if (
+        mediaRecorderRef.current &&
+        mediaRecorderRef.current.state !== "inactive"
+      ) {
         mediaRecorderRef.current.stop();
       }
       cleanupMediaStream();
@@ -411,16 +478,32 @@ export function Dropzone({
                 event.stopPropagation();
                 void (isListening ? stopListening() : startListening());
               }}
-              aria-label={isListening ? 'Stop voice recording' : isTranscribing ? 'Transcribing voice input' : 'Start voice recording'}
-              title={isListening ? 'Stop voice recording' : isTranscribing ? 'Transcribing voice input' : 'Start voice recording'}
+              aria-label={
+                isListening
+                  ? "Stop voice recording"
+                  : isTranscribing
+                    ? "Transcribing voice input"
+                    : "Start voice recording"
+              }
+              title={
+                isListening
+                  ? "Stop voice recording"
+                  : isTranscribing
+                    ? "Transcribing voice input"
+                    : "Start voice recording"
+              }
               disabled={isTranscribing}
               className={`absolute right-6 top-6 z-30 inline-flex h-16 w-16 items-center justify-center rounded-full border-2 neo-shadow-sm transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-70 ${
                 isListening
-                  ? 'border-[var(--aqs-accent-strong)] bg-[var(--aqs-accent)] text-white'
-                  : 'border-gray-900 bg-[var(--aqs-accent-soft)] text-[var(--aqs-accent)] dark:border-gray-100 dark:bg-[color:rgba(122,31,52,0.2)] dark:text-[var(--aqs-accent-dark)]'
+                  ? "border-[var(--aqs-accent-strong)] bg-[var(--aqs-accent)] text-white"
+                  : "border-gray-900 bg-[var(--aqs-accent-soft)] text-[var(--aqs-accent)] dark:border-gray-100 dark:bg-[color:rgba(122,31,52,0.2)] dark:text-[var(--aqs-accent-dark)]"
               }`}
             >
-              {isListening ? <Square className="h-6 w-6" /> : <Mic className="h-6 w-6" />}
+              {isListening ? (
+                <Square className="h-6 w-6" />
+              ) : (
+                <Mic className="h-6 w-6" />
+              )}
             </button>
           )}
           <div
@@ -429,8 +512,8 @@ export function Dropzone({
             onDrop={handleDrop}
             className={`relative block w-full overflow-hidden rounded-[2.2rem] border-2 px-8 py-14 text-center transition-all duration-200 neo-shadow focus-within:outline-none focus-within:ring-4 focus-within:ring-[color:rgba(122,31,52,0.18)] ${
               isDragging
-                ? 'border-[var(--aqs-accent)] bg-[var(--aqs-accent-soft)] translate-x-[2px] translate-y-[2px] shadow-none dark:bg-[color:rgba(122,31,52,0.2)]'
-                : 'border-gray-900 bg-white hover:-translate-y-1 dark:border-gray-100 dark:bg-gray-900'
+                ? "border-[var(--aqs-accent)] bg-[var(--aqs-accent-soft)] translate-x-[2px] translate-y-[2px] shadow-none dark:bg-[color:rgba(122,31,52,0.2)]"
+                : "border-gray-900 bg-white hover:-translate-y-1 dark:border-gray-100 dark:bg-gray-900"
             }`}
           >
             <button
@@ -450,10 +533,12 @@ export function Dropzone({
               </h2>
 
               <div className="mx-auto mt-8 inline-flex max-w-3xl flex-wrap items-center justify-center gap-3 rounded-full border-2 border-gray-900 bg-white px-5 py-3 font-mono text-sm text-gray-600 neo-shadow-sm dark:border-gray-100 dark:bg-gray-950 dark:text-gray-300">
+                <span>
+                  Type to open the question box, or paste a screenshot with
+                </span>
                 <span className="rounded-xl bg-[var(--aqs-accent-soft)] px-3 py-1 font-bold text-[var(--aqs-accent-strong)] dark:bg-[color:rgba(122,31,52,0.22)] dark:text-[var(--aqs-accent-dark)]">
                   Cmd+V
                 </span>
-                <span>Type to open the question box, or paste a screenshot with Cmd+V.</span>
               </div>
               {voiceStatus && (
                 <div className="mx-auto mt-4 max-w-2xl font-mono text-sm text-[var(--aqs-accent-strong)] dark:text-[var(--aqs-accent-dark)]">
@@ -483,16 +568,32 @@ export function Dropzone({
                 event.stopPropagation();
                 void (isListening ? stopListening() : startListening());
               }}
-              aria-label={isListening ? 'Stop voice recording' : isTranscribing ? 'Transcribing voice input' : 'Start voice recording'}
-              title={isListening ? 'Stop voice recording' : isTranscribing ? 'Transcribing voice input' : 'Start voice recording'}
+              aria-label={
+                isListening
+                  ? "Stop voice recording"
+                  : isTranscribing
+                    ? "Transcribing voice input"
+                    : "Start voice recording"
+              }
+              title={
+                isListening
+                  ? "Stop voice recording"
+                  : isTranscribing
+                    ? "Transcribing voice input"
+                    : "Start voice recording"
+              }
               disabled={isTranscribing}
               className={`relative z-20 inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-2 neo-shadow-sm transition disabled:cursor-not-allowed disabled:opacity-70 ${
                 isListening
-                  ? 'border-[var(--aqs-accent-strong)] bg-[var(--aqs-accent)] text-white'
-                  : 'border-gray-900 bg-[var(--aqs-accent-soft)] text-[var(--aqs-accent)] dark:border-gray-100 dark:bg-[color:rgba(122,31,52,0.2)] dark:text-[var(--aqs-accent-dark)]'
+                  ? "border-[var(--aqs-accent-strong)] bg-[var(--aqs-accent)] text-white"
+                  : "border-gray-900 bg-[var(--aqs-accent-soft)] text-[var(--aqs-accent)] dark:border-gray-100 dark:bg-[color:rgba(122,31,52,0.2)] dark:text-[var(--aqs-accent-dark)]"
               }`}
             >
-              {isListening ? <Square className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+              {isListening ? (
+                <Square className="h-5 w-5" />
+              ) : (
+                <Mic className="h-5 w-5" />
+              )}
             </button>
           )}
         </div>
@@ -503,8 +604,8 @@ export function Dropzone({
           onDrop={handleDrop}
           className={`relative mt-4 block w-full rounded-[1.6rem] border-2 p-5 transition-all duration-200 focus-within:outline-none focus-within:ring-4 focus-within:ring-[color:rgba(122,31,52,0.18)] ${
             isDragging
-              ? 'border-[var(--aqs-accent)] bg-[var(--aqs-accent-soft)] dark:bg-[color:rgba(122,31,52,0.2)]'
-              : 'border-gray-900 bg-gray-50 dark:border-gray-100 dark:bg-gray-950'
+              ? "border-[var(--aqs-accent)] bg-[var(--aqs-accent-soft)] dark:bg-[color:rgba(122,31,52,0.2)]"
+              : "border-gray-900 bg-gray-50 dark:border-gray-100 dark:bg-gray-950"
           }`}
         >
           <button
@@ -518,8 +619,12 @@ export function Dropzone({
               <UploadCloud className="h-5 w-5" />
             </div>
             <div>
-              <div className="font-bold text-gray-900 dark:text-gray-100">Tap to upload a screenshot</div>
-              <div className="mt-1 font-mono text-xs text-gray-500 dark:text-gray-400">Cmd+V also works</div>
+              <div className="font-bold text-gray-900 dark:text-gray-100">
+                Tap to upload a screenshot
+              </div>
+              <div className="mt-1 font-mono text-xs text-gray-500 dark:text-gray-400">
+                Cmd+V also works
+              </div>
             </div>
           </div>
         </div>

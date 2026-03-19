@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Newspaper, BookOpen, ArrowLeft, Clock } from "lucide-react";
 
-import type { AppState, SolveMode, ChatMessage, HistoryItem } from "./types";
+import type { AppState, SolveMode, ChatMessage, HistoryItem, BackgroundTask, SavedState } from "./types";
 import { useDarkMode } from "./hooks/useDarkMode";
 import { useHistory } from "./hooks/useHistory";
 import { useFilePreview } from "./hooks/useFilePreview";
@@ -18,6 +18,8 @@ import { ChatPanel } from "./components/ChatPanel";
 import { LoadingState } from "./components/LoadingState";
 import { ErrorState } from "./components/ErrorState";
 import { HistorySidebar } from "./components/HistorySidebar";
+import { WordOfTheDay } from "./components/WordOfTheDay";
+import { NewsView } from "./components/NewsView";
 
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
 const DEFAULT_SOLVE_MODE: SolveMode = "fast";
@@ -27,6 +29,20 @@ interface SolveRequest {
   detailed?: boolean;
   nextImageFile?: File | null;
   nextTextInput?: string | null;
+}
+
+function parseAIActions(text: string): { cleanText: string; actions: string[] } {
+  const actions: string[] = [];
+  let cleanText = text;
+
+  const actionRegex = /\[ACTION:\s*(\w+)\]/g;
+  let match;
+  while ((match = actionRegex.exec(text)) !== null) {
+    actions.push(match[1]);
+    cleanText = cleanText.replace(match[0], "");
+  }
+
+  return { cleanText: cleanText.trim(), actions };
 }
 
 function isEditableTarget(target: EventTarget | null) {
@@ -71,6 +87,14 @@ export default function App() {
   const idleDraftBufferRef = useRef("");
   const idleDraftCaptureTimeoutRef = useRef<number | null>(null);
 
+  // ── Feature toggle state ─────────────────────────────────────────────
+  const [newsQuery, setNewsQuery] = useState("");
+
+  // ── Background task state ───────────────────────────────────────────
+  const [backgroundTasks, setBackgroundTasks] = useState<BackgroundTask[]>([]);
+  const [savedState, setSavedState] = useState<SavedState | null>(null);
+  const [isReturning, setIsReturning] = useState(false);
+
   // ── Hooks ───────────────────────────────────────────────────────────
   const [darkMode, toggleDarkMode] = useDarkMode();
   const history = useHistory();
@@ -90,7 +114,69 @@ export default function App() {
     setSolution(null);
     setErrorMsg(null);
     setChatHistory([]);
+    setNewsQuery("");
+    setSavedState(null);
+    setIsReturning(false);
   }, []);
+
+  // ── Feature handlers ────────────────────────────────────────────────
+
+  const handleOpenNews = useCallback((query?: string) => {
+    if (solution && appState === "SOLVED") {
+      setSavedState({
+        solution,
+        chatHistory,
+        mode: lastMode,
+        subject,
+        input: { imageFile: imageFile ?? undefined, textInput: textInput ?? undefined },
+      });
+      setIsReturning(true);
+    }
+    setNewsQuery(query || "");
+    setAppState("NEWS");
+  }, [solution, chatHistory, lastMode, subject, imageFile, textInput, appState]);
+
+  const handleOpenWotd = useCallback(() => {
+    if (solution && appState === "SOLVED") {
+      setSavedState({
+        solution,
+        chatHistory,
+        mode: lastMode,
+        subject,
+        input: { imageFile: imageFile ?? undefined, textInput: textInput ?? undefined },
+      });
+      setIsReturning(true);
+    }
+    setAppState("WOTD");
+  }, [solution, chatHistory, lastMode, subject, imageFile, textInput, appState]);
+
+  const handleReturnToPrevious = useCallback(() => {
+    if (savedState) {
+      setSolution(savedState.solution);
+      setChatHistory(savedState.chatHistory);
+      setLastMode(savedState.mode);
+      setSubject(savedState.subject);
+      setImageFile(savedState.input.imageFile ?? null);
+      setTextInput(savedState.input.textInput ?? null);
+      setAppState("SOLVED");
+      setSavedState(null);
+      setIsReturning(false);
+      return;
+    }
+
+    const completedTask = backgroundTasks.find((t) => t.status === "completed" && t.type === "solve");
+    if (completedTask && completedTask.solution) {
+      setSolution(completedTask.solution);
+      setChatHistory([]);
+      setLastMode(completedTask.mode);
+      setSubject(completedTask.input.subject);
+      setImageFile(completedTask.input.imageFile ?? null);
+      setTextInput(completedTask.input.textInput ?? null);
+      setAppState("SOLVED");
+      setBackgroundTasks((prev) => prev.filter((t) => t.id !== completedTask.id));
+      setIsReturning(false);
+    }
+  }, [savedState, backgroundTasks]);
 
   // ── Input handlers ──────────────────────────────────────────────────
 
@@ -115,6 +201,8 @@ export default function App() {
 
   // ── Solve / Grade handlers ──────────────────────────────────────────
 
+  const currentTaskIdRef = useRef<string | null>(null);
+
   const runSolve = useCallback(
     async ({
       mode,
@@ -123,6 +211,8 @@ export default function App() {
       nextTextInput = textInput,
     }: SolveRequest) => {
       const trimmedText = nextTextInput?.trim() ?? null;
+      const taskId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      currentTaskIdRef.current = taskId;
 
       if (nextImageFile) {
         setImageFile(nextImageFile);
@@ -138,6 +228,8 @@ export default function App() {
       setChatHistory([]);
       setLastMode(mode);
 
+      const currentAppState = { current: appState };
+
       try {
         let result: string;
         if (nextImageFile) {
@@ -149,15 +241,71 @@ export default function App() {
           throw new Error("No input provided.");
         }
 
-        setSolution(result);
+        if (currentTaskIdRef.current !== taskId) {
+          return;
+        }
+
+        const { cleanText, actions } = parseAIActions(result);
+
+        if (actions.includes("show_wotd")) {
+          if (solution && currentAppState.current === "SOLVED") {
+            setSavedState({
+              solution,
+              chatHistory,
+              mode: lastMode,
+              subject,
+              input: { imageFile: imageFile ?? undefined, textInput: textInput ?? undefined },
+            });
+          }
+          setAppState("WOTD");
+          return;
+        }
+
+        if (actions.includes("show_news")) {
+          if (solution && currentAppState.current === "SOLVED") {
+            setSavedState({
+              solution,
+              chatHistory,
+              mode: lastMode,
+              subject,
+              input: { imageFile: imageFile ?? undefined, textInput: textInput ?? undefined },
+            });
+          }
+          setNewsQuery("");
+          setAppState("NEWS");
+          return;
+        }
+
+        const finalSolution = cleanText || result;
+
+        if (currentAppState.current === "NEWS" || currentAppState.current === "WOTD") {
+          setBackgroundTasks((prev) => [
+            ...prev.filter((t) => t.id !== taskId),
+            {
+              id: taskId,
+              type: "solve",
+              status: "completed",
+              solution: finalSolution,
+              timestamp: Date.now(),
+              mode,
+              input: { imageFile: nextImageFile ?? undefined, textInput: trimmedText ?? undefined, subject },
+            },
+          ]);
+          return;
+        }
+
+        setSolution(finalSolution);
         setAppState("SOLVED");
         history.push({
           id: Date.now().toString(),
           timestamp: Date.now(),
-          solution: result,
+          solution: finalSolution,
           type: "solve",
         });
       } catch (err) {
+        if (currentTaskIdRef.current !== taskId) {
+          return;
+        }
         console.error(err);
         const msg = err instanceof Error ? err.message : String(err);
         if (msg.includes("No input provided"))
@@ -175,7 +323,7 @@ export default function App() {
         setAppState("ERROR");
       }
     },
-    [imageFile, textInput, subject, history],
+    [imageFile, textInput, subject, history, solution, chatHistory, lastMode, appState],
   );
 
   const handleSolve = useCallback(
@@ -234,6 +382,65 @@ export default function App() {
       }
     };
   }, [appState, handleTextPasted]);
+
+  // ── Global keyboard shortcuts ────────────────────────────────────────
+
+  // ESC to close views/navigate back
+  const chatInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const handleGlobalKeys = (event: KeyboardEvent) => {
+      // ESC: Close views and navigate back - handle this even if in an input
+      if (event.key === "Escape") {
+        if (showHistory) {
+          event.preventDefault();
+          setShowHistory(false);
+          return;
+        }
+
+        if (appState === "NEWS" || appState === "WOTD") {
+          event.preventDefault();
+          if (savedState || backgroundTasks.some((t) => t.status === "completed")) {
+            handleReturnToPrevious();
+          } else {
+            resetAll();
+          }
+          return;
+        }
+
+        if (appState === "SOLVED") {
+          event.preventDefault();
+          if (savedState || backgroundTasks.some((t) => t.status === "completed")) {
+            handleReturnToPrevious();
+          }
+          return;
+        }
+
+        if (appState === "IDLE") {
+          return;
+        }
+      }
+
+      // Don't intercept other keys if user is typing in an input
+      if (isInteractiveTarget(event.target)) {
+        return;
+      }
+
+      // In SOLVED state: typing auto-focuses chat input
+      if (appState === "SOLVED" && !isChatLoading) {
+        const isPrintableKey = event.key.length === 1 && !event.metaKey && !event.ctrlKey && !event.altKey;
+        if (isPrintableKey && !event.shiftKey) {
+          // Small delay to allow the key to be typed before focus
+          setTimeout(() => {
+            chatInputRef.current?.focus();
+          }, 10);
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleGlobalKeys);
+    return () => window.removeEventListener("keydown", handleGlobalKeys);
+  }, [appState, showHistory, savedState, backgroundTasks, handleReturnToPrevious, resetAll, isChatLoading]);
 
   useEffect(() => {
     if (appState !== "PREVIEWING") {
@@ -429,6 +636,36 @@ export default function App() {
                 }}
                 onVoiceInput={handleTextPasted}
               />
+
+              <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
+                <button
+                  type="button"
+                  onClick={() => handleOpenNews()}
+                  className="inline-flex items-center gap-3 rounded-2xl border-2 border-gray-900 bg-white px-6 py-4 font-bold text-gray-900 transition-all hover:-translate-y-1 hover:neo-shadow active:neo-shadow-sm dark:border-gray-100 dark:bg-gray-900 dark:text-gray-100 dark:hover:border-[var(--aqs-accent-dark)]"
+                >
+                  <div className="rounded-lg bg-[var(--aqs-accent)] p-2">
+                    <Newspaper className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="text-left">
+                    <div className="text-sm">Latest</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">News</div>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleOpenWotd}
+                  className="inline-flex items-center gap-3 rounded-2xl border-2 border-gray-900 bg-white px-6 py-4 font-bold text-gray-900 transition-all hover:-translate-y-1 hover:neo-shadow active:neo-shadow-sm dark:border-gray-100 dark:bg-gray-900 dark:text-gray-100 dark:hover:border-[var(--aqs-accent-dark)]"
+                >
+                  <div className="rounded-lg bg-[var(--aqs-accent)] p-2">
+                    <BookOpen className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="text-left">
+                    <div className="text-sm">Word of</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">the Day</div>
+                  </div>
+                </button>
+              </div>
             </div>
           )}
 
@@ -486,8 +723,27 @@ export default function App() {
                 lastUserMessage={lastFollowUpQuestion}
                 onSend={handleSendChat}
                 onRetryLast={handleRetryChat}
+                inputRef={chatInputRef}
               />
             </div>
+          )}
+
+          {/* ── News view ─────────────────────────────────────── */}
+          {(appState === "NEWS") && (
+            <NewsView
+              initialQuery={newsQuery}
+              onClose={resetAll}
+              onReturn={isReturning || backgroundTasks.some(t => t.status === "completed") ? handleReturnToPrevious : undefined}
+              hasBackgroundTask={backgroundTasks.some(t => t.status === "completed")}
+            />
+          )}
+
+          {/* ── Word of the Day view ─────────────────────────── */}
+          {appState === "WOTD" && (
+            <WordOfTheDay 
+              onClose={resetAll} 
+              onReturn={isReturning || backgroundTasks.some(t => t.status === "completed") ? handleReturnToPrevious : undefined}
+            />
           )}
         </main>
       </div>

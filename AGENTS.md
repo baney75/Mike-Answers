@@ -1,5 +1,9 @@
 # AGENTS.md
 
+> **For full project architecture and patterns, see [ARCHITECTURE.md](./ARCHITECTURE.md)**
+> 
+> **⚠️ IMPORTANT**: When making significant changes to the codebase (new features, refactoring, new services, changed patterns), you MUST update `ARCHITECTURE.md` to reflect those changes. This document is the single source of truth for agents to understand the codebase—keeping it accurate prevents cascading mistakes as the codebase evolves.
+
 ## Cursor Cloud specific instructions
 
 ### Overview
@@ -149,6 +153,143 @@ import { VideoEmbed } from './components/VideoEmbed';
 
 ---
 
+## Word of the Day (Merriam-Webster)
+
+The app has a built-in Word of the Day feature powered by Merriam-Webster's RSS feed via rss2json API.
+
+### When to Use
+
+- User asks for "word of the day", "daily word", or similar
+- User asks for vocabulary/definition of the day
+- User wants to learn a new word
+- User asks about etymology or word origins
+
+### How to Invoke
+
+```tsx
+import { getWordOfTheDay } from './services/wotd';
+
+// Fetch current word of the day (cached for 1 hour)
+const wotd = await getWordOfTheDay();
+// Returns: { word, phonetic, partOfSpeech, definition, example, date, sourceUrl }
+```
+
+### Rendering
+
+The `WordOfTheDay` component displays the word with:
+- Word title (large, bold)
+- Phonetic pronunciation (if available)
+- Part of speech badge
+- Definition in styled card
+- Example usage (if available)
+- Source link to Merriam-Webster
+
+### Component Usage
+
+```tsx
+import { WordOfTheDay } from './components/WordOfTheDay';
+
+// In idle state or when user requests word of the day
+<WordOfTheDay onClose={resetAll} />
+```
+
+---
+
+## News Aggregation
+
+The app aggregates news from multiple trusted, unbiased RSS sources via rss2json API.
+
+### Approved News Sources
+
+| Source | URL | Bias | Notes |
+|--------|-----|------|-------|
+| Straight Arrow News | san.com/feed/ | Center | Original reporting |
+| Tangle | readtangle.com/archive/rss/ | Center | Curated summaries |
+| WSJ Tech | feeds.content.dowjones.io/public/rss/RSSWSJD | Center-Right | Tech news |
+| WSJ World News | feeds.content.dowjones.io/public/rss/RSSWorldNews | Center-Right | World events |
+| WSJ US News | feeds.content.dowjones.io/public/rss/RSSUSnews | Center-Right | US news |
+| NewsNation | newsnationnow.com/feed/ | Center | Original reporting |
+| The Center Square | thecentersquare.com/... | Center-Right | State-level news |
+
+### When to Use
+
+- User asks for "news", "latest news", "current events"
+- User asks about something happening now
+- User asks about a topic that requires recent information
+- User asks "what happened" about any topic
+
+### Source Selection Policy
+
+**For unbiased news:**
+- Primary: Straight Arrow News, NewsNation (original reporting, no opinion)
+- Secondary: Tangle (curated, balanced summaries)
+- Tertiary: WSJ, The Center Square (quality journalism with acknowledged lean)
+- **NEVER use**: Opinion-only sites, single-source viral content, or unnamed sources
+
+### How to Fetch News
+
+```tsx
+import { fetchAllNews, fetchNewsForQuery, NEWS_SOURCES } from './services/news';
+
+// Fetch all latest news (auto-deduplicated, sorted by date)
+const articles = await fetchAllNews({ maxArticles: 50 });
+
+// Fetch news filtered by query
+const articles = await fetchNewsForQuery('climate change', 20);
+```
+
+### News Article Structure
+
+```tsx
+interface NewsArticle {
+  title: string;       // Article headline
+  link: string;        // Direct link to source (PRIMARY SOURCE)
+  description: string; // Brief excerpt
+  pubDate: string;     // ISO date string
+  author?: string;     // Reporter name if available
+  thumbnail?: string;   // Article image if available
+  source: string;      // Source name (e.g., "Straight Arrow News")
+  sourceUrl: string;   // Same as link - direct to source
+}
+```
+
+### Rendering with NewsView Component
+
+```tsx
+import { NewsView } from './components/NewsView';
+
+// Full news view with search and filtering
+<NewsView 
+  initialQuery="technology"  // Optional: pre-filtered
+  onClose={resetAll} 
+/>
+```
+
+### Agent Instructions for News
+
+When agents need to fetch and display news:
+
+1. **Fetch from multiple sources**: Use `fetchAllNews()` to get aggregated content
+2. **Always cite primary sources**: Link directly to the original article, not aggregators
+3. **Verify before presenting**: Check that articles are recent (within 24-48 hours)
+4. **Present sources transparently**: Show which outlet published each story
+5. **For follow-up questions**: Use `fetchNewsForQuery(term)` to get topic-specific news
+6. **Filter by source if needed**: Users can filter by source in the NewsView UI
+
+**Example agent flow for news:**
+```
+User: "What's the latest news on AI regulation?"
+
+Agent:
+1. Call fetchNewsForQuery("AI regulation", 10)
+2. Filter for most recent (within 48 hours)
+3. Cite each story with direct links to original source
+4. Present in NewsView component with thumbnails
+5. Note: "These stories are from [source], [source], and [source]"
+```
+
+---
+
 ## Search Services
 
 ### Web Search
@@ -167,13 +308,63 @@ import { searchImages } from './services/search';
 const results = await searchImages('solar system diagram', 10);
 ```
 
-### Video Search
+### Video Search (Enhanced)
+
+The app uses YouTube for educational video content. Videos should be relevant, from credible channels, and support the user's learning.
+
+**When to suggest videos:**
+- User asks for "video", "tutorial", "how to", "explainer"
+- User wants visual learning (diagrams, experiments, processes)
+- User asks about something best demonstrated visually
+- User asks for "see example", "watch", "demonstration"
+
+**Video source preference (academic):**
+1. Khan Academy, MIT OpenCourseWare, Crash Course
+2. PBS, NOVA, National Geographic
+3. University channels (Stanford, MIT, Harvard lectures)
+4. Verified educational creators with expertise
+5. Official organizational channels (NASA, NIH, NSF)
+
+**Avoid:** Reaction content, unverified tutorials, clickbait
+
+### How to Search and Render Videos
 
 ```tsx
 import { searchVideos } from './services/search';
+import { VideoEmbed } from './components/VideoEmbed';
 
-const results = await searchVideos('calculus tutorial', 10);
+// Search for relevant videos
+const results = await searchVideos('machine learning tutorial', 6);
+
+// results.items[0] gives you: { videoId, title, description, channelTitle, thumbnailUrl }
+
+// Render with VideoEmbed
+<VideoEmbed
+  videoId={results.items[0].videoId}
+  title={results.items[0].title}
+  channelTitle={results.items[0].channelTitle}
+/>
 ```
+
+### VideoEmbed Component Features
+
+- Lazy-loaded thumbnail preview
+- Play button overlay
+- Title and channel attribution
+- Responsive sizing
+- Accessible controls
+- Dark mode compatible
+
+### Agent Instructions for Videos
+
+1. **Query specificity**: Use descriptive queries ("photosynthesis Khan Academy" not "photosynthesis")
+2. **Channel verification**: Prefer verified educational channels
+3. **Relevance ranking**: Consider:
+   - Duration (shorter for quick answers, longer for deep dives)
+   - View count (indicates popularity/quality)
+   - Upload date (prefer recent for fast-moving topics)
+4. **Fallback**: If video unavailable, provide direct YouTube search link
+5. **Presentation**: Always show title, channel, and duration
 
 ---
 
