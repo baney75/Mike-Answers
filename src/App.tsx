@@ -87,6 +87,9 @@ export default function App() {
   const idleDraftBufferRef = useRef("");
   const idleDraftCaptureTimeoutRef = useRef<number | null>(null);
 
+  // ── Original question context for follow-up chat ────────────────────
+  const originalQuestionRef = useRef<{ text?: string; imageBase64?: string } | null>(null);
+
   // ── Feature toggle state ─────────────────────────────────────────────
   const [newsQuery, setNewsQuery] = useState("");
 
@@ -108,6 +111,7 @@ export default function App() {
       window.clearTimeout(idleDraftCaptureTimeoutRef.current);
       idleDraftCaptureTimeoutRef.current = null;
     }
+    originalQuestionRef.current = null;
     setAppState("IDLE");
     setImageFile(null);
     setTextInput(null);
@@ -232,14 +236,21 @@ export default function App() {
 
       try {
         let result: string;
+        let originalImageBase64: string | undefined;
+
         if (nextImageFile) {
-          const base64 = await resizeImage(nextImageFile);
-          result = await solveQuestion(base64, mode, subject, detailed);
+          originalImageBase64 = await resizeImage(nextImageFile);
+          result = await solveQuestion(originalImageBase64, mode, subject, detailed);
         } else if (trimmedText) {
           result = await solveTextQuestion(trimmedText, mode, subject, detailed);
         } else {
           throw new Error("No input provided.");
         }
+
+        originalQuestionRef.current = {
+          text: trimmedText ?? undefined,
+          imageBase64: originalImageBase64,
+        };
 
         if (currentTaskIdRef.current !== taskId) {
           return;
@@ -508,7 +519,7 @@ export default function App() {
               ]
             : [];
 
-        const reply = await chatWithTutor([...context, ...historyBeforeCurrentTurn], trimmed);
+        const reply = await chatWithTutor([...context, ...historyBeforeCurrentTurn], trimmed, originalQuestionRef.current);
         setChatHistory([...nextHistory, { role: "tutor", text: reply }]);
         return true;
       } catch (err) {

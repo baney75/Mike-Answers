@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Markdown from "react-markdown";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
@@ -92,30 +92,100 @@ function chooseBestVideoResult(query: string, items: VideoResult[]) {
 
 function SmilesRenderer({ smiles }: { smiles: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [renderError, setRenderError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [isDark, setIsDark] = useState(false);
+
+  useEffect(() => {
+    const checkDark = () => {
+      setIsDark(document.documentElement.classList.contains("dark"));
+    };
+    checkDark();
+    const observer = new MutationObserver(checkDark);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    return () => observer.disconnect();
+  }, []);
+
+  const renderSmiles = useCallback(() => {
+    if (!canvasRef.current || !smiles) return;
+    setRenderError(null);
+
+    void (async () => {
+      try {
+        const drawer = new SmilesDrawer();
+        await drawer.draw(smiles.trim(), canvasRef.current!, isDark ? "dark" : "light");
+      } catch (err) {
+        console.error("SMILES render failed:", err);
+        setRenderError(err instanceof Error ? err.message : "Failed to render molecule");
+      }
+    })();
+  }, [smiles, isDark]);
 
   useEffect(() => {
     let active = true;
-
     if (canvasRef.current && smiles) {
-      void (async () => {
-        try {
-          const drawer = new SmilesDrawer();
-          await drawer.draw(smiles.trim(), canvasRef.current!, "light");
-          if (!active) return;
-        } catch (err) {
-          if (active) console.error("SMILES render failed:", err);
-        }
-      })();
+      renderSmiles();
     }
-
     return () => {
       active = false;
     };
-  }, [smiles]);
+  }, [smiles, renderSmiles]);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(smiles);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // clipboard not available
+    }
+  };
+
+  if (renderError) {
+    return (
+      <div className="my-4 rounded-xl border-2 border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
+        <div className="flex flex-col items-center gap-3">
+          <div className="rounded-lg bg-red-100 dark:bg-red-900/30 px-4 py-2">
+            <p className="text-sm font-mono text-red-700 dark:text-red-300">
+              Could not render molecule structure
+            </p>
+          </div>
+          <div className="flex flex-col items-center gap-2">
+            <code className="rounded bg-gray-100 px-3 py-1.5 font-mono text-sm dark:bg-gray-800 dark:text-gray-200">
+              {smiles}
+            </code>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleCopy}
+                className="rounded-lg border-2 border-gray-900 dark:border-gray-100 bg-white dark:bg-gray-800 px-3 py-1.5 text-xs font-bold text-gray-900 dark:text-gray-100 transition hover:bg-gray-50 dark:hover:bg-gray-700"
+              >
+                {copied ? "Copied!" : "Copy SMILES"}
+              </button>
+              <button
+                type="button"
+                onClick={renderSmiles}
+                className="rounded-lg border-2 border-gray-900 dark:border-gray-100 bg-[var(--aqs-accent)] px-3 py-1.5 text-xs font-bold text-white transition hover:bg-[var(--aqs-accent-strong)]"
+              >
+                Retry
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="my-4 flex justify-center overflow-x-auto rounded-xl border-2 border-gray-200 bg-white p-4 dark:border-gray-700">
-      <canvas ref={canvasRef} />
+    <div className="my-4 flex flex-col items-center gap-3 overflow-x-auto rounded-xl border-2 border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
+      <canvas ref={canvasRef} width={500} height={300} className="max-w-full" />
+      <button
+        type="button"
+        onClick={handleCopy}
+        className="rounded-lg border-2 border-gray-900 dark:border-gray-100 bg-white dark:bg-gray-800 px-3 py-1.5 text-xs font-bold text-gray-900 dark:text-gray-100 transition hover:bg-gray-50 dark:hover:bg-gray-700"
+      >
+        {copied ? "Copied!" : "Copy SMILES"}
+      </button>
     </div>
   );
 }

@@ -62,7 +62,19 @@ LOADING → SOLVED (success)
 LOADING → ERROR (failure)
 SOLVED → PREVIEWING (edit/retry) or IDLE (clear)
 ERROR → PREVIEWING (edit) or IDLE (clear)
+SOLVED → NEWS (user requests news)
+NEWS → SOLVED (user returns)
+SOLVED → WOTD (user requests word of the day)
+WOTD → SOLVED (user returns)
 ```
+
+**Follow-up Context Preservation:**
+When the user asks follow-up questions after receiving a solution:
+- Original question text is captured and stored in `originalQuestionRef`
+- Original image (if any) is captured as base64 and stored alongside
+- On follow-up, both original question and image are sent to `chatWithTutor`
+- System prompt instructs AI to "Always keep the original question in mind when answering follow-ups"
+- This ensures context continuity even in multi-turn tutoring sessions
 
 ---
 
@@ -105,7 +117,7 @@ The `GeminiService` in `src/services/gemini.ts` handles all AI interactions:
 **Key Methods:**
 - `solveQuestion(base64Image, mode, subject, detailed)` - Image + text question
 - `solveTextQuestion(text, mode, subject, detailed)` - Text-only question
-- `chatWithTutor(history, message)` - Follow-up questions
+- `chatWithTutor(history, message, originalQuestion?)` - Follow-up questions with optional original question/image context
 - `transcribeAudio(audioBlob)` - Voice to text
 
 **Model Fallback System**: If one model fails (rate limit, quota), it automatically tries the next available model.
@@ -147,6 +159,31 @@ The `fetchAllNews()` and `fetchNewsForQuery()` functions in `src/services/news.t
 - Date-based sorting
 - Query filtering for topic-specific news
 
+### NewsView AI World Briefing
+
+The `NewsView` component (`src/components/NewsView.tsx`) provides an enhanced news experience:
+
+**AI World Briefing:**
+- Auto-generates briefing summary when entering News view
+- Cached in localStorage with 5-minute TTL (regenerates on cache expiry or manual refresh)
+- Displays AI synthesis of top stories with source citations
+- "Regenerate" button to force fresh briefing generation
+
+**Per-Article Ask:**
+- Each article card has an "Ask" button (icon + text)
+- Clicking pre-fills chat input with "Tell me more about: [article title]"
+- Opens chat panel with article as primary context
+
+**Suggested Questions:**
+- Dynamic suggestions based on loaded articles
+- "Summarize the top stories", "What's the main topic today?"
+- Per-article suggestions: "Tell me about article 1/2/3"
+
+**News Chat Context:**
+- When chatting about news, top 5 articles are included as context
+- If user asks about specific article, that article is prioritized in context
+- Sources cited by name when answering questions
+
 ### rss.ts (RSS Parser)
 
 Lightweight RSS/Atom feed parser using native DOMParser (no external dependencies).
@@ -170,7 +207,7 @@ Lightweight RSS/Atom feed parser using native DOMParser (no external dependencie
 | Math (LaTeX) | remark-math + rehype-katex |
 | Code blocks | Syntax highlighting |
 | Charts | recharts (JSON chart blocks) |
-| Chemical structures | smiles-drawer |
+| Chemical structures | smiles-drawer (dark mode support, error fallback with copy/retry) |
 | Image search results | Inline rendering with `ImageRenderer` |
 | Video embeds | `VideoEmbed` (YouTube) |
 | Definitions | `DictionaryResult` cards |

@@ -13,9 +13,11 @@ import {
   MessageCircle,
   ArrowLeft,
   ArrowRight,
+  Globe,
 } from "lucide-react";
 import { fetchAllNews, fetchNewsForQuery, type NewsArticle, NEWS_SOURCES } from "../services/news";
 import { chatWithTutor } from "../services/gemini";
+import { RichResponse } from "./RichResponse";
 import type { ChatMessage } from "../types";
 
 interface NewsViewProps {
@@ -85,7 +87,7 @@ function formatDate(dateStr: string): string {
   }
 }
 
-function ArticleCard({ article }: { article: NewsArticle }) {
+function ArticleCard({ article, onAsk, index }: { article: NewsArticle; onAsk?: (article: NewsArticle) => void; index: number }) {
   const sourceColor = SOURCE_COLORS[article.source] || "bg-gray-500";
   const [imgError, setImgError] = useState(false);
 
@@ -145,17 +147,41 @@ function ArticleCard({ article }: { article: NewsArticle }) {
               {article.author}
             </span>
           )}
-          <a
-            href={article.link}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-sm font-bold text-[var(--aqs-accent)] dark:text-[var(--aqs-accent-dark)] hover:underline ml-auto"
-          >
-            Read More
-            <ExternalLink className="w-3 h-3" />
-          </a>
+          <div className="flex items-center gap-2 ml-auto">
+            {onAsk && (
+              <button
+                type="button"
+                onClick={() => onAsk(article)}
+                className="inline-flex items-center gap-1 text-sm font-bold text-[var(--aqs-accent)] dark:text-[var(--aqs-accent-dark)] hover:underline"
+                title="Ask about this article"
+              >
+                <MessageCircle className="w-4 h-4" />
+                Ask
+              </button>
+            )}
+            <a
+              href={article.link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-sm font-bold text-[var(--aqs-accent)] dark:text-[var(--aqs-accent-dark)] hover:underline"
+            >
+              Read
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          </div>
         </div>
       </div>
+
+      {onAsk && (
+        <button
+          type="button"
+          onClick={() => onAsk(article)}
+          className="absolute bottom-4 right-4 rounded-full bg-[var(--aqs-accent)] text-white p-2 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-[var(--aqs-accent-strong)]"
+          title={`Ask about: ${article.title}`}
+        >
+          <MessageCircle className="w-4 h-4" />
+        </button>
+      )}
     </article>
   );
 }
@@ -190,6 +216,38 @@ function SourceFilter({
   );
 }
 
+const BRIEFING_STORAGE_KEY = "aqs_news_briefing";
+const BRIEFING_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+interface BriefingCache {
+  summary: string;
+  generatedAt: number;
+}
+
+function getCachedBriefing(): { summary: string; generatedAt: number } | null {
+  try {
+    const raw = localStorage.getItem(BRIEFING_STORAGE_KEY);
+    if (!raw) return null;
+    const cached: BriefingCache = JSON.parse(raw);
+    return cached;
+  } catch {
+    return null;
+  }
+}
+
+function setCachedBriefing(summary: string): void {
+  try {
+    const cache: BriefingCache = { summary, generatedAt: Date.now() };
+    localStorage.setItem(BRIEFING_STORAGE_KEY, JSON.stringify(cache));
+  } catch {
+    // localStorage unavailable
+  }
+}
+
+function isBriefingStale(generatedAt: number): boolean {
+  return Date.now() - generatedAt > BRIEFING_CACHE_TTL_MS;
+}
+
 export function NewsView({ initialQuery = "", onClose, onReturn, hasBackgroundTask }: NewsViewProps) {
   const [articles, setArticles] = useState<NewsArticle[]>([]);
   const [loading, setLoading] = useState(true);
@@ -205,6 +263,21 @@ export function NewsView({ initialQuery = "", onClose, onReturn, hasBackgroundTa
   const [showChat, setShowChat] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const prevMessagesLengthRef = useRef(0);
+
+  // Briefing state
+  const [briefingSummary, setBriefingSummary] = useState<string | null>(() => {
+    const cached = getCachedBriefing();
+    if (cached && !isBriefingStale(cached.generatedAt)) {
+      return cached.summary;
+    }
+    return null;
+  });
+  const [briefingGeneratedAt, setBriefingGeneratedAt] = useState<number | null>(() => {
+    const cached = getCachedBriefing();
+    return cached?.generatedAt ?? null;
+  });
+  const [isBriefingLoading, setIsBriefingLoading] = useState(false);
+  const [briefingError, setBriefingError] = useState<string | null>(null);
 
   const loadNews = useCallback(
     async (searchQuery: string, forceRefresh = false) => {
@@ -258,6 +331,87 @@ export function NewsView({ initialQuery = "", onClose, onReturn, hasBackgroundTa
     });
   };
 
+  const generateBriefing = useCallback(async (articleList: NewsArticle[], forceRegenerate = false) => {
+    const cached = getCachedBriefing();
+    if (!forceRegenerate && cached && !isBriefingStale(cached.generatedAt)) {
+      setBriefingSummary(cached.summary);
+      setBriefingGeneratedAt(cached.generatedAt);
+      return;
+    }
+
+    setIsBriefingLoading(true);
+    setBriefingError(null);
+
+    try {
+      const topArticles = articleList.slice(0, 10);
+      const articlesSummary = topArticles.map((a, i) =>
+        `${i + 1}. "${a.title}" - ${a.source} (${formatDate(a.pubDate)}): ${a.description?.slice(0, 300) || ""}`
+      ).join("\n");
+
+      const briefingPrompt = `You are a news briefing assistant. Based on these articles from trusted sources (Straight Arrow News, Tangle, WSJ Tech, WSJ World News, WSJ US News, NewsNation, The Center Square), provide a 3-4 paragraph summary of the most important current events. Highlight the top 3-5 stories with brief analysis.
+
+Articles:
+${articlesSummary}
+
+Please provide a clear, balanced briefing that synthesizes these sources.`;
+
+      const summary = await chatWithTutor([], briefingPrompt);
+      setBriefingSummary(summary);
+      const now = Date.now();
+      setBriefingGeneratedAt(now);
+      setCachedBriefing(summary);
+    } catch (err) {
+      console.error("Briefing error:", err);
+      setBriefingError("Failed to generate briefing. Please try again.");
+    } finally {
+      setIsBriefingLoading(false);
+    }
+  }, []);
+
+  const handleAskAboutArticle = useCallback(async (article: NewsArticle) => {
+    if (isChatLoading || articles.length === 0) return;
+
+    const userMessage = `Tell me more about: "${article.title}"`;
+    setChatMessages((prev) => [...prev, { role: "user", text: userMessage }]);
+    setIsChatLoading(true);
+    setShowChat(true);
+
+    try {
+      // Prioritize the specific article being asked about
+      const askedArticleContext = `SPECIFIC ARTICLE USER IS ASKING ABOUT:
+"${article.title}" - ${article.source} (${formatDate(article.pubDate)})
+${article.description}
+
+`;
+
+      const otherArticles = articles.filter((a) => a.link !== article.link).slice(0, 4);
+      const otherContext = otherArticles.map((a, i) =>
+        `${i + 1}. "${a.title}" - ${a.source} (${formatDate(a.pubDate)}): ${a.description?.slice(0, 200) || ""}`
+      ).join("\n");
+
+      const combinedMessage = `You are a news assistant helping the user understand current events. Here are some of the latest headlines from trusted sources:
+
+${askedArticleContext}
+OTHER RECENT HEADLINES:
+${otherContext}
+
+Based on these articles, please answer the user's question below. Be informative, cite specific articles when relevant, and note if the articles don't cover the topic being asked about.
+
+User question: ${userMessage}`;
+
+      const reply = await chatWithTutor([], combinedMessage);
+      setChatMessages((prev) => [...prev, { role: "tutor", text: reply }]);
+    } catch (err) {
+      console.error("Chat error:", err);
+      setChatMessages((prev) => [
+        ...prev,
+        { role: "tutor", text: "Sorry, I couldn't process that. Please try again." },
+      ]);
+    } finally {
+      setIsChatLoading(false);
+    }
+  }, [isChatLoading, articles]);
+
   const handleSendChat = useCallback(async () => {
     if (!chatInput.trim() || isChatLoading || articles.length === 0) return;
 
@@ -268,14 +422,14 @@ export function NewsView({ initialQuery = "", onClose, onReturn, hasBackgroundTa
     setShowChat(true);
 
     try {
-      const topArticles = articles.slice(0, 5);
-      const articlesSummary = topArticles.map((a, i) => 
+      let contextArticles = articles.slice(0, 5);
+      let articleContext = contextArticles.map((a, i) =>
         `${i + 1}. "${a.title}" - ${a.source} (${formatDate(a.pubDate)}): ${a.description?.slice(0, 200) || ""}`
       ).join("\n");
 
       const combinedMessage = `You are a news assistant helping the user understand current events. Here are some of the latest headlines from trusted sources:
 
-${articlesSummary}
+${articleContext}
 
 Based on these articles, please answer the user's question below. Be informative, cite specific articles when relevant, and note if the articles don't cover the topic being asked about.
 
@@ -293,6 +447,64 @@ User question: ${userMessage}`;
       setIsChatLoading(false);
     }
   }, [chatInput, isChatLoading, articles]);
+
+  // Send a pre-filled message (for suggested questions and per-article ask)
+  const sendPrefilledMessage = useCallback(async (message: string) => {
+    if (isChatLoading || articles.length === 0) return;
+
+    const userMessage = message.trim();
+    setChatMessages((prev) => [...prev, { role: "user", text: userMessage }]);
+    setIsChatLoading(true);
+    setShowChat(true);
+
+    try {
+      let contextArticles = articles.slice(0, 5);
+      let articleContext = contextArticles.map((a, i) =>
+        `${i + 1}. "${a.title}" - ${a.source} (${formatDate(a.pubDate)}): ${a.description?.slice(0, 200) || ""}`
+      ).join("\n");
+
+      // If message mentions a specific article, prioritize it
+      const articleMatch = userMessage.match(/article (\d+)/i);
+      if (articleMatch) {
+        const articleIndex = parseInt(articleMatch[1], 10) - 1;
+        const specificArticle = articles[articleIndex];
+        if (specificArticle) {
+          const askedArticleContext = `SPECIFIC ARTICLE USER IS ASKING ABOUT:
+"${specificArticle.title}" - ${specificArticle.source} (${formatDate(specificArticle.pubDate)})
+${specificArticle.description}
+
+`;
+          articleContext = askedArticleContext + "\nOTHER RECENT HEADLINES:\n" + articleContext;
+        }
+      }
+
+      const combinedMessage = `You are a news assistant helping the user understand current events. Here are some of the latest headlines from trusted sources:
+
+${articleContext}
+
+Based on these articles, please answer the user's question below. Be informative, cite specific articles when relevant, and note if the articles don't cover the topic being asked about.
+
+User question: ${userMessage}`;
+
+      const reply = await chatWithTutor([], combinedMessage);
+      setChatMessages((prev) => [...prev, { role: "tutor", text: reply }]);
+    } catch (err) {
+      console.error("Chat error:", err);
+      setChatMessages((prev) => [
+        ...prev,
+        { role: "tutor", text: "Sorry, I couldn't process that. Please try again." },
+      ]);
+    } finally {
+      setIsChatLoading(false);
+    }
+  }, [isChatLoading, articles]);
+
+  // Generate briefing when articles load (if not cached)
+  useEffect(() => {
+    if (!loading && articles.length > 0 && !briefingSummary && !isBriefingLoading) {
+      void generateBriefing(articles);
+    }
+  }, [loading, articles, briefingSummary, isBriefingLoading, generateBriefing]);
 
   const filteredArticles =
     selectedSources.size > 0
@@ -427,6 +639,78 @@ User question: ${userMessage}`;
             </div>
           ) : (
             <>
+              {/* AI World Briefing Section */}
+              {(briefingSummary || isBriefingLoading || briefingError) && (
+                <div className="mb-8">
+                  <div className="rounded-[1.4rem] border-2 border-gray-900 dark:border-gray-100 bg-[var(--aqs-accent-soft)] dark:bg-[color:rgba(122,31,52,0.18)] p-5 md:p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="rounded-lg bg-[var(--aqs-accent)] p-2">
+                          <Globe className="w-5 h-5 text-white" />
+                        </div>
+                        <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+                          AI World Briefing
+                        </h2>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => void generateBriefing(articles, true)}
+                        disabled={isBriefingLoading}
+                        className="flex items-center gap-2 rounded-lg bg-[var(--aqs-accent)] px-3 py-1.5 text-sm font-bold text-white transition hover:bg-[var(--aqs-accent-strong)] disabled:opacity-50"
+                      >
+                        <RefreshCw className={`w-4 h-4 ${isBriefingLoading ? "animate-spin" : ""}`} />
+                        Regenerate
+                      </button>
+                    </div>
+
+                    {isBriefingLoading ? (
+                      <div className="flex items-center gap-3 py-4">
+                        <Loader2 className="w-6 h-6 animate-spin text-[var(--aqs-accent)]" />
+                        <span className="text-gray-600 dark:text-gray-400">Generating briefing...</span>
+                      </div>
+                    ) : briefingError ? (
+                      <p className="text-red-600 dark:text-red-400">{briefingError}</p>
+                    ) : briefingSummary ? (
+                      <div className="prose prose-sm prose-gray max-w-none dark:prose-invert">
+                        <RichResponse text={briefingSummary} compact />
+                      </div>
+                    ) : null}
+
+                    {briefingGeneratedAt && !isBriefingLoading && !briefingError && (
+                      <p className="mt-3 text-xs font-mono text-gray-500 dark:text-gray-400">
+                        Updated {formatDate(new Date(briefingGeneratedAt).toISOString())}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Suggested Questions */}
+              <div className="mb-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <MessageCircle className="w-4 h-4 text-[var(--aqs-accent)] dark:text-[var(--aqs-accent-dark)]" />
+                  <span className="text-sm font-bold text-gray-900 dark:text-white">Ask About the News</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    "Summarize the top stories",
+                    "What's the main topic today?",
+                    ...articles.slice(0, 3).map((a, i) => `Tell me about article ${i + 1}`),
+                  ].map((suggestion) => (
+                    <button
+                      key={suggestion}
+                      type="button"
+                      onClick={() => void sendPrefilledMessage(suggestion)}
+                      disabled={isChatLoading}
+                      className="rounded-xl border-2 border-gray-900 dark:border-gray-100 bg-white dark:bg-gray-900 px-4 py-2 text-sm font-medium text-gray-900 dark:text-gray-100 transition hover:bg-gray-50 dark:hover:bg-gray-800 hover:-translate-y-0.5 hover:neo-shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {suggestion}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Article count and grid */}
               <div className="flex items-center justify-between mb-4">
                 <p className="text-sm font-mono text-gray-600 dark:text-gray-400">
                   {filteredArticles.length} article{filteredArticles.length !== 1 ? "s" : ""}
@@ -445,7 +729,7 @@ User question: ${userMessage}`;
 
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {filteredArticles.map((article, index) => (
-                  <ArticleCard key={`${article.link}-${index}`} article={article} />
+                  <ArticleCard key={`${article.link}-${index}`} article={article} index={index} onAsk={handleAskAboutArticle} />
                 ))}
               </div>
             </>

@@ -609,13 +609,39 @@ If the user pasted their own attempt, notes, or answer, proactively check that w
 export async function chatWithTutor(
   history: { role: string; text: string }[],
   message: string,
+  originalQuestion?: { text?: string; imageBase64?: string },
 ): Promise<string> {
   if (!message.trim()) throw new Error("Message must not be empty.");
 
-  const contents = history.map((h) => ({
-    role: h.role === "user" ? "user" : "model",
-    parts: [{ text: h.text }],
-  }));
+  const contents: Array<{ role: "user" | "model"; parts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }> }> = [];
+
+  // Add original question context if provided
+  if (originalQuestion) {
+    const originalParts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }> = [];
+    if (originalQuestion.imageBase64) {
+      originalParts.push({
+        inlineData: { mimeType: "image/jpeg", data: originalQuestion.imageBase64 },
+      });
+    }
+    if (originalQuestion.text) {
+      originalParts.push({ text: `The user originally asked: ${originalQuestion.text}` });
+    } else if (originalParts.length > 0) {
+      originalParts.push({ text: "The image above shows the user's original question." });
+    }
+    if (originalParts.length > 0) {
+      contents.push({ role: "user", parts: originalParts });
+    }
+  }
+
+  // Add conversation history
+  for (const h of history) {
+    contents.push({
+      role: h.role === "user" ? "user" : "model",
+      parts: [{ text: h.text }],
+    });
+  }
+
+  // Add current message
   contents.push({ role: "user", parts: [{ text: message }] });
 
   for (let i = 0; i < contents.length; i++) {
@@ -633,6 +659,8 @@ export async function chatWithTutor(
     config: {
       systemInstruction:
         `You are a helpful tutor answering follow-up questions. Be concise but thorough. If the user asks whether their work is right, verify it directly before expanding. Use LaTeX for math. Include Python code or charts when computation would help.
+
+IMPORTANT: Always keep the original question in mind when answering follow-ups. Reference specific aspects of the original question and any original image when relevant. Build upon or correct the original reasoning as needed.
 
 ${MEDIA_MARKER_PROMPT}
 
