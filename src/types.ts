@@ -25,6 +25,7 @@ export interface HistoryItem {
   timestamp: number;
   solution: string;
   type?: 'solve' | 'grade';
+  hideAnswerByDefault?: boolean;
 }
 
 /** Context passed to AI for feature views (WOTD, News). */
@@ -59,6 +60,7 @@ export interface BackgroundTask {
   type: 'solve';
   status: 'running' | 'completed' | 'failed';
   solution?: string;
+  hideAnswerByDefault?: boolean;
   error?: string;
   timestamp: number;
   mode: SolveMode;
@@ -72,6 +74,7 @@ export interface BackgroundTask {
 /** Saved state to return to after viewing features */
 export interface SavedState {
   solution: string;
+  hideAnswerByDefault?: boolean;
   chatHistory: ChatMessage[];
   mode: SolveMode;
   subject: string;

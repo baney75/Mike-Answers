@@ -104,7 +104,9 @@ Users can select a subject (Auto-detect, Mathematics, Physics, Chemistry, etc.) 
 | `deep` | Thinking-enabled | No | Step-by-step walkthroughs |
 | `research` | Grounded model | Yes (Google Search) | Questions needing citations/sources |
 
-**Automatic Grounding**: The app auto-enables grounding for prompts asking for citations, current information, or evidence. Manual `research` mode is rarely needed.
+**Automatic Grounding**: The app auto-enables grounding for prompts asking for citations, current information, evidence, or time-sensitive officeholder/current-fact questions (for example, "who is the current president"). Manual `research` mode is rarely needed.
+
+**Homework-aware rendering**: obvious coursework prompts are solved in the normal flow, but `SolutionDisplay` can hide the final `**Answer:**` section by default so students see the method first and reveal the answer deliberately.
 
 ---
 
@@ -122,7 +124,7 @@ The `GeminiService` in `src/services/gemini.ts` handles all AI interactions:
 
 **Model Fallback System**: If one model fails (rate limit, quota), it automatically tries the next available model.
 
-**Grounding Logic**: `buildRequestPlan()` determines whether to enable Google Search grounding based on query intent.
+**Grounding Logic**: `buildRequestPlan()` determines whether to enable Google Search grounding based on query intent, including explicit source requests, news/current-events, and current officeholder/leadership questions.
 
 ### search.ts (Web/Image/Video)
 
@@ -134,19 +136,20 @@ The `GeminiService` in `src/services/gemini.ts` handles all AI interactions:
 
 ### wotd.ts (Word of the Day)
 
-The `getWordOfTheDay()` function in `src/services/wotd.ts` fetches the daily word from Merriam-Webster via rss2json API.
+The `getWordOfTheDay()` function in `src/services/wotd.ts` sources the daily word from Merriam-Webster's official RSS feed, preferring a fast rss2json mirror first and falling back to feed/proxy parsing when needed.
 
 **Features:**
-- Daily word with definition, phonetic, part of speech
+- Daily word with concise definition, phonetic, and part of speech
 - Example sentences when available
 - 1-hour caching
 - Source link to Merriam-Webster
+- Minimal default UI: definition first, optional agent follow-up panel on demand
 
 ### news.ts (News Aggregation)
 
-The `fetchAllNews()` and `fetchNewsForQuery()` functions in `src/services/news.ts` aggregate news from multiple trusted RSS sources.
+The `fetchAllNews()` and `fetchNewsForQuery()` functions in `src/services/news.ts` aggregate news from multiple trusted RSS sources and enrich each article for direct-source use.
 
-**Sources (all via rss2json API):**
+**Sources:**
 - Straight Arrow News (Center - original reporting)
 - Tangle (Center - curated summaries)
 - WSJ Tech/World/US (Center-Right - quality journalism)
@@ -155,38 +158,36 @@ The `fetchAllNews()` and `fetchNewsForQuery()` functions in `src/services/news.t
 
 **Features:**
 - Parallel fetching from all sources
+- Direct/proxied RSS parsing with rss2json fallback for blocked feeds
 - Automatic deduplication
 - Date-based sorting
 - Query filtering for topic-specific news
+- Per-article body-text enrichment for agent context
+- Best-effort primary-source detection from article links and metadata
+- Explicit `directArticleUrl` and optional `primarySourceUrl` fields for UI and citation use
 
-### NewsView AI World Briefing
+### NewsView Editorial Desk
 
-The `NewsView` component (`src/components/NewsView.tsx`) provides an enhanced news experience:
+The `NewsView` component (`src/components/NewsView.tsx`) is a news-only editorial surface:
 
-**AI World Briefing:**
-- Auto-generates briefing summary when entering News view
-- Cached in localStorage with 5-minute TTL (regenerates on cache expiry or manual refresh)
-- Displays AI synthesis of top stories with source citations
-- "Regenerate" button to force fresh briefing generation
+**Layout:**
+- lead story panel
+- latest-desk side rail
+- additional coverage grid
+- source toggles for the approved outlets only
 
-**Per-Article Ask:**
-- Each article card has an "Ask" button (icon + text)
-- Clicking pre-fills chat input with "Tell me more about: [article title]"
-- Opens chat panel with article as primary context
-
-**Suggested Questions:**
-- Dynamic suggestions based on loaded articles
-- "Summarize the top stories", "What's the main topic today?"
-- Per-article suggestions: "Tell me about article 1/2/3"
+**Per-Article Controls:**
+- direct article button
+- primary-source button when detected
+- ask-about-this-story button
 
 **News Chat Context:**
-- When chatting about news, top 5 articles are included as context
-- If user asks about specific article, that article is prioritized in context
-- Sources cited by name when answering questions
+- uses hydrated article body text, direct article URLs, and detected primary sources
+- stays inside news mode instead of re-triggering generic search/news actions
 
 ### rss.ts (RSS Parser)
 
-Lightweight RSS/Atom feed parser using native DOMParser (no external dependencies).
+Lightweight RSS/Atom parsing + remote fetch fallback layer for browser-safe feed ingestion.
 
 ### Other Services
 
@@ -206,12 +207,31 @@ Lightweight RSS/Atom feed parser using native DOMParser (no external dependencie
 | Markdown | react-markdown + remark-gfm |
 | Math (LaTeX) | remark-math + rehype-katex |
 | Code blocks | Syntax highlighting |
-| Charts | recharts (JSON chart blocks) |
+| Charts | recharts (JSON chart blocks with line/bar/area/scatter support) |
 | Chemical structures | smiles-drawer (dark mode support, error fallback with copy/retry) |
 | Image search results | Inline rendering with `ImageRenderer` |
 | Video embeds | `VideoEmbed` (YouTube) |
 | Definitions | `DictionaryResult` cards |
 | Source citations | Custom source-card UI (not raw markdown) |
+
+### SolutionDisplay Component
+
+`src/components/SolutionDisplay.tsx` can split the answer body from the final `**Answer:**` section.
+
+For homework-like prompts:
+- the teaching portion renders first with sources intact
+- the final answer is hidden behind a reveal button
+- students can toggle the answer open only when they want to check their work
+- the homework-safe flag is persisted with saved solutions/history so the behavior survives reloads and revisits
+
+### Print / PDF Output
+
+`src/index.css` defines a dedicated print layer so `window.print()` exports cleaner PDFs:
+- hides interactive chrome via `.no-print`
+- removes grid/shadow effects
+- sets tighter page margins and print-safe typography
+- avoids splitting major cards, charts, tables, and code blocks across pages when possible
+- prints links with their URLs for shareable PDFs
 
 ### Media Markers
 
@@ -302,7 +322,7 @@ bun install  # Install dependencies
 bun dev      # Dev server on port 3000 (0.0.0.0)
 bun run build # Production build to dist/
 bun lint     # TypeScript check (tsc --noEmit)
-bun test src/utils/image.test.ts src/utils/input.test.ts src/utils/solution.test.ts src/services/gemini.test.ts
+bun test src/utils/image.test.ts src/utils/input.test.ts src/utils/solution.test.ts src/services/gemini.test.ts src/services/news.test.ts src/services/wotd.test.ts
 ```
 
 ---

@@ -93,15 +93,140 @@
 }
 
 @media print {
+  @page {
+    size: letter;
+    margin: 0.6in;
+  }
+
+  html,
   body {
     background: white !important;
     color: black !important;
+    font-size: 11pt;
+    line-height: 1.45;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
+
+  #root {
+    min-height: auto !important;
+  }
+
   .no-print {
     display: none !important;
   }
-  .neo-shadow, .neo-shadow-sm {
+
+  .bg-grid-pattern,
+  .bg-grid-pattern * {
+    background-image: none !important;
+  }
+
+  .neo-shadow,
+  .neo-shadow-sm {
     box-shadow: none !important;
-    border: 1px solid #ccc !important;
+    border-color: #d1d5db !important;
+  }
+
+  main,
+  section,
+  article,
+  pre,
+  blockquote,
+  table,
+  figure,
+  .print-solution-shell,
+  .print-answer-callout {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .print-solution-shell {
+    border: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    background: white !important;
+  }
+
+  .print-answer-callout {
+    margin-top: 20pt !important;
+    border: 1.5pt solid #7a1f34 !important;
+    background: #faf5f6 !important;
+  }
+
+  .prose,
+  .dark .prose {
+    color: #111827 !important;
+    max-width: none !important;
+  }
+
+  .prose h1,
+  .prose h2,
+  .prose h3,
+  .prose h4,
+  .prose strong,
+  .prose code,
+  .prose th,
+  .prose td,
+  .prose li,
+  .prose p,
+  .prose blockquote,
+  .prose a,
+  .dark .prose h1,
+  .dark .prose h2,
+  .dark .prose h3,
+  .dark .prose h4,
+  .dark .prose strong,
+  .dark .prose code,
+  .dark .prose th,
+  .dark .prose td,
+  .dark .prose li,
+  .dark .prose p,
+  .dark .prose blockquote,
+  .dark .prose a {
+    color: #111827 !important;
+  }
+
+  .prose a::after {
+    content: " (" attr(href) ")";
+    font-size: 9pt;
+    color: #6b7280;
+    word-break: break-all;
+  }
+
+  .prose pre,
+  .prose code,
+  .dark .prose pre,
+  .dark .prose code {
+    background: #f8fafc !important;
+    color: #111827 !important;
+    border-color: #d1d5db !important;
+    white-space: pre-wrap !important;
+  }
+
+  .prose table,
+  .dark .prose table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+
+  .prose th,
+  .prose td,
+  .dark .prose th,
+  .dark .prose td {
+    border-color: #d1d5db !important;
+  }
+
+  svg,
+  canvas,
+  img {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    box-shadow: none !important;
   }
 }

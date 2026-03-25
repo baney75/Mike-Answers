@@ -1,24 +1,31 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Newspaper,
-  RefreshCw,
-  ExternalLink,
-  Loader2,
-  Search,
-  X,
-  Clock,
-  Filter,
-  Rss,
-  Send,
-  MessageCircle,
   ArrowLeft,
   ArrowRight,
-  Globe,
+  Clock3,
+  ExternalLink,
+  Loader2,
+  MessageCircle,
+  Newspaper,
+  RefreshCw,
+  Rss,
+  Search,
+  Send,
+  ShieldCheck,
+  Sparkles,
+  X,
 } from "lucide-react";
-import { fetchAllNews, fetchNewsForQuery, type NewsArticle, NEWS_SOURCES } from "../services/news";
+
+import {
+  NEWS_SOURCES,
+  buildNewsReasoningContext,
+  fetchAllNews,
+  fetchNewsForQuery,
+  hydrateNewsArticles,
+  type NewsArticle,
+} from "../services/news";
 import { chatWithTutor } from "../services/gemini";
 import { RichResponse } from "./RichResponse";
-import type { ChatMessage } from "../types";
 
 interface NewsViewProps {
   initialQuery?: string;
@@ -27,846 +34,701 @@ interface NewsViewProps {
   hasBackgroundTask?: boolean;
 }
 
-function BackgroundTaskBanner({ onReturn }: { onReturn: () => void }) {
+function formatRelativeTime(dateString: string) {
+  const time = new Date(dateString).getTime();
+  if (Number.isNaN(time)) {
+    return "";
+  }
+
+  const diffMs = Date.now() - time;
+  const minutes = Math.max(1, Math.floor(diffMs / (1000 * 60)));
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "Yesterday";
+  return `${days}d ago`;
+}
+
+function formatPublishedLabel(dateString: string) {
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) {
+    return "Unknown time";
+  }
+
+  return date.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function SourceToggle({
+  active,
+  label,
+  onClick,
+}: {
+  active: boolean;
+  label: string;
+  onClick: () => void;
+}) {
   return (
-    <div className="bg-amber-100 dark:bg-amber-900/30 border-b-2 border-amber-300 dark:border-amber-700 px-4 py-3 flex items-center justify-between gap-4">
-      <div className="flex items-center gap-3">
-        <div className="w-5 h-5 border-2 border-amber-600 dark:border-amber-400 border-t-transparent rounded-full animate-spin" />
-        <span className="text-sm font-medium text-amber-900 dark:text-amber-100">
-          Your question is being answered in the background
-        </span>
-      </div>
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-full border px-3 py-1.5 text-xs font-mono font-bold uppercase tracking-[0.18em] transition ${
+        active
+          ? "border-[var(--aqs-accent)] bg-[var(--aqs-accent)] text-white"
+          : "border-gray-300 bg-white/70 text-gray-600 hover:border-[var(--aqs-accent)] hover:text-[var(--aqs-accent-strong)] dark:border-gray-700 dark:bg-gray-900/60 dark:text-gray-300"
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
+
+function ArticleMeta({
+  article,
+  compact = false,
+}: {
+  article: NewsArticle;
+  compact?: boolean;
+}) {
+  return (
+    <div className={`flex flex-wrap items-center gap-2 ${compact ? "text-[11px]" : "text-xs"} font-mono uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400`}>
+      <span className="rounded-full border border-[var(--aqs-accent)]/30 bg-[var(--aqs-accent-soft)] px-2.5 py-1 text-[var(--aqs-accent-strong)] dark:bg-[color:rgba(122,31,52,0.18)] dark:text-[var(--aqs-accent-dark)]">
+        {article.source}
+      </span>
+      <span>{article.sourceBias}</span>
+      <span>{article.sourceType === "wire" ? "direct reporting" : "analysis"}</span>
+      <span className="inline-flex items-center gap-1">
+        <Clock3 className="h-3.5 w-3.5" />
+        {formatRelativeTime(article.pubDate)}
+      </span>
+    </div>
+  );
+}
+
+function ArticleButtons({
+  article,
+  onAsk,
+}: {
+  article: NewsArticle;
+  onAsk: (article: NewsArticle) => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <a
+        href={article.directArticleUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-2 rounded-xl border-2 border-gray-900 bg-white px-3 py-2 text-sm font-bold text-gray-900 transition hover:-translate-y-0.5 hover:bg-gray-50 dark:border-gray-100 dark:bg-gray-900 dark:text-gray-100 dark:hover:bg-gray-800"
+      >
+        Direct Article
+        <ExternalLink className="h-4 w-4" />
+      </a>
+      {article.primarySourceUrl ? (
+        <a
+          href={article.primarySourceUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 rounded-xl border-2 border-[var(--aqs-accent)] bg-[var(--aqs-accent-soft)] px-3 py-2 text-sm font-bold text-[var(--aqs-accent-strong)] transition hover:-translate-y-0.5 dark:bg-[color:rgba(122,31,52,0.18)] dark:text-[var(--aqs-accent-dark)]"
+        >
+          Primary Source
+          <ShieldCheck className="h-4 w-4" />
+        </a>
+      ) : null}
       <button
         type="button"
-        onClick={onReturn}
-        className="flex items-center gap-2 rounded-lg bg-amber-600 text-white px-3 py-1.5 text-sm font-bold hover:bg-amber-700 transition"
+        onClick={() => onAsk(article)}
+        className="inline-flex items-center gap-2 rounded-xl border-2 border-gray-900 bg-[var(--aqs-accent)] px-3 py-2 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-[var(--aqs-accent-strong)] dark:border-gray-100"
       >
-        <span>View Answer</span>
-        <ArrowRight className="w-4 h-4" />
+        Ask About This
+        <MessageCircle className="h-4 w-4" />
       </button>
     </div>
   );
 }
 
-const SOURCE_COLORS: Record<string, string> = {
-  "Straight Arrow News": "bg-blue-500",
-  "Tangle": "bg-purple-500",
-  "WSJ Tech": "bg-green-600",
-  "WSJ World News": "bg-green-600",
-  "WSJ US News": "bg-green-600",
-  "NewsNation": "bg-orange-500",
-  "The Center Square": "bg-red-600",
-};
-
-function formatDate(dateStr: string): string {
-  try {
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffHours = diffMs / (1000 * 60 * 60);
-
-    if (diffHours < 1) {
-      const mins = Math.floor(diffMs / (1000 * 60));
-      return mins <= 1 ? "Just now" : `${mins} min ago`;
-    }
-    if (diffHours < 24) {
-      const hours = Math.floor(diffHours);
-      return `${hours}h ago`;
-    }
-    if (diffHours < 48) {
-      return "Yesterday";
-    }
-
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: date.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
-    });
-  } catch {
-    return "";
-  }
-}
-
-function ArticleCard({ article, onAsk, index }: { article: NewsArticle; onAsk?: (article: NewsArticle) => void; index: number }) {
-  const sourceColor = SOURCE_COLORS[article.source] || "bg-gray-500";
-  const [imgError, setImgError] = useState(false);
-
+function LeadStory({
+  article,
+  onAsk,
+}: {
+  article: NewsArticle;
+  onAsk: (article: NewsArticle) => void;
+}) {
   return (
-    <article className="group relative rounded-[1.4rem] border-2 border-gray-900 dark:border-gray-100 bg-white dark:bg-gray-900 overflow-hidden neo-shadow transition-all duration-300 hover:-translate-y-1 hover:neo-shadow-md">
-      {article.thumbnail && !imgError ? (
-        <a href={article.link} target="_blank" rel="noopener noreferrer" className="block aspect-video overflow-hidden">
-          <img
-            src={article.thumbnail}
-            alt=""
-            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-            onError={() => setImgError(true)}
-          />
-        </a>
-      ) : (
-        <a
-          href={article.link}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="block aspect-video bg-gradient-to-br from-[var(--aqs-accent-soft)] to-[var(--aqs-accent)] flex items-center justify-center"
-        >
-          <Newspaper className="w-12 h-12 text-[var(--aqs-accent)] dark:text-[var(--aqs-accent-dark)] opacity-50" />
-        </a>
-      )}
-
-      <div className="p-4">
-        <div className="flex items-center gap-2 mb-3">
-          <span
-            className={`px-2 py-0.5 rounded-md text-xs font-mono font-bold uppercase tracking-wider text-white ${sourceColor}`}
-          >
-            {article.source}
-          </span>
-          <span className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 font-mono">
-            <Clock className="w-3 h-3" />
-            {formatDate(article.pubDate)}
-          </span>
+    <article className="rounded-[2rem] border-2 border-gray-900 bg-white p-4 text-gray-900 neo-shadow dark:border-gray-100 dark:bg-gray-900 dark:text-gray-100 md:p-5">
+      <div className="grid gap-5 lg:grid-cols-[1.25fr_0.95fr]">
+        <div className="overflow-hidden rounded-[1.4rem] border-2 border-gray-900 bg-[var(--aqs-accent-soft)] dark:border-gray-100 dark:bg-[color:rgba(122,31,52,0.16)]">
+          {article.thumbnail ? (
+            <img src={article.thumbnail} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <div className="flex aspect-[4/3] items-center justify-center">
+              <Newspaper className="h-12 w-12 text-[var(--aqs-accent)] dark:text-[var(--aqs-accent-dark)]" />
+            </div>
+          )}
         </div>
 
-        <h3 className="font-bold text-gray-900 dark:text-white text-lg leading-snug mb-2 line-clamp-3">
-          <a
-            href={article.link}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-[var(--aqs-accent)] dark:hover:text-[var(--aqs-accent-dark)] transition-colors"
-          >
-            {article.title}
-          </a>
-        </h3>
-
-        <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed line-clamp-2 mb-3">
-          {article.description}
-        </p>
-
-        <div className="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-gray-700">
-          {article.author && (
-            <span className="text-xs text-gray-500 dark:text-gray-500 truncate max-w-[60%]">
-              {article.author}
-            </span>
-          )}
-          <div className="flex items-center gap-2 ml-auto">
-            {onAsk && (
-              <button
-                type="button"
-                onClick={() => onAsk(article)}
-                className="inline-flex items-center gap-1 text-sm font-bold text-[var(--aqs-accent)] dark:text-[var(--aqs-accent-dark)] hover:underline"
-                title="Ask about this article"
-              >
-                <MessageCircle className="w-4 h-4" />
-                Ask
-              </button>
-            )}
-            <a
-              href={article.link}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-sm font-bold text-[var(--aqs-accent)] dark:text-[var(--aqs-accent-dark)] hover:underline"
-            >
-              Read
-              <ExternalLink className="w-3 h-3" />
-            </a>
+        <div className="flex flex-col justify-between gap-4">
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-[0.28em] text-[var(--aqs-accent-strong)] dark:text-[var(--aqs-accent-dark)]">
+              <Sparkles className="h-4 w-4" />
+              Lead Story
+            </div>
+            <ArticleMeta article={article} />
+            <div>
+              <h2 className="text-2xl font-black leading-tight md:text-[2rem]">
+                {article.title}
+              </h2>
+              <p className="mt-4 text-base leading-7 text-gray-700 dark:text-gray-300">
+                {article.description}
+              </p>
+            </div>
+            {article.contentText ? (
+              <div className="rounded-[1.2rem] border border-gray-200 bg-gray-50/80 p-4 dark:border-gray-700 dark:bg-gray-950/60">
+                <p className="text-xs font-mono uppercase tracking-[0.22em] text-gray-500 dark:text-gray-400">
+                  Report snapshot
+                </p>
+                <p className="mt-3 line-clamp-6 text-sm leading-7 text-gray-700 dark:text-gray-300">
+                  {article.contentText}
+                </p>
+              </div>
+            ) : null}
           </div>
+
+          <ArticleButtons article={article} onAsk={onAsk} />
         </div>
       </div>
-
-      {onAsk && (
-        <button
-          type="button"
-          onClick={() => onAsk(article)}
-          className="absolute bottom-4 right-4 rounded-full bg-[var(--aqs-accent)] text-white p-2 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-[var(--aqs-accent-strong)]"
-          title={`Ask about: ${article.title}`}
-        >
-          <MessageCircle className="w-4 h-4" />
-        </button>
-      )}
     </article>
   );
 }
 
-function SourceFilter({
-  selectedSources,
-  onToggle,
+function LatestStory({
+  article,
+  onAsk,
 }: {
-  selectedSources: Set<string>;
-  onToggle: (source: string) => void;
+  article: NewsArticle;
+  onAsk: (article: NewsArticle) => void;
 }) {
   return (
-    <div className="flex flex-wrap gap-2">
-      {NEWS_SOURCES.map((source) => {
-        const isSelected = selectedSources.has(source.name);
-        return (
-          <button
-            key={source.name}
-            type="button"
-            onClick={() => onToggle(source.name)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold uppercase tracking-wider transition-all ${
-              isSelected
-                ? "bg-[var(--aqs-accent)] text-white neo-shadow-sm"
-                : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
-            }`}
-          >
-            {source.name}
-          </button>
-        );
-      })}
-    </div>
+    <article className="rounded-[1.4rem] border-2 border-gray-900 bg-white p-4 neo-shadow-sm dark:border-gray-100 dark:bg-gray-900">
+      <ArticleMeta article={article} compact />
+      <h3 className="mt-3 text-lg font-bold leading-tight text-gray-900 dark:text-white">
+        {article.title}
+      </h3>
+      <p className="mt-2 line-clamp-3 text-sm leading-6 text-gray-600 dark:text-gray-400">
+        {article.description}
+      </p>
+      <div className="mt-4 flex items-center justify-between gap-2">
+        <span className="text-[11px] font-mono uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">
+          {formatPublishedLabel(article.pubDate)}
+        </span>
+        <button
+          type="button"
+          onClick={() => onAsk(article)}
+          className="text-sm font-bold text-[var(--aqs-accent-strong)] hover:underline dark:text-[var(--aqs-accent-dark)]"
+        >
+          Open brief
+        </button>
+      </div>
+    </article>
   );
 }
 
-const BRIEFING_STORAGE_KEY = "aqs_news_briefing";
-const BRIEFING_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
-
-interface BriefingCache {
-  summary: string;
-  generatedAt: number;
+function StoryCard({
+  article,
+  onAsk,
+}: {
+  article: NewsArticle;
+  onAsk: (article: NewsArticle) => void;
+}) {
+  return (
+    <article className="overflow-hidden rounded-[1.4rem] border-2 border-gray-900 bg-white neo-shadow transition hover:-translate-y-1 dark:border-gray-100 dark:bg-gray-900">
+      <div className="aspect-[16/9] overflow-hidden border-b-2 border-gray-900 dark:border-gray-100">
+        {article.thumbnail ? (
+          <img src={article.thumbnail} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <div className="flex h-full items-center justify-center bg-[var(--aqs-accent-soft)] dark:bg-[color:rgba(122,31,52,0.18)]">
+            <Newspaper className="h-9 w-9 text-[var(--aqs-accent)] dark:text-[var(--aqs-accent-dark)]" />
+          </div>
+        )}
+      </div>
+      <div className="space-y-4 p-4">
+        <ArticleMeta article={article} compact />
+        <div>
+          <h3 className="text-lg font-bold leading-tight text-gray-900 dark:text-white">{article.title}</h3>
+          <p className="mt-2 line-clamp-4 text-sm leading-6 text-gray-600 dark:text-gray-400">
+            {article.description}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2 text-xs font-mono uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">
+          {article.categories.slice(0, 3).map((category) => (
+            <span key={category} className="rounded-full bg-gray-100 px-2.5 py-1 dark:bg-gray-800">
+              {category}
+            </span>
+          ))}
+        </div>
+        <ArticleButtons article={article} onAsk={onAsk} />
+      </div>
+    </article>
+  );
 }
 
-function getCachedBriefing(): { summary: string; generatedAt: number } | null {
-  try {
-    const raw = localStorage.getItem(BRIEFING_STORAGE_KEY);
-    if (!raw) return null;
-    const cached: BriefingCache = JSON.parse(raw);
-    return cached;
-  } catch {
-    return null;
-  }
-}
-
-function setCachedBriefing(summary: string): void {
-  try {
-    const cache: BriefingCache = { summary, generatedAt: Date.now() };
-    localStorage.setItem(BRIEFING_STORAGE_KEY, JSON.stringify(cache));
-  } catch {
-    // localStorage unavailable
-  }
-}
-
-function isBriefingStale(generatedAt: number): boolean {
-  return Date.now() - generatedAt > BRIEFING_CACHE_TTL_MS;
+function BackgroundTaskBanner({ onReturn }: { onReturn: () => void }) {
+  return (
+    <div className="flex items-center justify-between gap-4 rounded-[1.4rem] border-2 border-amber-300 bg-amber-100 px-4 py-3 dark:border-amber-700 dark:bg-amber-900/20">
+      <div className="flex items-center gap-3">
+        <div className="h-5 w-5 rounded-full border-2 border-amber-600 border-t-transparent animate-spin dark:border-amber-400" />
+        <span className="text-sm font-medium text-amber-900 dark:text-amber-100">
+          Your earlier question is still running in the background.
+        </span>
+      </div>
+      <button
+        type="button"
+        onClick={onReturn}
+        className="inline-flex items-center gap-2 rounded-xl bg-amber-600 px-3 py-2 text-sm font-bold text-white hover:bg-amber-700"
+      >
+        View Answer
+        <ArrowRight className="h-4 w-4" />
+      </button>
+    </div>
+  );
 }
 
 export function NewsView({ initialQuery = "", onClose, onReturn, hasBackgroundTask }: NewsViewProps) {
   const [articles, setArticles] = useState<NewsArticle[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState(initialQuery);
   const [searchInput, setSearchInput] = useState(initialQuery);
   const [selectedSources, setSelectedSources] = useState<Set<string>>(new Set());
-  const [showFilters, setShowFilters] = useState(false);
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [showChat, setShowChat] = useState(false);
+  const [chatMessages, setChatMessages] = useState<Array<{ role: "user" | "tutor"; text: string }>>([]);
   const [chatInput, setChatInput] = useState("");
   const [isChatLoading, setIsChatLoading] = useState(false);
-  const [showChat, setShowChat] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
-  const prevMessagesLengthRef = useRef(0);
-
-  // Briefing state
-  const [briefingSummary, setBriefingSummary] = useState<string | null>(() => {
-    const cached = getCachedBriefing();
-    if (cached && !isBriefingStale(cached.generatedAt)) {
-      return cached.summary;
-    }
-    return null;
-  });
-  const [briefingGeneratedAt, setBriefingGeneratedAt] = useState<number | null>(() => {
-    const cached = getCachedBriefing();
-    return cached?.generatedAt ?? null;
-  });
-  const [isBriefingLoading, setIsBriefingLoading] = useState(false);
-  const [briefingError, setBriefingError] = useState<string | null>(null);
 
   const loadNews = useCallback(
     async (searchQuery: string, forceRefresh = false) => {
       setLoading(true);
       setError(null);
-      if (forceRefresh) setRefreshing(true);
+      if (forceRefresh) {
+        setRefreshing(true);
+      }
 
       try {
-        let news: NewsArticle[];
-        if (searchQuery.trim()) {
-          news = await fetchNewsForQuery(searchQuery);
-        } else {
-          news = await fetchAllNews();
-        }
-        setArticles(news);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load news");
+        const items = searchQuery.trim()
+          ? await fetchNewsForQuery(searchQuery.trim())
+          : await fetchAllNews();
+        const hydrated = await hydrateNewsArticles(items, 8);
+        setArticles(hydrated);
+      } catch (loadError) {
+        setError(loadError instanceof Error ? loadError.message : "Failed to load news.");
       } finally {
         setLoading(false);
         setRefreshing(false);
       }
     },
-    []
+    [],
   );
 
   useEffect(() => {
     void loadNews(query);
-  }, [query, loadNews]);
+  }, [loadNews, query]);
 
   useEffect(() => {
-    if (chatMessages.length > prevMessagesLengthRef.current) {
+    if (chatMessages.length > 0) {
       chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
-    prevMessagesLengthRef.current = chatMessages.length;
-  });
+  }, [chatMessages]);
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
+  const filteredArticles = useMemo(() => {
+    if (selectedSources.size === 0) {
+      return articles;
+    }
+    return articles.filter((article) => selectedSources.has(article.source));
+  }, [articles, selectedSources]);
+
+  const leadArticle = filteredArticles[0] || null;
+  const latestRail = filteredArticles.slice(1, 4);
+  const deckArticles = filteredArticles.slice(4);
+
+  const handleSearch = (event: React.FormEvent) => {
+    event.preventDefault();
     setQuery(searchInput);
   };
 
-  const handleSourceToggle = (source: string) => {
-    setSelectedSources((prev) => {
-      const next = new Set(prev);
-      if (next.has(source)) {
-        next.delete(source);
+  const toggleSource = (sourceName: string) => {
+    setSelectedSources((current) => {
+      const next = new Set(current);
+      if (next.has(sourceName)) {
+        next.delete(sourceName);
       } else {
-        next.add(source);
+        next.add(sourceName);
       }
       return next;
     });
   };
 
-  const generateBriefing = useCallback(async (articleList: NewsArticle[], forceRegenerate = false) => {
-    const cached = getCachedBriefing();
-    if (!forceRegenerate && cached && !isBriefingStale(cached.generatedAt)) {
-      setBriefingSummary(cached.summary);
-      setBriefingGeneratedAt(cached.generatedAt);
-      return;
-    }
-
-    setIsBriefingLoading(true);
-    setBriefingError(null);
-
-    try {
-      const topArticles = articleList.slice(0, 10);
-      const articlesSummary = topArticles.map((a, i) =>
-        `${i + 1}. "${a.title}" - ${a.source} (${formatDate(a.pubDate)}): ${a.description?.slice(0, 300) || ""}`
-      ).join("\n");
-
-      const briefingPrompt = `You are a news briefing assistant. Based on these articles from trusted sources (Straight Arrow News, Tangle, WSJ Tech, WSJ World News, WSJ US News, NewsNation, The Center Square), provide a 3-4 paragraph summary of the most important current events. Highlight the top 3-5 stories with brief analysis.
-
-Articles:
-${articlesSummary}
-
-Please provide a clear, balanced briefing that synthesizes these sources.`;
-
-      const summary = await chatWithTutor([], briefingPrompt);
-      setBriefingSummary(summary);
-      const now = Date.now();
-      setBriefingGeneratedAt(now);
-      setCachedBriefing(summary);
-    } catch (err) {
-      console.error("Briefing error:", err);
-      setBriefingError("Failed to generate briefing. Please try again.");
-    } finally {
-      setIsBriefingLoading(false);
-    }
-  }, []);
-
-  const handleAskAboutArticle = useCallback(async (article: NewsArticle) => {
-    if (isChatLoading || articles.length === 0) return;
-
-    const userMessage = `Tell me more about: "${article.title}"`;
-    setChatMessages((prev) => [...prev, { role: "user", text: userMessage }]);
-    setIsChatLoading(true);
-    setShowChat(true);
-
-    try {
-      // Prioritize the specific article being asked about
-      const askedArticleContext = `SPECIFIC ARTICLE USER IS ASKING ABOUT:
-"${article.title}" - ${article.source} (${formatDate(article.pubDate)})
-${article.description}
-
-`;
-
-      const otherArticles = articles.filter((a) => a.link !== article.link).slice(0, 4);
-      const otherContext = otherArticles.map((a, i) =>
-        `${i + 1}. "${a.title}" - ${a.source} (${formatDate(a.pubDate)}): ${a.description?.slice(0, 200) || ""}`
-      ).join("\n");
-
-      const combinedMessage = `You are a news assistant helping the user understand current events. Here are some of the latest headlines from trusted sources:
-
-${askedArticleContext}
-OTHER RECENT HEADLINES:
-${otherContext}
-
-Based on these articles, please answer the user's question below. Be informative, cite specific articles when relevant, and note if the articles don't cover the topic being asked about.
-
-User question: ${userMessage}`;
-
-      const reply = await chatWithTutor([], combinedMessage);
-      setChatMessages((prev) => [...prev, { role: "tutor", text: reply }]);
-    } catch (err) {
-      console.error("Chat error:", err);
-      setChatMessages((prev) => [
-        ...prev,
-        { role: "tutor", text: "Sorry, I couldn't process that. Please try again." },
-      ]);
-    } finally {
-      setIsChatLoading(false);
-    }
-  }, [isChatLoading, articles]);
-
-  const handleSendChat = useCallback(async () => {
-    if (!chatInput.trim() || isChatLoading || articles.length === 0) return;
-
-    const userMessage = chatInput.trim();
-    setChatInput("");
-    setChatMessages((prev) => [...prev, { role: "user", text: userMessage }]);
-    setIsChatLoading(true);
-    setShowChat(true);
-
-    try {
-      let contextArticles = articles.slice(0, 5);
-      let articleContext = contextArticles.map((a, i) =>
-        `${i + 1}. "${a.title}" - ${a.source} (${formatDate(a.pubDate)}): ${a.description?.slice(0, 200) || ""}`
-      ).join("\n");
-
-      const combinedMessage = `You are a news assistant helping the user understand current events. Here are some of the latest headlines from trusted sources:
-
-${articleContext}
-
-Based on these articles, please answer the user's question below. Be informative, cite specific articles when relevant, and note if the articles don't cover the topic being asked about.
-
-User question: ${userMessage}`;
-
-      const reply = await chatWithTutor([], combinedMessage);
-      setChatMessages((prev) => [...prev, { role: "tutor", text: reply }]);
-    } catch (err) {
-      console.error("Chat error:", err);
-      setChatMessages((prev) => [
-        ...prev,
-        { role: "tutor", text: "Sorry, I couldn't process that. Please try again." },
-      ]);
-    } finally {
-      setIsChatLoading(false);
-    }
-  }, [chatInput, isChatLoading, articles]);
-
-  // Send a pre-filled message (for suggested questions and per-article ask)
-  const sendPrefilledMessage = useCallback(async (message: string) => {
-    if (isChatLoading || articles.length === 0) return;
-
-    const userMessage = message.trim();
-    setChatMessages((prev) => [...prev, { role: "user", text: userMessage }]);
-    setIsChatLoading(true);
-    setShowChat(true);
-
-    try {
-      let contextArticles = articles.slice(0, 5);
-      let articleContext = contextArticles.map((a, i) =>
-        `${i + 1}. "${a.title}" - ${a.source} (${formatDate(a.pubDate)}): ${a.description?.slice(0, 200) || ""}`
-      ).join("\n");
-
-      // If message mentions a specific article, prioritize it
-      const articleMatch = userMessage.match(/article (\d+)/i);
-      if (articleMatch) {
-        const articleIndex = parseInt(articleMatch[1], 10) - 1;
-        const specificArticle = articles[articleIndex];
-        if (specificArticle) {
-          const askedArticleContext = `SPECIFIC ARTICLE USER IS ASKING ABOUT:
-"${specificArticle.title}" - ${specificArticle.source} (${formatDate(specificArticle.pubDate)})
-${specificArticle.description}
-
-`;
-          articleContext = askedArticleContext + "\nOTHER RECENT HEADLINES:\n" + articleContext;
-        }
+  const sendNewsQuestion = useCallback(
+    async (message: string, article?: NewsArticle) => {
+      if (!message.trim() || isChatLoading || filteredArticles.length === 0) {
+        return;
       }
 
-      const combinedMessage = `You are a news assistant helping the user understand current events. Here are some of the latest headlines from trusted sources:
+      const userMessage = message.trim();
+      setShowChat(true);
+      setChatMessages((prev) => [...prev, { role: "user", text: userMessage }]);
+      setIsChatLoading(true);
 
-${articleContext}
+      try {
+        const focusArticles = article
+          ? [article, ...filteredArticles.filter((item) => item.link !== article.link)]
+          : filteredArticles;
+        const context = buildNewsReasoningContext(focusArticles, query, 5);
+        const prompt = `You are analyzing current news from the app's curated RSS feeds.
 
-Based on these articles, please answer the user's question below. Be informative, cite specific articles when relevant, and note if the articles don't cover the topic being asked about.
+Use ONLY the articles below as your source base unless you explicitly state that the current feed set does not answer the question.
+Quote or reference the DIRECT ARTICLE URL when discussing a story.
+If a story has a primary source listed, mention it.
+Do not emit [ACTION: show_news]. Stay in analyst mode.
+Be concise, neutral, and truth-seeking.
 
-User question: ${userMessage}`;
+ARTICLES:
+${context}
 
-      const reply = await chatWithTutor([], combinedMessage);
-      setChatMessages((prev) => [...prev, { role: "tutor", text: reply }]);
-    } catch (err) {
-      console.error("Chat error:", err);
-      setChatMessages((prev) => [
-        ...prev,
-        { role: "tutor", text: "Sorry, I couldn't process that. Please try again." },
-      ]);
-    } finally {
-      setIsChatLoading(false);
-    }
-  }, [isChatLoading, articles]);
+USER QUESTION:
+${userMessage}`;
 
-  // Generate briefing when articles load (if not cached)
-  useEffect(() => {
-    if (!loading && articles.length > 0 && !briefingSummary && !isBriefingLoading) {
-      void generateBriefing(articles);
-    }
-  }, [loading, articles, briefingSummary, isBriefingLoading, generateBriefing]);
+        const reply = await chatWithTutor([], prompt);
+        setChatMessages((prev) => [...prev, { role: "tutor", text: reply }]);
+      } catch {
+        setChatMessages((prev) => [
+          ...prev,
+          {
+            role: "tutor",
+            text: "I couldn't process that news follow-up right now. Try again in a moment.",
+          },
+        ]);
+      } finally {
+        setIsChatLoading(false);
+      }
+    },
+    [filteredArticles, isChatLoading, query],
+  );
 
-  const filteredArticles =
-    selectedSources.size > 0
-      ? articles.filter((a) => selectedSources.has(a.source))
-      : articles;
+  const sourceSummary = useMemo(() => {
+    const loaded = new Set(filteredArticles.map((article) => article.source));
+    return NEWS_SOURCES.filter((source) => loaded.has(source.name));
+  }, [filteredArticles]);
 
   return (
-    <div className="min-h-screen animate-in fade-in duration-500 space-y-4">
-      {hasBackgroundTask && onReturn && <BackgroundTaskBanner onReturn={onReturn} />}
-      <div className="rounded-[2rem] border-2 border-gray-900 dark:border-gray-100 bg-white dark:bg-gray-900 neo-shadow overflow-hidden">
-        <div className="bg-gradient-to-r from-[var(--aqs-accent)] to-[var(--aqs-accent-strong)] p-6 md:p-8">
-          <div className="flex items-start justify-between gap-4 mb-4">
-            <div className="flex items-center gap-3">
-              {onReturn && (
-                <button
-                  type="button"
-                  onClick={onReturn}
-                  className="rounded-xl bg-white/20 p-2 text-white transition hover:bg-white/30"
-                  title="Back to answer"
-                >
-                  <ArrowLeft className="w-5 h-5" />
-                </button>
-              )}
-              <div className="rounded-xl bg-white/20 p-3">
-                <Newspaper className="w-8 h-8 text-white" />
+    <div className="space-y-5 animate-in fade-in duration-500">
+      {hasBackgroundTask && onReturn ? <BackgroundTaskBanner onReturn={onReturn} /> : null}
+
+      <section className="overflow-hidden rounded-[2.2rem] border-2 border-gray-900 bg-[linear-gradient(135deg,rgba(122,31,52,0.1),rgba(255,255,255,0.9))] neo-shadow dark:border-gray-100 dark:bg-[linear-gradient(135deg,rgba(122,31,52,0.24),rgba(10,14,25,0.96))]">
+        <div className="border-b-2 border-gray-900 px-5 py-5 dark:border-gray-100 md:px-7 dark:bg-transparent">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                {onReturn ? (
+                  <button
+                    type="button"
+                    onClick={onReturn}
+                    className="rounded-xl border-2 border-gray-900 bg-white p-2 text-gray-900 transition hover:-translate-y-0.5 dark:border-gray-100 dark:bg-gray-900 dark:text-gray-100"
+                    title="Back to answer"
+                  >
+                    <ArrowLeft className="h-5 w-5" />
+                  </button>
+                ) : null}
+                <div className="rounded-2xl border-2 border-gray-900 bg-[var(--aqs-accent)] p-3 text-white dark:border-gray-100">
+                  <Newspaper className="h-7 w-7" />
+                </div>
+                <div>
+                  <p className="text-xs font-mono font-bold uppercase tracking-[0.28em] text-[var(--aqs-accent-strong)] dark:text-[var(--aqs-accent-dark)]">
+                    Verified News Desk
+                  </p>
+                  <h1 className="mt-1 text-3xl font-black tracking-tight text-gray-900 dark:text-white md:text-4xl">
+                    Latest reporting, direct links, primary references.
+                  </h1>
+                </div>
               </div>
-              <div>
-                <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight">
-                  Latest News
-                </h1>
-                <p className="text-white/70 text-sm mt-1">
-                  Aggregated from trusted sources
-                </p>
-              </div>
+              <p className="max-w-3xl text-sm leading-6 text-gray-600 dark:text-gray-300 md:text-base">
+                This view only appears for news requests. It prioritizes the feeds you approved, keeps direct article links visible, and surfaces primary references when the feed or article metadata exposes them.
+              </p>
             </div>
-            <div className="flex items-center gap-2">
+
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
-                onClick={() => setShowChat(!showChat)}
-                className={`rounded-xl bg-white/20 p-3 text-white transition hover:bg-white/30 ${showChat ? "bg-white text-[var(--aqs-accent)]" : ""}`}
-                title="Chat about news"
+                onClick={() => setShowChat((value) => !value)}
+                className={`rounded-xl border-2 px-4 py-3 text-sm font-bold transition ${
+                  showChat
+                    ? "border-gray-900 bg-[var(--aqs-accent)] text-white dark:border-gray-100"
+                    : "border-gray-900 bg-white text-gray-900 hover:-translate-y-0.5 dark:border-gray-100 dark:bg-gray-900 dark:text-gray-100"
+                }`}
               >
-                <MessageCircle className="w-5 h-5" />
+                <MessageCircle className="mr-2 inline h-4 w-4" />
+                News Chat
               </button>
               <button
                 type="button"
                 onClick={() => void loadNews(query, true)}
                 disabled={refreshing}
-                className="rounded-xl bg-white/20 p-3 text-white transition hover:bg-white/30 disabled:opacity-50"
-                title="Refresh"
+                className="rounded-xl border-2 border-gray-900 bg-white px-4 py-3 text-sm font-bold text-gray-900 transition hover:-translate-y-0.5 dark:border-gray-100 dark:bg-gray-900 dark:text-gray-100"
               >
-                <RefreshCw className={`w-5 h-5 ${refreshing ? "animate-spin" : ""}`} />
+                <RefreshCw className={`mr-2 inline h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+                Refresh
               </button>
-              {onClose && (
+              {onClose ? (
                 <button
                   type="button"
                   onClick={onClose}
-                  className="rounded-xl bg-white/20 p-3 text-white transition hover:bg-white/30"
-                  title="Close"
+                  className="rounded-xl border-2 border-gray-900 bg-white px-4 py-3 text-sm font-bold text-gray-900 transition hover:-translate-y-0.5 dark:border-gray-100 dark:bg-gray-900 dark:text-gray-100"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="mr-2 inline h-4 w-4" />
+                  Close
                 </button>
-              )}
+              ) : null}
             </div>
           </div>
 
-          <form onSubmit={handleSearch} className="flex gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <form onSubmit={handleSearch} className="mt-6 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
+            <label className="relative block">
+              <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
                 value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                placeholder="Search news..."
-                className="w-full rounded-xl border-2 border-white/30 bg-white/10 pl-12 pr-4 py-3 text-white placeholder:text-white/60 focus:border-white focus:outline-none focus:ring-4 focus:ring-white/20"
+                onChange={(event) => setSearchInput(event.target.value)}
+                placeholder="Search this live news set..."
+                className="w-full rounded-[1.2rem] border-2 border-gray-900 bg-white py-3 pl-12 pr-4 text-gray-900 focus:border-[var(--aqs-accent)] focus:outline-none focus:ring-4 focus:ring-[color:rgba(122,31,52,0.18)] dark:border-gray-100 dark:bg-gray-900 dark:text-gray-100"
               />
-            </div>
+            </label>
             <button
               type="submit"
-              className="rounded-xl bg-white px-6 py-3 font-bold text-[var(--aqs-accent)] transition hover:-translate-y-0.5 hover:neo-shadow-sm"
+              className="rounded-[1.2rem] border-2 border-gray-900 bg-[var(--aqs-accent)] px-5 py-3 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-[var(--aqs-accent-strong)] dark:border-gray-100"
             >
-              Search
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowFilters(!showFilters)}
-              className={`rounded-xl px-4 py-3 font-bold transition hover:-translate-y-0.5 hover:neo-shadow-sm ${
-                showFilters ? "bg-white text-[var(--aqs-accent)]" : "bg-white/20 text-white"
-              }`}
-            >
-              <Filter className="w-5 h-5" />
+              Search News
             </button>
           </form>
 
-          {showFilters && (
-            <div className="mt-4 pt-4 border-t border-white/20">
-              <div className="flex items-center gap-2 mb-3">
-                <Rss className="w-4 h-4 text-white/70" />
-                <span className="text-sm text-white/70 font-medium">Filter by source:</span>
-              </div>
-              <SourceFilter selectedSources={selectedSources} onToggle={handleSourceToggle} />
-            </div>
-          )}
-        </div>
-
-        <div className="p-4 md:p-6">
-          {loading ? (
-            <div className="flex flex-col items-center justify-center py-20 gap-4">
-              <Loader2 className="w-10 h-10 animate-spin text-[var(--aqs-accent)]" />
-              <p className="text-gray-600 dark:text-gray-400 font-medium">
-                Loading latest news...
-              </p>
-            </div>
-          ) : error ? (
-            <div className="flex flex-col items-center justify-center py-20 gap-4">
-              <p className="text-gray-600 dark:text-gray-400 font-medium">{error}</p>
-              <button
-                type="button"
-                onClick={() => void loadNews(query, true)}
-                className="inline-flex items-center gap-2 rounded-xl border-2 border-gray-900 bg-white px-4 py-2 font-bold text-gray-900 transition hover:-translate-y-0.5 hover:bg-gray-50 neo-shadow-sm dark:border-gray-100 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
-              >
-                <RefreshCw className="w-4 h-4" />
-                Try Again
-              </button>
-            </div>
-          ) : filteredArticles.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 gap-4">
-              <Newspaper className="w-12 h-12 text-gray-400" />
-              <p className="text-gray-600 dark:text-gray-400 font-medium">
-                No articles found. Try adjusting your filters.
-              </p>
-            </div>
-          ) : (
-            <>
-              {/* AI World Briefing Section */}
-              {(briefingSummary || isBriefingLoading || briefingError) && (
-                <div className="mb-8">
-                  <div className="rounded-[1.4rem] border-2 border-gray-900 dark:border-gray-100 bg-[var(--aqs-accent-soft)] dark:bg-[color:rgba(122,31,52,0.18)] p-5 md:p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className="rounded-lg bg-[var(--aqs-accent)] p-2">
-                          <Globe className="w-5 h-5 text-white" />
-                        </div>
-                        <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-                          AI World Briefing
-                        </h2>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => void generateBriefing(articles, true)}
-                        disabled={isBriefingLoading}
-                        className="flex items-center gap-2 rounded-lg bg-[var(--aqs-accent)] px-3 py-1.5 text-sm font-bold text-white transition hover:bg-[var(--aqs-accent-strong)] disabled:opacity-50"
-                      >
-                        <RefreshCw className={`w-4 h-4 ${isBriefingLoading ? "animate-spin" : ""}`} />
-                        Regenerate
-                      </button>
-                    </div>
-
-                    {isBriefingLoading ? (
-                      <div className="flex items-center gap-3 py-4">
-                        <Loader2 className="w-6 h-6 animate-spin text-[var(--aqs-accent)]" />
-                        <span className="text-gray-600 dark:text-gray-400">Generating briefing...</span>
-                      </div>
-                    ) : briefingError ? (
-                      <p className="text-red-600 dark:text-red-400">{briefingError}</p>
-                    ) : briefingSummary ? (
-                      <div className="prose prose-sm prose-gray max-w-none dark:prose-invert">
-                        <RichResponse text={briefingSummary} compact />
-                      </div>
-                    ) : null}
-
-                    {briefingGeneratedAt && !isBriefingLoading && !briefingError && (
-                      <p className="mt-3 text-xs font-mono text-gray-500 dark:text-gray-400">
-                        Updated {formatDate(new Date(briefingGeneratedAt).toISOString())}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Suggested Questions */}
-              <div className="mb-6">
-                <div className="flex items-center gap-2 mb-3">
-                  <MessageCircle className="w-4 h-4 text-[var(--aqs-accent)] dark:text-[var(--aqs-accent-dark)]" />
-                  <span className="text-sm font-bold text-gray-900 dark:text-white">Ask About the News</span>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    "Summarize the top stories",
-                    "What's the main topic today?",
-                    ...articles.slice(0, 3).map((a, i) => `Tell me about article ${i + 1}`),
-                  ].map((suggestion) => (
-                    <button
-                      key={suggestion}
-                      type="button"
-                      onClick={() => void sendPrefilledMessage(suggestion)}
-                      disabled={isChatLoading}
-                      className="rounded-xl border-2 border-gray-900 dark:border-gray-100 bg-white dark:bg-gray-900 px-4 py-2 text-sm font-medium text-gray-900 dark:text-gray-100 transition hover:bg-gray-50 dark:hover:bg-gray-800 hover:-translate-y-0.5 hover:neo-shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {suggestion}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Article count and grid */}
-              <div className="flex items-center justify-between mb-4">
-                <p className="text-sm font-mono text-gray-600 dark:text-gray-400">
-                  {filteredArticles.length} article{filteredArticles.length !== 1 ? "s" : ""}
-                  {selectedSources.size > 0 && ` from ${selectedSources.size} source${selectedSources.size !== 1 ? "s" : ""}`}
-                </p>
-                {selectedSources.size > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setSelectedSources(new Set())}
-                    className="text-sm text-[var(--aqs-accent)] dark:text-[var(--aqs-accent-dark)] hover:underline"
-                  >
-                    Clear filters
-                  </button>
-                )}
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {filteredArticles.map((article, index) => (
-                  <ArticleCard key={`${article.link}-${index}`} article={article} index={index} onAsk={handleAskAboutArticle} />
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-950">
-          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs font-mono text-gray-500 dark:text-gray-400">
-            <span>Sources:</span>
+          <div className="mt-4 flex flex-wrap gap-2">
             {NEWS_SOURCES.map((source) => (
-              <a
+              <SourceToggle
                 key={source.name}
-                href={source.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-[var(--aqs-accent)] dark:hover:text-[var(--aqs-accent-dark)] underline"
-              >
-                {source.name}
-              </a>
+                active={selectedSources.has(source.name)}
+                label={source.name}
+                onClick={() => toggleSource(source.name)}
+              />
             ))}
           </div>
         </div>
-      </div>
 
-      {showChat && (
-        <div className="rounded-[2rem] border-2 border-gray-900 dark:border-gray-100 bg-white dark:bg-gray-900 neo-shadow overflow-hidden">
-          <div className="bg-[var(--aqs-accent-soft)] dark:bg-[color:rgba(122,31,52,0.18)] border-b-2 border-gray-900 dark:border-gray-100 p-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-[var(--aqs-accent)] p-2">
-                <MessageCircle className="w-5 h-5 text-white" />
+        <div className="p-5 md:p-7">
+          {loading ? (
+            <div className="flex min-h-[280px] flex-col items-center justify-center gap-4">
+              <Loader2 className="h-10 w-10 animate-spin text-[var(--aqs-accent)]" />
+              <p className="text-gray-600 dark:text-gray-300">Loading the latest approved feeds...</p>
+            </div>
+          ) : error ? (
+            <div className="flex min-h-[280px] flex-col items-center justify-center gap-4 rounded-[1.4rem] border-2 border-gray-900 bg-white p-6 dark:border-gray-100 dark:bg-gray-900">
+              <p className="text-center text-gray-700 dark:text-gray-300">{error}</p>
+              <button
+                type="button"
+                onClick={() => void loadNews(query, true)}
+                className="rounded-xl border-2 border-gray-900 bg-[var(--aqs-accent)] px-4 py-2 font-bold text-white dark:border-gray-100"
+              >
+                Try Again
+              </button>
+            </div>
+          ) : filteredArticles.length === 0 || !leadArticle ? (
+            <div className="flex min-h-[280px] flex-col items-center justify-center gap-4 rounded-[1.4rem] border-2 border-gray-900 bg-white p-6 dark:border-gray-100 dark:bg-gray-900">
+              <Newspaper className="h-10 w-10 text-gray-400" />
+              <p className="text-center text-gray-600 dark:text-gray-300">
+                No articles matched that filter. Try another query or clear some source toggles.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-8">
+              <div className="grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_360px]">
+                <LeadStory article={leadArticle} onAsk={(article) => void sendNewsQuestion(`Explain this story: ${article.title}`, article)} />
+
+                <aside className="space-y-4">
+                  <div className="rounded-[1.4rem] border-2 border-gray-900 bg-white p-4 neo-shadow-sm dark:border-gray-100 dark:bg-gray-900">
+                    <p className="text-xs font-mono font-bold uppercase tracking-[0.28em] text-[var(--aqs-accent-strong)] dark:text-[var(--aqs-accent-dark)]">
+                      Latest Desk
+                    </p>
+                    <div className="mt-4 space-y-3">
+                      {latestRail.map((article) => (
+                        <LatestStory key={article.link} article={article} onAsk={(selectedArticle) => void sendNewsQuestion(`What matters most in this article?`, selectedArticle)} />
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="rounded-[1.4rem] border-2 border-gray-900 bg-white p-4 neo-shadow-sm dark:border-gray-100 dark:bg-gray-900">
+                    <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-[0.28em] text-[var(--aqs-accent-strong)] dark:text-[var(--aqs-accent-dark)]">
+                      <Rss className="h-4 w-4" />
+                      Feed Status
+                    </div>
+                    <div className="mt-4 space-y-3 text-sm text-gray-700 dark:text-gray-300">
+                      <p>
+                        Showing <strong>{filteredArticles.length}</strong> current article{filteredArticles.length === 1 ? "" : "s"}.
+                      </p>
+                      <p>
+                        Active outlets:{" "}
+                        <span className="font-medium">{sourceSummary.map((source) => source.name).join(", ")}</span>
+                      </p>
+                      <p className="text-xs font-mono uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">
+                        Every card links to the direct article. Primary-source buttons appear when the feed or article metadata exposes them.
+                      </p>
+                    </div>
+                  </div>
+                </aside>
               </div>
-              <div>
-                <p className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--aqs-accent-strong)] dark:text-[var(--aqs-accent-dark)]">
-                  News Assistant
-                </p>
-                <p className="text-xs text-gray-600 dark:text-gray-400">
-                  Ask about the latest news
-                </p>
-              </div>
+
+              {deckArticles.length > 0 ? (
+                <div>
+                  <div className="mb-4 flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-xs font-mono font-bold uppercase tracking-[0.28em] text-[var(--aqs-accent-strong)] dark:text-[var(--aqs-accent-dark)]">
+                        More Coverage
+                      </p>
+                      <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
+                        Additional stories from the same approved feed set.
+                      </p>
+                    </div>
+                    {selectedSources.size > 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedSources(new Set())}
+                        className="text-sm font-bold text-[var(--aqs-accent-strong)] hover:underline dark:text-[var(--aqs-accent-dark)]"
+                      >
+                        Clear filters
+                      </button>
+                    ) : null}
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    {deckArticles.map((article) => (
+                      <StoryCard key={article.link} article={article} onAsk={(selectedArticle) => void sendNewsQuestion(`Give me the essentials on this article.`, selectedArticle)} />
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {showChat ? (
+        <section className="overflow-hidden rounded-[2rem] border-2 border-gray-900 bg-white neo-shadow dark:border-gray-100 dark:bg-gray-900">
+          <div className="flex items-center justify-between border-b-2 border-gray-900 bg-[var(--aqs-accent-soft)] px-4 py-4 dark:border-gray-100 dark:bg-[color:rgba(122,31,52,0.14)]">
+            <div>
+              <p className="text-xs font-mono font-bold uppercase tracking-[0.28em] text-[var(--aqs-accent-strong)] dark:text-[var(--aqs-accent-dark)]">
+                News Chat
+              </p>
+              <p className="mt-1 text-sm text-gray-700 dark:text-gray-300">
+                Ask for comparisons, timelines, or what the direct reporting actually says.
+              </p>
             </div>
             <button
               type="button"
               onClick={() => setShowChat(false)}
-              className="rounded-lg p-2 text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 transition"
+              className="rounded-xl border-2 border-gray-900 bg-white p-2 text-gray-900 dark:border-gray-100 dark:bg-gray-900 dark:text-gray-100"
             >
-              <X className="w-5 h-5" />
+              <X className="h-5 w-5" />
             </button>
           </div>
 
-          <div className="p-4 md:p-6 max-h-[400px] overflow-y-auto space-y-4">
-            {chatMessages.length === 0 && (
-              <div className="text-center py-8">
-                <MessageCircle className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
-                <p className="text-gray-500 dark:text-gray-400 text-sm">
-                  Ask me about the news!
+          <div className="space-y-4 p-4 md:p-6">
+            {chatMessages.length === 0 ? (
+              <div className="rounded-[1.4rem] border-2 border-dashed border-gray-300 px-4 py-8 text-center dark:border-gray-700">
+                <MessageCircle className="mx-auto h-10 w-10 text-gray-300 dark:text-gray-600" />
+                <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">
+                  Try: “Compare the lead story with the second one,” or “What is the direct source behind this report?”
                 </p>
-                <div className="mt-4 flex flex-wrap justify-center gap-2">
-                  {[
-                    "Summarize the top stories",
-                    "What are the main topics today?",
-                    "Tell me more about the first article",
-                  ].map((suggestion) => (
-                    <button
-                      key={suggestion}
-                      type="button"
-                      onClick={() => setChatInput(suggestion)}
-                      className="rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-xs text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+              </div>
+            ) : (
+              <div className="max-h-[460px] space-y-4 overflow-y-auto">
+                {chatMessages.map((message, index) => (
+                  <div key={`${message.role}-${index}`} className={message.role === "user" ? "flex justify-end" : "flex justify-start"}>
+                    <div
+                      className={`max-w-[88%] rounded-[1.4rem] border-2 px-4 py-3 ${
+                        message.role === "user"
+                          ? "border-gray-900 bg-[var(--aqs-accent)] text-white dark:border-gray-100"
+                          : "border-gray-900 bg-white text-gray-900 dark:border-gray-100 dark:bg-gray-900 dark:text-gray-100"
+                      }`}
                     >
-                      {suggestion}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {chatMessages.map((message, index) => (
-              <div
-                key={`${index}-${message.role}`}
-                className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
-              >
-                <div
-                  className={`max-w-[85%] rounded-2xl px-4 py-3 ${
-                    message.role === "user"
-                      ? "bg-[var(--aqs-accent)] text-white neo-shadow-sm"
-                      : "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-2 border-gray-900 dark:border-gray-100"
-                  }`}
-                >
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.text}</p>
-                </div>
-              </div>
-            ))}
-
-            {isChatLoading && (
-              <div className="flex justify-start">
-                <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl px-4 py-3 border-2 border-gray-900 dark:border-gray-100">
-                  <div className="flex items-center gap-2">
-                    <div className="flex gap-1">
-                      <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                      <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                      <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                      {message.role === "tutor" ? <RichResponse text={message.text} compact /> : <p className="text-sm leading-7">{message.text}</p>}
                     </div>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">Thinking...</span>
                   </div>
-                </div>
+                ))}
+                {isChatLoading ? (
+                  <div className="flex justify-start">
+                    <div className="rounded-[1.4rem] border-2 border-gray-900 bg-white px-4 py-3 dark:border-gray-100 dark:bg-gray-900">
+                      <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Thinking through the feed set...
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+                <div ref={chatEndRef} />
               </div>
             )}
 
-            <div ref={chatEndRef} />
-          </div>
+            <div className="flex flex-wrap gap-2">
+              {[
+                "Summarize the top stories.",
+                "Which article has the strongest direct sourcing?",
+                "What changed in the last 24 hours?",
+              ].map((suggestion) => (
+                <button
+                  key={suggestion}
+                  type="button"
+                  onClick={() => {
+                    setChatInput(suggestion);
+                    void sendNewsQuestion(suggestion);
+                  }}
+                  disabled={isChatLoading || filteredArticles.length === 0}
+                  className="rounded-full border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:border-[var(--aqs-accent)] hover:text-[var(--aqs-accent-strong)] dark:border-gray-700 dark:text-gray-300"
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
 
-          <div className="p-4 border-t-2 border-gray-900 dark:border-gray-100">
             <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                void handleSendChat();
+              onSubmit={(event) => {
+                event.preventDefault();
+                const message = chatInput.trim();
+                if (!message) return;
+                setChatInput("");
+                void sendNewsQuestion(message);
               }}
               className="flex gap-2"
             >
               <input
                 type="text"
                 value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                placeholder="Ask about the news..."
-                disabled={isChatLoading || articles.length === 0}
-                className="flex-1 rounded-xl border-2 border-gray-900 dark:border-gray-100 bg-white dark:bg-gray-800 px-4 py-3 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:border-[var(--aqs-accent)] focus:outline-none focus:ring-4 focus:ring-[color:rgba(122,31,52,0.18)] disabled:opacity-50"
+                onChange={(event) => setChatInput(event.target.value)}
+                placeholder="Ask about the articles above..."
+                disabled={isChatLoading}
+                className="flex-1 rounded-[1.2rem] border-2 border-gray-900 bg-white px-4 py-3 text-gray-900 focus:border-[var(--aqs-accent)] focus:outline-none focus:ring-4 focus:ring-[color:rgba(122,31,52,0.18)] disabled:opacity-50 dark:border-gray-100 dark:bg-gray-900 dark:text-gray-100"
               />
               <button
                 type="submit"
-                disabled={!chatInput.trim() || isChatLoading || articles.length === 0}
-                className="rounded-xl bg-[var(--aqs-accent)] px-4 py-3 text-white transition hover:-translate-y-0.5 hover:neo-shadow disabled:opacity-50 disabled:transform-none"
+                disabled={!chatInput.trim() || isChatLoading}
+                className="rounded-[1.2rem] border-2 border-gray-900 bg-[var(--aqs-accent)] px-4 py-3 text-white transition hover:-translate-y-0.5 disabled:opacity-50 dark:border-gray-100"
               >
-                <Send className="w-5 h-5" />
+                <Send className="h-5 w-5" />
               </button>
             </form>
           </div>
-        </div>
-      )}
+        </section>
+      ) : null}
     </div>
   );
 }

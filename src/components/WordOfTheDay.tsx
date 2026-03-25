@@ -1,9 +1,19 @@
-import { useEffect, useState, useCallback, useRef } from "react";
-import { BookOpen, RefreshCw, ExternalLink, Loader2, Send, MessageCircle, ArrowLeft, ArrowRight } from "lucide-react";
-import { getWordOfTheDay, type WordOfTheDay as WotdType } from "../services/wotd";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  BookOpen,
+  ExternalLink,
+  Loader2,
+  MessageCircle,
+  RefreshCw,
+  Send,
+  Volume2,
+} from "lucide-react";
+
 import { chatWithTutor } from "../services/gemini";
-import { stripSolutionClientArtifacts } from "../utils/solution";
-import type { ChatMessage } from "../types";
+import { getWordOfTheDay, type WordOfTheDay as WotdType } from "../services/wotd";
+import { RichResponse } from "./RichResponse";
 
 interface WordOfTheDayProps {
   onClose?: () => void;
@@ -15,23 +25,26 @@ export function WordOfTheDay({ onClose, onReturn }: WordOfTheDayProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [showAskPanel, setShowAskPanel] = useState(false);
+  const [chatMessages, setChatMessages] = useState<Array<{ role: "user" | "tutor"; text: string }>>([]);
   const [chatInput, setChatInput] = useState("");
   const [isChatLoading, setIsChatLoading] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
-  const prevMessagesLengthRef = useRef(0);
 
   const loadWotd = useCallback(async (forceRefresh = false) => {
     setLoading(true);
     setError(null);
-    if (forceRefresh) setRefreshing(true);
+    if (forceRefresh) {
+      setRefreshing(true);
+    }
 
     try {
-      const word = await getWordOfTheDay(forceRefresh);
-      setWotd(word);
+      const nextWord = await getWordOfTheDay(forceRefresh);
+      setWotd(nextWord);
       setChatMessages([]);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load word of the day");
+      setShowAskPanel(false);
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Failed to load word of the day.");
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -43,14 +56,24 @@ export function WordOfTheDay({ onClose, onReturn }: WordOfTheDayProps) {
   }, [loadWotd]);
 
   useEffect(() => {
-    if (chatMessages.length > prevMessagesLengthRef.current) {
+    if (chatMessages.length > 0) {
       chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
-    prevMessagesLengthRef.current = chatMessages.length;
-  });
+  }, [chatMessages]);
 
-  const handleSendChat = useCallback(async () => {
-    if (!wotd || !chatInput.trim() || isChatLoading) return;
+  const formattedDate = wotd
+    ? new Date(wotd.date).toLocaleDateString("en-US", {
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      })
+    : "";
+
+  const handleAsk = useCallback(async () => {
+    if (!wotd || !chatInput.trim() || isChatLoading) {
+      return;
+    }
 
     const userMessage = chatInput.trim();
     setChatInput("");
@@ -58,42 +81,40 @@ export function WordOfTheDay({ onClose, onReturn }: WordOfTheDayProps) {
     setIsChatLoading(true);
 
     try {
-      const wotdContext = `You are helping the user learn about today's Word of the Day: "${wotd.word}".
+      const prompt = `You are helping the user learn today's Merriam-Webster word of the day.
 
-Word of the Day Details:
-- Word: ${wotd.word}
-- Pronunciation: ${wotd.phonetic || "N/A"}
-- Part of Speech: ${wotd.partOfSpeech || "N/A"}
-- Definition: ${wotd.definition}
-${wotd.example ? `- Example: ${wotd.example}` : ""}
-- Source: ${wotd.sourceUrl}
+Word: ${wotd.word}
+Pronunciation: ${wotd.phonetic || "N/A"}
+Part of speech: ${wotd.partOfSpeech || "N/A"}
+Definition: ${wotd.definition}
+${wotd.example ? `Example: ${wotd.example}` : ""}
+Source: ${wotd.sourceUrl}
 
-Please answer any questions the user has about this word, its meaning, usage, etymology, or related concepts. Be informative and educational.`;
+Answer the user's question directly. Stay focused on understanding, usage, nuance, or etymology.`;
 
-      const history: ChatMessage[] = [
-        { role: "user", text: "Please help me understand this word." },
-        { role: "tutor", text: wotdContext },
-        { role: "user", text: userMessage },
-      ];
-
-      const reply = await chatWithTutor(history.slice(0, -1), userMessage);
+      const reply = await chatWithTutor([], `${prompt}\n\nUser question: ${userMessage}`);
       setChatMessages((prev) => [...prev, { role: "tutor", text: reply }]);
-    } catch (err) {
+    } catch {
       setChatMessages((prev) => [
         ...prev,
-        { role: "tutor", text: "Sorry, I couldn't process that. Please try again." },
+        { role: "tutor", text: "I couldn't answer that right now. Please try again." },
       ]);
     } finally {
       setIsChatLoading(false);
     }
-  }, [wotd, chatInput, isChatLoading]);
+  }, [chatInput, isChatLoading, wotd]);
+
+  const playAudio = () => {
+    if (!wotd?.audioUrl) return;
+    new Audio(wotd.audioUrl).play().catch(() => {});
+  };
 
   if (loading) {
     return (
-      <div className="rounded-[2rem] border-2 border-gray-900 dark:border-gray-100 bg-white dark:bg-gray-900 neo-shadow overflow-hidden">
-        <div className="p-8 flex flex-col items-center justify-center min-h-[200px] gap-4">
-          <Loader2 className="w-8 h-8 animate-spin text-[var(--aqs-accent)]" />
-          <p className="text-gray-600 dark:text-gray-400 font-medium">Loading word of the day...</p>
+      <div className="rounded-[2rem] border-2 border-gray-900 bg-white neo-shadow dark:border-gray-100 dark:bg-gray-900">
+        <div className="flex min-h-[220px] flex-col items-center justify-center gap-4 p-8">
+          <Loader2 className="h-8 w-8 animate-spin text-[var(--aqs-accent)]" />
+          <p className="text-gray-600 dark:text-gray-300">Loading word of the day...</p>
         </div>
       </div>
     );
@@ -101,17 +122,14 @@ Please answer any questions the user has about this word, its meaning, usage, et
 
   if (error || !wotd) {
     return (
-      <div className="rounded-[2rem] border-2 border-gray-900 dark:border-gray-100 bg-white dark:bg-gray-900 neo-shadow overflow-hidden">
-        <div className="p-8 flex flex-col items-center justify-center min-h-[200px] gap-4">
-          <p className="text-gray-600 dark:text-gray-400 font-medium">
-            {error || "Failed to load word of the day"}
-          </p>
+      <div className="rounded-[2rem] border-2 border-gray-900 bg-white neo-shadow dark:border-gray-100 dark:bg-gray-900">
+        <div className="flex min-h-[220px] flex-col items-center justify-center gap-4 p-8">
+          <p className="text-center text-gray-700 dark:text-gray-300">{error || "Failed to load word of the day."}</p>
           <button
             type="button"
             onClick={() => void loadWotd(true)}
-            className="inline-flex items-center gap-2 rounded-xl border-2 border-gray-900 bg-white px-4 py-2 font-bold text-gray-900 transition hover:-translate-y-0.5 hover:bg-gray-50 neo-shadow-sm dark:border-gray-100 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
+            className="rounded-xl border-2 border-gray-900 bg-[var(--aqs-accent)] px-4 py-2 font-bold text-white dark:border-gray-100"
           >
-            <RefreshCw className="w-4 h-4" />
             Try Again
           </button>
         </div>
@@ -119,248 +137,233 @@ Please answer any questions the user has about this word, its meaning, usage, et
     );
   }
 
-  const formattedDate = new Date(wotd.date).toLocaleDateString("en-US", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-
   return (
-    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {onReturn && (
-        <div className="bg-amber-100 dark:bg-amber-900/30 border-2 border-amber-300 dark:border-amber-700 rounded-xl px-4 py-3 flex items-center justify-between">
+    <div className="space-y-4 animate-in fade-in duration-500">
+      {onReturn ? (
+        <div className="flex items-center justify-between gap-4 rounded-[1.4rem] border-2 border-amber-300 bg-amber-100 px-4 py-3 dark:border-amber-700 dark:bg-amber-900/20">
           <div className="flex items-center gap-3">
-            <div className="w-5 h-5 border-2 border-amber-600 dark:border-amber-400 border-t-transparent rounded-full animate-spin" />
+            <div className="h-5 w-5 rounded-full border-2 border-amber-600 border-t-transparent animate-spin dark:border-amber-400" />
             <span className="text-sm font-medium text-amber-900 dark:text-amber-100">
-              Your question is being answered in the background
+              Your earlier question is still running in the background.
             </span>
           </div>
           <button
             type="button"
             onClick={onReturn}
-            className="flex items-center gap-2 rounded-lg bg-amber-600 text-white px-3 py-1.5 text-sm font-bold hover:bg-amber-700 transition"
+            className="inline-flex items-center gap-2 rounded-xl bg-amber-600 px-3 py-2 text-sm font-bold text-white hover:bg-amber-700"
           >
-            <span>View Answer</span>
-            <ArrowRight className="w-4 h-4" />
+            View Answer
+            <ArrowRight className="h-4 w-4" />
           </button>
         </div>
-      )}
-      <div className="rounded-[2rem] border-2 border-gray-900 dark:border-gray-100 bg-white dark:bg-gray-900 neo-shadow overflow-hidden">
-        <div className="bg-amber-50 dark:bg-amber-900/20 border-b-2 border-gray-900 dark:border-gray-100 p-4 flex items-center justify-between">
+      ) : null}
+
+      <section className="overflow-hidden rounded-[2rem] border-2 border-gray-900 bg-white neo-shadow dark:border-gray-100 dark:bg-gray-900">
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b-2 border-gray-900 bg-[var(--aqs-accent-soft)] px-5 py-4 dark:border-gray-100 dark:bg-[color:rgba(122,31,52,0.14)]">
           <div className="flex items-center gap-3">
-            {onReturn && (
+            {onReturn ? (
               <button
                 type="button"
                 onClick={onReturn}
-                className="rounded-lg bg-[var(--aqs-accent)] p-2 text-white hover:bg-[var(--aqs-accent-strong)] transition"
+                className="rounded-xl border-2 border-gray-900 bg-white p-2 text-gray-900 dark:border-gray-100 dark:bg-gray-900 dark:text-gray-100"
                 title="Back to answer"
               >
-                <ArrowLeft className="w-5 h-5" />
+                <ArrowLeft className="h-5 w-5" />
               </button>
-            )}
-            <div className="rounded-lg bg-[var(--aqs-accent)] p-2">
-              <BookOpen className="w-5 h-5 text-white" />
+            ) : null}
+            <div className="rounded-xl border-2 border-gray-900 bg-[var(--aqs-accent)] p-2 text-white dark:border-gray-100">
+              <BookOpen className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--aqs-accent-strong)] dark:text-[var(--aqs-accent-dark)]">
+              <p className="text-xs font-mono font-bold uppercase tracking-[0.28em] text-[var(--aqs-accent-strong)] dark:text-[var(--aqs-accent-dark)]">
                 Word of the Day
               </p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">{formattedDate}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-300">{formattedDate}</p>
             </div>
           </div>
+
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => void loadWotd(true)}
               disabled={refreshing}
-              className="rounded-lg p-2 text-gray-600 hover:bg-gray-100 hover:text-[var(--aqs-accent)] dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-[var(--aqs-accent-dark)] transition disabled:opacity-50"
-              title="Refresh"
+              className="rounded-xl border-2 border-gray-900 bg-white px-3 py-2 text-sm font-bold text-gray-900 transition hover:-translate-y-0.5 dark:border-gray-100 dark:bg-gray-900 dark:text-gray-100"
             >
-              <RefreshCw className={`w-5 h-5 ${refreshing ? "animate-spin" : ""}`} />
+              <RefreshCw className={`mr-2 inline h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+              Refresh
             </button>
-            {onClose && (
+            {onClose ? (
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-lg px-3 py-1 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 transition"
+                className="rounded-xl border-2 border-gray-900 bg-white px-3 py-2 text-sm font-bold text-gray-900 transition hover:-translate-y-0.5 dark:border-gray-100 dark:bg-gray-900 dark:text-gray-100"
               >
                 Close
               </button>
-            )}
+            ) : null}
           </div>
         </div>
 
-        <div className="p-6 md:p-8">
-          <div className="flex items-start justify-between gap-4 mb-6">
-            <div className="flex-1">
-              <h2 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white tracking-tight">
+        <div className="space-y-6 p-6 md:p-8">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h2 className="text-4xl font-black tracking-tight text-gray-900 dark:text-white md:text-5xl">
                 {wotd.word}
               </h2>
-              {(wotd.phonetic || wotd.partOfSpeech) && (
-                <div className="flex items-center gap-3 mt-2">
-                  {wotd.phonetic && (
-                    <span className="font-mono text-lg text-gray-500 dark:text-gray-400">
-                      /{wotd.phonetic}/
-                    </span>
-                  )}
-                  {wotd.partOfSpeech && (
-                    <span className="inline-block rounded bg-[var(--aqs-accent)]/10 px-2 py-1 text-xs font-mono font-bold uppercase text-[var(--aqs-accent-strong)] dark:text-[var(--aqs-accent-dark)]">
-                      {wotd.partOfSpeech}
-                    </span>
-                  )}
-                </div>
-              )}
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                {wotd.phonetic ? (
+                  <span className="font-mono text-lg text-gray-500 dark:text-gray-400">
+                    /{wotd.phonetic}/
+                  </span>
+                ) : null}
+                {wotd.partOfSpeech ? (
+                  <span className="rounded-full border border-[var(--aqs-accent)] bg-[var(--aqs-accent-soft)] px-3 py-1 text-xs font-mono font-bold uppercase tracking-[0.2em] text-[var(--aqs-accent-strong)] dark:bg-[color:rgba(122,31,52,0.18)] dark:text-[var(--aqs-accent-dark)]">
+                    {wotd.partOfSpeech}
+                  </span>
+                ) : null}
+                {wotd.audioUrl ? (
+                  <button
+                    type="button"
+                    onClick={playAudio}
+                    className="inline-flex items-center gap-2 rounded-full border-2 border-gray-900 bg-white px-3 py-2 text-sm font-bold text-gray-900 dark:border-gray-100 dark:bg-gray-900 dark:text-gray-100"
+                  >
+                    <Volume2 className="h-4 w-4" />
+                    Listen
+                  </button>
+                ) : null}
+              </div>
             </div>
+
             <a
               href={wotd.sourceUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-xl border-2 border-gray-900 bg-white px-3 py-2 font-bold text-gray-900 transition hover:-translate-y-0.5 hover:bg-gray-50 neo-shadow-sm dark:border-gray-100 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700 flex-shrink-0"
-              title="View on Merriam-Webster"
+              className="inline-flex items-center gap-2 rounded-xl border-2 border-gray-900 bg-white px-4 py-3 text-sm font-bold text-gray-900 transition hover:-translate-y-0.5 dark:border-gray-100 dark:bg-gray-900 dark:text-gray-100"
             >
-              <ExternalLink className="w-4 h-4" />
-              <span className="sr-only md:not-sr-only">Source</span>
+              Merriam-Webster
+              <ExternalLink className="h-4 w-4" />
             </a>
           </div>
 
-          <div className="space-y-4">
-            <div className="rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-4">
-              <p className="text-lg md:text-xl text-gray-900 dark:text-gray-100 leading-relaxed font-medium">
-                {wotd.definition}
-              </p>
-            </div>
-
-            {wotd.example && (
-              <div className="pl-4 border-l-4 border-[var(--aqs-accent)]">
-                <p className="text-gray-600 dark:text-gray-400 italic text-lg">
-                  &ldquo;{wotd.example}&rdquo;
+          <div className="rounded-[1.6rem] border-2 border-gray-900 bg-white p-5 dark:border-gray-100 dark:bg-gray-950">
+            <p className="text-xs font-mono font-bold uppercase tracking-[0.26em] text-[var(--aqs-accent-strong)] dark:text-[var(--aqs-accent-dark)]">
+              Definition
+            </p>
+            <p className="mt-4 text-xl leading-8 text-gray-900 dark:text-gray-100">
+              {wotd.definition}
+            </p>
+            {wotd.example ? (
+              <div className="mt-5 rounded-[1.2rem] border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-900">
+                <p className="text-xs font-mono font-bold uppercase tracking-[0.22em] text-gray-500 dark:text-gray-400">
+                  Example
+                </p>
+                <p className="mt-2 text-base italic leading-7 text-gray-700 dark:text-gray-300">
+                  “{wotd.example}”
                 </p>
               </div>
-            )}
+            ) : null}
           </div>
 
-          <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-[var(--aqs-accent-soft)] flex items-center justify-center">
-                <BookOpen className="w-4 h-4 text-[var(--aqs-accent-strong)]" />
-              </div>
-              <span className="text-sm font-mono text-gray-600 dark:text-gray-400">
-                Merriam-Webster
-              </span>
-            </div>
-            <span className="text-xs font-mono text-gray-500 dark:text-gray-500">
-              Updated daily
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setShowAskPanel((value) => !value)}
+              className="inline-flex items-center gap-2 rounded-xl border-2 border-gray-900 bg-[var(--aqs-accent)] px-4 py-3 text-sm font-bold text-white transition hover:-translate-y-0.5 dark:border-gray-100"
+            >
+              <MessageCircle className="h-4 w-4" />
+              {showAskPanel ? "Hide Agent" : "Ask About This Word"}
+            </button>
+            <span className="text-sm text-gray-500 dark:text-gray-400">
+              Keep the card simple. Open the agent only if you want more context or examples.
             </span>
           </div>
         </div>
-      </div>
+      </section>
 
-      <div className="rounded-[2rem] border-2 border-gray-900 dark:border-gray-100 bg-white dark:bg-gray-900 neo-shadow overflow-hidden">
-        <div className="bg-[var(--aqs-accent-soft)] dark:bg-[color:rgba(122,31,52,0.18)] border-b-2 border-gray-900 dark:border-gray-100 p-4 flex items-center gap-3">
-          <div className="rounded-lg bg-[var(--aqs-accent)] p-2">
-            <MessageCircle className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <p className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--aqs-accent-strong)] dark:text-[var(--aqs-accent-dark)]">
-              Ask About This Word
+      {showAskPanel ? (
+        <section className="overflow-hidden rounded-[2rem] border-2 border-gray-900 bg-white neo-shadow dark:border-gray-100 dark:bg-gray-900">
+          <div className="border-b-2 border-gray-900 bg-[var(--aqs-accent-soft)] px-4 py-4 dark:border-gray-100 dark:bg-[color:rgba(122,31,52,0.14)]">
+            <p className="text-xs font-mono font-bold uppercase tracking-[0.28em] text-[var(--aqs-accent-strong)] dark:text-[var(--aqs-accent-dark)]">
+              Ask the Agent
             </p>
-            <p className="text-xs text-gray-600 dark:text-gray-400">
-              Have questions? Ask the AI tutor!
+            <p className="mt-1 text-sm text-gray-700 dark:text-gray-300">
+              Ask for nuance, etymology, synonyms, or more example sentences.
             </p>
           </div>
-        </div>
 
-        <div className="p-4 md:p-6 max-h-[400px] overflow-y-auto space-y-4">
-          {chatMessages.length === 0 && (
-            <div className="text-center py-8">
-              <MessageCircle className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
-              <p className="text-gray-500 dark:text-gray-400 text-sm">
-                Ask me anything about &ldquo;{wotd.word}&rdquo;!
-              </p>
-              <div className="mt-4 flex flex-wrap justify-center gap-2">
-                {[
-                  `What does "${wotd.word}" mean?`,
-                  `Use "${wotd.word}" in a sentence`,
-                  `What is the etymology of "${wotd.word}"?`,
-                  `Synonyms for "${wotd.word}"?`,
-                ].map((suggestion) => (
-                  <button
-                    key={suggestion}
-                    type="button"
-                    onClick={() => {
-                      setChatInput(suggestion);
-                    }}
-                    className="rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-xs text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
-                  >
-                    {suggestion}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {chatMessages.map((message, index) => (
-            <div
-              key={`${index}-${message.role}`}
-              className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
-            >
-              <div
-                className={`max-w-[85%] rounded-2xl px-4 py-3 ${
-                  message.role === "user"
-                    ? "bg-[var(--aqs-accent)] text-white neo-shadow-sm"
-                    : "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-2 border-gray-900 dark:border-gray-100"
-                }`}
-              >
-                <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.text}</p>
-              </div>
-            </div>
-          ))}
-
-          {isChatLoading && (
-            <div className="flex justify-start">
-              <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl px-4 py-3 border-2 border-gray-900 dark:border-gray-100">
-                <div className="flex items-center gap-2">
-                  <div className="flex gap-1">
-                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+          <div className="space-y-4 p-4 md:p-6">
+            {chatMessages.length > 0 ? (
+              <div className="max-h-[420px] space-y-4 overflow-y-auto">
+                {chatMessages.map((message, index) => (
+                  <div key={`${message.role}-${index}`} className={message.role === "user" ? "flex justify-end" : "flex justify-start"}>
+                    <div
+                      className={`max-w-[88%] rounded-[1.4rem] border-2 px-4 py-3 ${
+                        message.role === "user"
+                          ? "border-gray-900 bg-[var(--aqs-accent)] text-white dark:border-gray-100"
+                          : "border-gray-900 bg-white text-gray-900 dark:border-gray-100 dark:bg-gray-900 dark:text-gray-100"
+                      }`}
+                    >
+                      {message.role === "tutor" ? <RichResponse text={message.text} compact /> : <p className="text-sm leading-7">{message.text}</p>}
+                    </div>
                   </div>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">Thinking...</span>
-                </div>
+                ))}
+                {isChatLoading ? (
+                  <div className="flex justify-start">
+                    <div className="rounded-[1.4rem] border-2 border-gray-900 bg-white px-4 py-3 dark:border-gray-100 dark:bg-gray-900">
+                      <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Thinking...
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+                <div ref={chatEndRef} />
               </div>
+            ) : null}
+
+            <div className="flex flex-wrap gap-2">
+              {[
+                `Use "${wotd.word}" in another sentence.`,
+                `What is the nuance of "${wotd.word}"?`,
+                `What is the etymology of "${wotd.word}"?`,
+              ].map((suggestion) => (
+                <button
+                  key={suggestion}
+                  type="button"
+                  onClick={() => setChatInput(suggestion)}
+                  className="rounded-full border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:border-[var(--aqs-accent)] hover:text-[var(--aqs-accent-strong)] dark:border-gray-700 dark:text-gray-300"
+                >
+                  {suggestion}
+                </button>
+              ))}
             </div>
-          )}
 
-          <div ref={chatEndRef} />
-        </div>
-
-        <div className="p-4 border-t-2 border-gray-900 dark:border-gray-100">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              void handleSendChat();
-            }}
-            className="flex gap-2"
-          >
-            <input
-              type="text"
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              placeholder={`Ask about "${wotd.word}"...`}
-              disabled={isChatLoading}
-              className="flex-1 rounded-xl border-2 border-gray-900 dark:border-gray-100 bg-white dark:bg-gray-800 px-4 py-3 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:border-[var(--aqs-accent)] focus:outline-none focus:ring-4 focus:ring-[color:rgba(122,31,52,0.18)] disabled:opacity-50"
-            />
-            <button
-              type="submit"
-              disabled={!chatInput.trim() || isChatLoading}
-              className="rounded-xl bg-[var(--aqs-accent)] px-4 py-3 text-white transition hover:-translate-y-0.5 hover:neo-shadow disabled:opacity-50 disabled:transform-none"
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                void handleAsk();
+              }}
+              className="flex gap-2"
             >
-              <Send className="w-5 h-5" />
-            </button>
-          </form>
-        </div>
-      </div>
+              <input
+                type="text"
+                value={chatInput}
+                onChange={(event) => setChatInput(event.target.value)}
+                placeholder={`Ask about "${wotd.word}"...`}
+                disabled={isChatLoading}
+                className="flex-1 rounded-[1.2rem] border-2 border-gray-900 bg-white px-4 py-3 text-gray-900 focus:border-[var(--aqs-accent)] focus:outline-none focus:ring-4 focus:ring-[color:rgba(122,31,52,0.18)] disabled:opacity-50 dark:border-gray-100 dark:bg-gray-900 dark:text-gray-100"
+              />
+              <button
+                type="submit"
+                disabled={!chatInput.trim() || isChatLoading}
+                className="rounded-[1.2rem] border-2 border-gray-900 bg-[var(--aqs-accent)] px-4 py-3 text-white transition hover:-translate-y-0.5 disabled:opacity-50 dark:border-gray-100"
+              >
+                <Send className="h-5 w-5" />
+              </button>
+            </form>
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 }

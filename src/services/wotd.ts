@@ -1,9 +1,13 @@
 /**
- * Word of the Day service using Merriam-Webster RSS feed via rss2json API.
+ * Merriam-Webster Word of the Day service.
+ * Uses the official RSS feed first, then falls back to rss2json only when needed.
  */
+
+import { fetchFeedXml, stripHtml } from "./rss";
 
 const WOTD_FEED_URL = "https://www.merriam-webster.com/wotd/feed/rss2";
 const RSS2JSON_API = "https://api.rss2json.com/v1/api.json";
+const CACHE_TTL_MS = 1000 * 60 * 60;
 
 export interface WordOfTheDay {
   word: string;
@@ -11,117 +15,108 @@ export interface WordOfTheDay {
   partOfSpeech?: string;
   definition: string;
   example?: string;
+  didYouKnow?: string;
   date: string;
   audioUrl?: string;
   sourceUrl: string;
 }
 
-interface Rss2JsonItem {
-  title: string;
-  link: string;
-  pubDate: string;
-  description: string;
-  content?: string;
-  enclosure?: {
-    link: string;
-    type: string;
-  };
-}
-
-interface Rss2JsonResponse {
-  status: string;
-  feed: {
-    title: string;
-    link: string;
-    image?: string;
-  };
-  items: Rss2JsonItem[];
-}
-
 let cachedWotd: WordOfTheDay | null = null;
-let cacheTime: number = 0;
-const CACHE_TTL = 1000 * 60 * 60; // 1 hour
+let cacheTime = 0;
 
-function stripHtml(html: string): string {
-  return html
-    .replace(/<[^>]+>/g, " ")
+function normalizeWhitespace(value: string) {
+  return value
+    .replace(/^<!\[CDATA\[/, "")
+    .replace(/\]\]>$/, "")
     .replace(/\s+/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#\d+;/g, "")
     .trim();
 }
 
-function parseWotdItem(item: Rss2JsonItem): WordOfTheDay {
-  const word = item.title.trim();
+function extractFirstMatch(value: string, regex: RegExp) {
+  const match = value.match(regex);
+  return match?.[1] ? normalizeWhitespace(match[1]) : undefined;
+}
 
-  const content = item.content || item.description;
+function extractXmlTag(xml: string, tagName: string) {
+  const escaped = tagName.replace(":", "\\:");
+  return extractFirstMatch(xml, new RegExp(`<${escaped}[^>]*>([\\s\\S]*?)<\\/${escaped}>`, "i"));
+}
 
-  let phonetic: string | undefined;
-  const phoneticMatch = content.match(/\\([A-Za-z\- ʃŋθð]+?)\\/);
-  if (phoneticMatch) {
-    phonetic = phoneticMatch[1].trim();
+function extractXmlAttribute(xml: string, tagName: string, attribute: string) {
+  const escaped = tagName.replace(":", "\\:");
+  return extractFirstMatch(
+    xml,
+    new RegExp(`<${escaped}[^>]*\\b${attribute}=["']([^"']+)["'][^>]*\\/?>`, "i"),
+  );
+}
+
+function extractDefinitionFromHtml(html: string, fallbackWord: string) {
+  const shortDef = extractFirstMatch(html, /<merriam:shortdef><!\[CDATA\[(.*?)\]\]><\/merriam:shortdef>/i);
+  if (shortDef) {
+    return shortDef;
   }
 
-  let partOfSpeech: string | undefined;
-  const posMatch = content.match(/<em>([a-z]+)<\/em>/i);
-  if (posMatch) {
-    partOfSpeech = posMatch[1].toLowerCase();
-  }
-
-  let definition = "";
-  const strippedContent = stripHtml(content);
-
-  const refersMatch = strippedContent.match(/[Rr]efers?\s+to\s+[^.]+\./);
-  if (refersMatch) {
-    definition = word + " " + refersMatch[0].trim();
-  } else {
-    const sentences = strippedContent.split(/[.!?]+/);
-    for (const sentence of sentences) {
-      const trimmed = sentence.trim();
-      if (trimmed.length > 30 && trimmed.length < 300 && 
-          !trimmed.includes("Merriam-Webster") && 
-          !trimmed.includes("Word of the Day") &&
-          !trimmed.includes("Examples")) {
-        definition = trimmed + ".";
-        break;
-      }
+  const paragraphs = html.match(/<p[\s\S]*?<\/p>/gi) || [];
+  for (const paragraph of paragraphs) {
+    const text = stripHtml(paragraph);
+    const normalized = normalizeWhitespace(text);
+    if (
+      !normalized ||
+      normalized.includes("Word of the Day") ||
+      normalized.startsWith("Examples:") ||
+      normalized.startsWith("Did you know?") ||
+      normalized.startsWith("See the entry") ||
+      normalized.startsWith("//") ||
+      normalized.includes("\\") ||
+      normalized.length < 20
+    ) {
+      continue;
     }
+
+    return normalized;
   }
 
-  if (definition.length > 500) {
-    definition = definition.slice(0, 497) + "...";
+  return `${fallbackWord} is Merriam-Webster's featured word for today.`;
+}
+
+function extractExampleFromHtml(html: string) {
+  const slashExample = extractFirstMatch(html, /\/\/\s*([\s\S]*?)<\/p>/i);
+  if (slashExample) {
+    return stripHtml(slashExample).replace(/^["“]|["”]$/g, "").trim();
   }
 
-  let example: string | undefined;
-
-  const slashExampleMatch = content.match(/<p>\s*\/\/\s*([^<]+)<\/p>/);
-  if (slashExampleMatch) {
-    const rawExample = slashExampleMatch[1];
-    const emMatch = rawExample.match(/<em>[^<]*<\/em>\s*([^""<]+)/);
-    if (emMatch) {
-      example = emMatch[1].trim();
-    } else {
-      example = rawExample.replace(/<[^>]+>/g, "").trim();
-    }
-    if (example && !example.endsWith(".") && !example.endsWith('"')) {
-      example = example.replace(/[""]$/, "") + '"';
-    }
+  const quotedExample = extractFirstMatch(html, /Examples:<\/strong><br\s*\/?>\s*<p>(.*?)<\/p>/i);
+  if (quotedExample) {
+    return stripHtml(quotedExample).replace(/^["“]|["”]$/g, "").trim();
   }
 
-  if (!example) {
-    const exampleQuoteMatch = content.match(/<p>\s*[""]([^""]+)[""]\s*—/);
-    if (exampleQuoteMatch) {
-      example = exampleQuoteMatch[1].replace(/<[^>]+>/g, "").trim();
-    }
+  return undefined;
+}
+
+function extractDidYouKnowFromHtml(html: string) {
+  const didYouKnow = extractFirstMatch(html, /Did you know\?<\/strong><br\s*\/?>\s*<p>([\s\S]*?)<\/p>/i);
+  return didYouKnow ? stripHtml(didYouKnow) : undefined;
+}
+
+export function parseMerriamWotdXml(xml: string): WordOfTheDay {
+  const itemXml = extractFirstMatch(xml, /<item>([\s\S]*?)<\/item>/i);
+  if (!itemXml) {
+    throw new Error("No word of the day found");
   }
 
-  if (example && example.length > 200) {
-    example = example.slice(0, 197) + "...";
-  }
+  const word = extractXmlTag(itemXml, "title") || "Word of the Day";
+  const link = extractXmlTag(itemXml, "link") || "https://www.merriam-webster.com/word-of-the-day";
+  const pubDate = extractXmlTag(itemXml, "pubDate") || new Date().toISOString();
+  const descriptionHtml = extractXmlTag(itemXml, "description") || "";
+  const shortDef = extractXmlTag(itemXml, "merriam:shortdef");
+  const phonetic = extractFirstMatch(descriptionHtml, /\\([^\\]+)\\/);
+  const partOfSpeech =
+    extractFirstMatch(descriptionHtml, /(?:•|&#149;)\s*<em>([^<]+)<\/em>/i) ||
+    extractFirstMatch(descriptionHtml, /\\[^\\]+\\(?:&nbsp;|\s)*(?:•|&#149;)\s*<em>([^<]+)<\/em>/i);
+  const definition = shortDef || extractDefinitionFromHtml(descriptionHtml, word);
+  const example = extractExampleFromHtml(descriptionHtml);
+  const didYouKnow = extractDidYouKnowFromHtml(descriptionHtml);
+  const audioUrl = extractXmlAttribute(itemXml, "enclosure", "url");
 
   return {
     word,
@@ -129,33 +124,76 @@ function parseWotdItem(item: Rss2JsonItem): WordOfTheDay {
     partOfSpeech,
     definition,
     example,
-    date: item.pubDate,
-    audioUrl: item.enclosure?.link,
-    sourceUrl: item.link,
+    didYouKnow,
+    date: pubDate,
+    audioUrl,
+    sourceUrl: link,
   };
+}
+
+interface Rss2JsonItem {
+  title: string;
+  pubDate: string;
+  link: string;
+  description: string;
+  enclosure?: {
+    link?: string;
+  };
+}
+
+interface Rss2JsonResponse {
+  status: string;
+  items?: Rss2JsonItem[];
+}
+
+function parseFallbackJson(data: Rss2JsonResponse): WordOfTheDay {
+  const item = data.items?.[0];
+  if (!item) {
+    throw new Error("No word of the day found");
+  }
+
+  const html = item.description || "";
+  return {
+    word: item.title?.trim() || "Word of the Day",
+    phonetic: extractFirstMatch(html, /\\([^\\]+)\\/),
+    partOfSpeech:
+      extractFirstMatch(html, /(?:•|&#149;)\s*<em>([^<]+)<\/em>/i) ||
+      extractFirstMatch(html, /\\[^\\]+\\(?:&nbsp;|\s)*(?:•|&#149;)\s*<em>([^<]+)<\/em>/i),
+    definition: extractDefinitionFromHtml(html, item.title || "Word of the Day"),
+    example: extractExampleFromHtml(html),
+    didYouKnow: extractDidYouKnowFromHtml(html),
+    date: item.pubDate || new Date().toISOString(),
+    audioUrl: item.enclosure?.link,
+    sourceUrl: item.link || "https://www.merriam-webster.com/word-of-the-day",
+  };
+}
+
+async function fetchWordOfTheDayFromFeed() {
+  try {
+    const response = await fetch(`${RSS2JSON_API}?rss_url=${encodeURIComponent(WOTD_FEED_URL)}`);
+    if (!response.ok) {
+      throw new Error("Failed to fetch word of the day");
+    }
+
+    const data: Rss2JsonResponse = await response.json();
+    if (data.status !== "ok") {
+      throw new Error("Failed to fetch word of the day");
+    }
+
+    return parseFallbackJson(data);
+  } catch (error) {
+    const xml = await fetchFeedXml(WOTD_FEED_URL);
+    return parseMerriamWotdXml(xml);
+  }
 }
 
 export async function getWordOfTheDay(forceRefresh = false): Promise<WordOfTheDay> {
   const now = Date.now();
-
-  if (!forceRefresh && cachedWotd && now - cacheTime < CACHE_TTL) {
+  if (!forceRefresh && cachedWotd && now - cacheTime < CACHE_TTL_MS) {
     return cachedWotd;
   }
 
-  const response = await fetch(`${RSS2JSON_API}?rss_url=${encodeURIComponent(WOTD_FEED_URL)}`);
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch word of the day: ${response.status}`);
-  }
-
-  const data: Rss2JsonResponse = await response.json();
-
-  if (data.status !== "ok" || !data.items?.length) {
-    throw new Error("No word of the day found");
-  }
-
-  cachedWotd = parseWotdItem(data.items[0]);
+  cachedWotd = await fetchWordOfTheDayFromFeed();
   cacheTime = now;
-
   return cachedWotd;
 }

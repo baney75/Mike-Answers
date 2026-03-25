@@ -21,6 +21,12 @@ describe("gemini routing", () => {
     expect(plan.modelCandidates.includes("gemini-2.5-pro")).toBe(true);
   });
 
+  test("auto-enables grounding for current officeholder prompts", () => {
+    const plan = buildRequestPlan("fast", "Who is the current president of the United States?", false);
+
+    expect(plan.useGrounding).toBe(true);
+  });
+
   test("strips trailing raw sources sections from model text", () => {
     const cleaned = stripTrailingSourcesSection("Body text\n\nSources:\n1. https://example.edu\n2. https://nih.gov");
 
@@ -66,6 +72,20 @@ describe("grounded source extraction", () => {
     expect(sources.length).toBe(2);
     expect(sources[0]?.host.includes("reuters.com") || sources[1]?.host.includes("reuters.com")).toBe(true);
     expect(sources[0]?.host.includes("apnews.com") || sources[1]?.host.includes("apnews.com")).toBe(true);
+  });
+
+  test("keeps curated newsroom sources when stronger wire services are absent", () => {
+    const sources = extractReliableSources({
+      groundingChunks: [
+        { web: { uri: "https://san.com/article/example", title: "Straight Arrow News report" } },
+        { web: { uri: "https://www.wsj.com/world/example", title: "WSJ world report" } },
+        { web: { uri: "https://www.example.com/opinion", title: "Opinion blog" } },
+      ],
+    }, "What is the latest news on this event?");
+
+    expect(sources.length).toBe(2);
+    expect(sources[0]?.host.includes("san.com") || sources[1]?.host.includes("san.com")).toBe(true);
+    expect(sources[0]?.host.includes("wsj.com") || sources[1]?.host.includes("wsj.com")).toBe(true);
   });
 
   test("uses title-derived hosts when grounding URIs are Google proxy links", () => {

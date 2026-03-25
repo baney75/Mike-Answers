@@ -8,6 +8,7 @@ import {
 
 import type { SolutionSource, SolveMode } from "../types";
 import { embedSourcesInSolution } from "../utils/solution";
+import { isLikelyHomeworkRequest, shouldAskClarifyingQuestions } from "../utils/request";
 
 function getAiClient() {
   return new GoogleGenAI({ apiKey: import.meta.env.GEMINI_API_KEY });
@@ -40,11 +41,17 @@ type SourceIntent = "general" | "scholarly" | "news";
 const PRO_COMPLEXITY_HINTS =
   /\b(prove|proof|derive|derivation|rigorous|formal|analy[sz]e|compare|synthesize|optimi[sz]e|walkthrough|theorem|graduate|dissertation|essay|case law|mechanism|multistep|step-by-step)\b/i;
 const GROUNDED_QUESTION_HINTS =
-  /\b(source|sources|cite|citation|reference|references|latest|recent|current|today|news|study|studies|paper|papers|journal|journals|guideline|guidelines|evidence|historical|history|law|legal|medical|medicine|statistic|statistics|real world|real-world)\b/i;
+  /\b(source|sources|cite|citation|reference|references|latest|recent|current|today|news|study|studies|paper|papers|journal|journals|guideline|guidelines|evidence|historical|history|law|legal|medical|medicine|statistic|statistics|real world|real-world|president|vice president|prime minister|governor|mayor|ceo|chief executive officer|secretary of state|speaker of the house|pope|king|queen)\b/i;
 const SCHOLARLY_HINTS =
   /\b(scholarly|academic|peer-reviewed|peer reviewed|journal|journals|paper|papers|study|studies|meta-analysis|systematic review|doi|research article|literature review)\b/i;
 const NEWS_HINTS =
   /\b(news|headline|headlines|breaking|reported|reporting|latest|recent|today|yesterday|this week|current events|election|conflict|war|market|markets|earnings|announced)\b/i;
+const CURRENT_FACT_HINTS =
+  /\b(current|currently|right now|today|as of|latest|most recent|incumbent|who is|who's|whos)\b/i;
+const CALCULUS_HINTS =
+  /\b(calculus|differentiat|derivativ|integral|integrat|limit|series|taylor|maclaurin|critical point|optimization|maxim|minim|concavity|inflection|related rates|differential equation)\b/i;
+const GRAPHING_HINTS =
+  /\b(graph|plot|sketch|curve|function shape|intercept|asymptote|turning point|critical point|domain|range|slope field|phase portrait)\b/i;
 const LOW_TRUST_HOSTS = [
   "reddit.com",
   "quora.com",
@@ -73,6 +80,13 @@ const HIGH_TRUST_NEWS_HOSTS = [
   "bbc.com",
   "pbs.org",
   "npr.org",
+];
+const CURATED_NEWS_HOSTS = [
+  "san.com",
+  "readtangle.com",
+  "wsj.com",
+  "newsnationnow.com",
+  "thecentersquare.com",
 ];
 const SCHOLARLY_HOST_HINTS = [
   "pubmed",
@@ -129,6 +143,9 @@ YOUR CORE PRINCIPLES:
 3. Cite well-known theorems, laws, or principles by name when applicable.
 4. If a question is ambiguous, state your interpretation and proceed.
 5. Be proactive. If the user provides partial or completed work, inspect that work first and continue tutoring from it.
+6. For mathematics, prefer exact symbolic answers first, then give decimal approximations only when useful.
+7. For time-sensitive facts, verify them with live search grounding and state the exact date or time context when it matters.
+8. Match reasoning depth to the task. Be fast and direct for simple questions; reason deeply only when the problem is genuinely multi-step, ambiguous, or high-stakes.
 
 FORMATTING RULES:
 - Use LaTeX with single dollar signs ($) for inline math and double ($$) for display math.
@@ -144,8 +161,9 @@ CODE & COMPUTATION:
 
 DATA VISUALIZATION:
 - When data or a function plot would help understanding, output a chart in a \`\`\`chart block.
-- Chart format is JSON: {"type":"line"|"bar","title":"...","xLabel":"...","yLabel":"...","data":[{"x":0,"y":10},...]}
-- Use charts for: function plots, data distributions, physics trajectories, economic trends, etc.
+- Chart format is JSON: {"type":"line"|"bar"|"area"|"scatter","title":"...","xLabel":"...","yLabel":"...","xKey":"x","series":[{"key":"y","label":"f(x)"}],"data":[{"x":0,"y":10},...]}
+- For function graphs, include enough sample points to make the curve look correct, and mention key intercepts, extrema, asymptotes, or discontinuities in prose.
+- Use charts for: function plots, data distributions, physics trajectories, economic trends, comparative series, and scatter data.
 
 ${MEDIA_MARKER_PROMPT}
 
@@ -196,6 +214,8 @@ WORK-CHECKING BEHAVIOR:
 - Be constructive and encouraging without becoming vague.
 - Be proactive with underspecified but ordinary requests. If the user asks for a definition, summary, quick explanation, or a common reference item, choose a sensible default and answer directly instead of asking them to pick a source unless the source truly changes the answer.
 - IMPORTANT: For "word of the day" requests, ALWAYS use [ACTION: show_wotd] to show the actual word of the day from Merriam-Webster. Do NOT make up a word.
+- If the request is genuinely underspecified for a correct answer, ask up to 3 concise clarification questions instead of guessing.
+- If the request is clearly homework or coursework, teach the method first. Keep any final answer in the dedicated **Answer:** section only so the UI can hide it by default.
 
 RESPONSE FORMAT:
 **Subject:** [subject/domain]
@@ -212,6 +232,7 @@ When search grounding is active:
 - Prefer university, government, peer-reviewed, official, or other academically reliable sources.
 - For scholarly questions, prefer peer-reviewed journals, university sources, official agencies, and primary research over general websites.
 - For news or current events, prefer Reuters, AP, BBC, PBS, NPR, and primary official statements over opinion or partisan outlets.
+- For time-sensitive identity questions such as the current president, prime minister, CEO, or office holder, verify the answer live and give the exact date context of that answer.
 - Do NOT rely on forums, homework mills, or anonymous community posts unless absolutely unavoidable.
 - Be explicitly truth-seeking: separate verified facts from interpretation, and avoid partisan framing or sensational language.
 - Use inline citations like [1], [2], [3] in the answer body when a claim depends on a source.
@@ -234,7 +255,7 @@ function shouldAutoUseGrounding(text: string, mode: SolveMode) {
     return true;
   }
 
-  return GROUNDED_QUESTION_HINTS.test(text);
+  return GROUNDED_QUESTION_HINTS.test(text) || (CURRENT_FACT_HINTS.test(text) && /\b(president|vice president|prime minister|governor|mayor|ceo|chief executive officer|secretary|speaker|pope|king|queen)\b/i.test(text));
 }
 
 export function getSourceIntent(text: string): SourceIntent {
@@ -259,6 +280,10 @@ function isProxyHost(host: string) {
 
 function isHighTrustNewsHost(host: string) {
   return HIGH_TRUST_NEWS_HOSTS.some((entry) => host.includes(entry));
+}
+
+function isCuratedNewsHost(host: string) {
+  return CURATED_NEWS_HOSTS.some((entry) => host.includes(entry));
 }
 
 function isScholarlyHost(host: string) {
@@ -317,6 +342,9 @@ function getSourceCategory(host: string) {
   if (isHighTrustNewsHost(host)) {
     return "Major Newsroom";
   }
+  if (isCuratedNewsHost(host)) {
+    return "Curated Newsroom";
+  }
   if (isTertiaryReferenceHost(host)) {
     return "Reference";
   }
@@ -346,6 +374,9 @@ function getHostScore(host: string, intent: SourceIntent) {
   if (intent === "news" && isHighTrustNewsHost(host)) {
     return 6;
   }
+  if (intent === "news" && isCuratedNewsHost(host)) {
+    return 5;
+  }
   if (intent === "scholarly" && (isScholarlyHost(host) || isOfficialHost(host))) {
     return 6;
   }
@@ -362,6 +393,9 @@ function getHostScore(host: string, intent: SourceIntent) {
     return 4;
   }
   if (isHighTrustNewsHost(host)) {
+    return 3;
+  }
+  if (isCuratedNewsHost(host)) {
     return 3;
   }
 
@@ -531,13 +565,32 @@ export function buildRequestPlan(mode: SolveMode, text: string, detailed: boolea
   };
 }
 
-function buildConfig(mode: SolveMode, subject: string, detailed: boolean) {
+function buildConfig(mode: SolveMode, subject: string, detailed: boolean, requestText = "") {
   let prompt = SYSTEM_PROMPT;
   if (subject !== "Auto-detect") {
     prompt += `\n\nThe user has specified the subject is: ${subject}. Tailor your response to this domain's conventions and notation.`;
   }
   if (detailed) {
     prompt += `\n\nProvide an EXTREMELY detailed, step-by-step explanation. Break down every single concept. Include worked examples, edge cases, and conceptual connections. Add Python code for computation and charts for visualization where helpful.`;
+  }
+  if (CALCULUS_HINTS.test(requestText)) {
+    prompt += `\n\nFor calculus and higher math:
+- verify derivatives by differentiating your final antiderivative or by checking with an equivalent method when practical
+- verify integrals, limits, and extrema carefully before stating the answer
+- prefer exact forms before decimals
+- if a numeric approximation is needed, state the rounding clearly`;
+  }
+  if (GRAPHING_HINTS.test(requestText)) {
+    prompt += `\n\nFor graphing requests:
+- do not only describe the graph; include a chart block when the graph is central to the answer
+- sample enough points for a smooth, trustworthy plot
+- identify intercepts, asymptotes, extrema, inflection points, domain, and range when relevant`;
+  }
+  if (CURRENT_FACT_HINTS.test(requestText)) {
+    prompt += `\n\nFor time-sensitive factual questions:
+- verify the answer using live grounding
+- include the exact date context when saying who currently holds an office or role
+- if sources disagree, say so plainly and explain which source is primary`;
   }
 
   const config: Record<string, unknown> = { systemInstruction: prompt };
@@ -557,8 +610,9 @@ export async function solveQuestion(
 ): Promise<string> {
   const requestText = getRequestText(subject === "Auto-detect" ? "" : `Subject: ${subject}`);
   const plan = buildRequestPlan(mode, requestText, detailed);
-  const config = buildConfig(mode, subject, detailed);
-  if (plan.useGrounding) {
+  const config = buildConfig(mode, subject, detailed, requestText);
+  const useGroundingForImage = plan.useGrounding || subject === "Auto-detect";
+  if (useGroundingForImage) {
     config.tools = [{ googleSearch: {} }];
   }
 
@@ -573,7 +627,9 @@ If the image includes the user's work, proactively check it before giving the fi
 - continue from the last correct idea,
 - and then provide the corrected solution.
 
-If the image is only the question prompt, solve it directly. Be rigorous and thorough.`,
+If the image is only the question prompt, solve it directly. Assume this may be coursework. Teach the method first and keep any final numeric/result statement isolated in the **Answer:** section only.
+
+If the image is too ambiguous to answer correctly, ask concise clarification questions instead of guessing.`,
     ],
     config,
   });
@@ -588,7 +644,9 @@ export async function solveTextQuestion(
 ): Promise<string> {
   const requestText = getRequestText(text);
   const plan = buildRequestPlan(mode, requestText, detailed);
-  const config = buildConfig(mode, subject, detailed);
+  const config = buildConfig(mode, subject, detailed, requestText);
+  const looksLikeHomework = isLikelyHomeworkRequest(requestText, { subject });
+  const shouldClarify = shouldAskClarifyingQuestions(requestText);
   if (plan.useGrounding) {
     config.tools = [{ googleSearch: {} }];
   }
@@ -599,7 +657,10 @@ export async function solveTextQuestion(
 
 ${text}
 
-If the user pasted their own attempt, notes, or answer, proactively check that work first and then continue tutoring. If it is just a question, solve it directly.`,
+If the user pasted their own attempt, notes, or answer, proactively check that work first and then continue tutoring. If it is just a question, solve it directly.
+
+${looksLikeHomework ? "This looks like student coursework. Teach the underlying method first and keep the final answer confined to the **Answer:** section only." : ""}
+${shouldClarify ? "This may be too vague for a correct answer. If key details are missing, ask up to 3 concise clarification questions and stop there." : ""}`,
     ],
     config,
   });
@@ -661,6 +722,9 @@ export async function chatWithTutor(
         `You are a helpful tutor answering follow-up questions. Be concise but thorough. If the user asks whether their work is right, verify it directly before expanding. Use LaTeX for math. Include Python code or charts when computation would help.
 
 IMPORTANT: Always keep the original question in mind when answering follow-ups. Reference specific aspects of the original question and any original image when relevant. Build upon or correct the original reasoning as needed.
+
+If the follow-up is too vague to answer correctly, ask concise clarification questions instead of guessing.
+If the original problem is clearly coursework, continue teaching method-first and keep any final result isolated in the **Answer:** section only.
 
 ${MEDIA_MARKER_PROMPT}
 

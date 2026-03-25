@@ -18,10 +18,13 @@ AnyQuestionSolver is a client-side React + Vite SPA for academic help. It accept
 - Image uploads and pasted screenshots go to preview first
 - Voice input should transcribe into preview so the user can confirm/edit before sending if needed
 - If an image or pasted text already shows a worked solution or partial attempt, the app should proactively check that work and continue tutoring without a separate "grade my work" mode
+- For obvious homework/coursework prompts, the app should default to method-first tutoring and hide the final answer behind an explicit reveal control
 - Preview options should stay limited to `fast` and `deep`; grounded/source-backed research is automatic when the question requires it
 - Grounded answers should render sources in the app's custom source-card UI, not as a raw markdown dump
 - Rich responses may include inline media markers for images, videos, definitions, and curated link blocks; those markers must render in both the main answer and follow-up replies
 - Solved screens and follow-up chat should expose retry/edit affordances in the app's existing maroon neo-shadow style, not browser-default UI
+- If a prompt is genuinely too vague for a correct answer, the AI should ask concise follow-up questions instead of bluffing
+- `Print / PDF` should produce a clean, teacher-shareable export with strong print typography and without the interactive chrome
 
 ### Running the app
 
@@ -29,14 +32,14 @@ AnyQuestionSolver is a client-side React + Vite SPA for academic help. It accept
 - `bun dev` starts the Vite dev server on port `3000` with host `0.0.0.0`
 - `bun run build` creates a production build in `dist/`
 - `bun lint` runs `tsc --noEmit`
-- `bun test src/utils/image.test.ts src/utils/input.test.ts src/utils/solution.test.ts src/services/gemini.test.ts` runs the current Bun unit tests
+- `bun test src/utils/image.test.ts src/utils/input.test.ts src/utils/solution.test.ts src/utils/request.test.ts src/services/gemini.test.ts src/services/news.test.ts src/services/wotd.test.ts` runs the current Bun unit tests
 
 ### Verification requirements
 
 After code changes, run all of the following unless the task makes one impossible:
 
 - `bun lint`
-- `bun test src/utils/image.test.ts src/utils/input.test.ts src/utils/solution.test.ts src/services/gemini.test.ts`
+- `bun test src/utils/image.test.ts src/utils/input.test.ts src/utils/solution.test.ts src/services/gemini.test.ts src/services/news.test.ts src/services/wotd.test.ts`
 - `bun run build`
 
 If UI code changed, also smoke-test the app in a browser and check for:
@@ -98,10 +101,12 @@ echo 'GEMINI_API_KEY="'"$GEMINI_API_KEY"'"' > .env.local
 - `fast` is the primary CTA and the default quick-submit path
 - `deep` is for longer walkthroughs, not a separate product branch
 - Grounded, source-backed answers should be triggered automatically for prompts that ask for current information, citations, evidence, or research
+- Time-sensitive identity/fact prompts such as "who is the current president" or "who is the current CEO" must auto-trigger live grounding even if the user does not explicitly ask for sources
 - When grounding is active, prefer `.edu`, `.gov`, peer-reviewed, official, and other academically credible sources
 - For scholarly questions, rank peer-reviewed journals, universities, government agencies, and primary research above general web pages
 - For news/current-events questions, rank Reuters, AP, BBC, PBS, NPR, and primary official statements above commentary or opinion-heavy outlets
 - Treat tertiary references like Wikipedia/Britannica and advocacy or think-tank sources as fallback-only, not preferred evidence
+- For graphing-heavy answers, prefer structured chart blocks over plain prose so the UI can render fast, visually clear charts
 - Do not reintroduce a dedicated "grade my work" feature unless the user explicitly asks for it
 
 ---
@@ -155,7 +160,7 @@ import { VideoEmbed } from './components/VideoEmbed';
 
 ## Word of the Day (Merriam-Webster)
 
-The app has a built-in Word of the Day feature powered by Merriam-Webster's RSS feed via rss2json API.
+The app has a built-in Word of the Day feature sourced from Merriam-Webster's official RSS feed. The client tries the fast rss2json mirror first for speed, then falls back to feed/proxy parsing when needed.
 
 ### When to Use
 
@@ -176,13 +181,14 @@ const wotd = await getWordOfTheDay();
 
 ### Rendering
 
-The `WordOfTheDay` component displays the word with:
+The `WordOfTheDay` component is intentionally simple by default:
 - Word title (large, bold)
 - Phonetic pronunciation (if available)
 - Part of speech badge
-- Definition in styled card
+- Definition in a single styled card
 - Example usage (if available)
 - Source link to Merriam-Webster
+- A single `Ask About This Word` button that opens the agent panel only when the user wants follow-up help
 
 ### Component Usage
 
@@ -197,7 +203,7 @@ import { WordOfTheDay } from './components/WordOfTheDay';
 
 ## News Aggregation
 
-The app aggregates news from multiple trusted, unbiased RSS sources via rss2json API.
+The app aggregates news from multiple trusted RSS sources using direct/proxied RSS parsing first, with rss2json fallback only when a feed blocks client access.
 
 ### Approved News Sources
 
@@ -243,13 +249,16 @@ const articles = await fetchNewsForQuery('climate change', 20);
 ```tsx
 interface NewsArticle {
   title: string;       // Article headline
-  link: string;        // Direct link to source (PRIMARY SOURCE)
+  link: string;        // Direct article URL on the publishing outlet
   description: string; // Brief excerpt
   pubDate: string;     // ISO date string
   author?: string;     // Reporter name if available
-  thumbnail?: string;   // Article image if available
+  thumbnail?: string;  // Article image if available
   source: string;      // Source name (e.g., "Straight Arrow News")
-  sourceUrl: string;   // Same as link - direct to source
+  sourceUrl: string;   // Feed URL for the outlet
+  primarySourceUrl?: string;   // Best detected upstream report / filing / statement
+  contentText: string; // Best available article body text or excerpt for agent context
+  directArticleUrl: string; // Same as link, kept explicit for UI clarity
 }
 ```
 
@@ -258,7 +267,7 @@ interface NewsArticle {
 ```tsx
 import { NewsView } from './components/NewsView';
 
-// Full news view with search and filtering
+// Full news view with search, source filtering, direct article buttons, and primary-source affordances
 <NewsView 
   initialQuery="technology"  // Optional: pre-filtered
   onClose={resetAll} 
@@ -269,12 +278,12 @@ import { NewsView } from './components/NewsView';
 
 When agents need to fetch and display news:
 
-1. **Fetch from multiple sources**: Use `fetchAllNews()` to get aggregated content
-2. **Always cite primary sources**: Link directly to the original article, not aggregators
-3. **Verify before presenting**: Check that articles are recent (within 24-48 hours)
-4. **Present sources transparently**: Show which outlet published each story
-5. **For follow-up questions**: Use `fetchNewsForQuery(term)` to get topic-specific news
-6. **Filter by source if needed**: Users can filter by source in the NewsView UI
+1. **Fetch from multiple sources**: Use `fetchAllNews()` or `fetchNewsForQuery()` to get the current feed set.
+2. **Always cite the direct article link**: Use `directArticleUrl`, not a proxy or generic outlet homepage.
+3. **Prefer detected primary references**: If `primarySourceUrl` exists, cite it as the upstream document/report/story behind the article.
+4. **Give agents body text, not just headlines**: Use `contentText` when generating summaries or answering follow-up questions.
+5. **Verify recency**: Treat the feed set as current reporting and prefer the freshest relevant stories.
+6. **Keep the special news UI news-only**: Use `NewsView` for news requests, not general research questions.
 
 **Example agent flow for news:**
 ```
