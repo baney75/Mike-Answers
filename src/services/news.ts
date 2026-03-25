@@ -3,6 +3,7 @@ import { searchWeb } from "./search";
 
 const RSS2JSON_API = "https://api.rss2json.com/v1/api.json";
 const ARTICLE_FETCH_TIMEOUT_MS = 18_000;
+const NEWS_CACHE_TTL_MS = 1000 * 60 * 5;
 const ARTICLE_FETCH_FALLBACKS = [
   (url: string) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
   (url: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
@@ -52,6 +53,10 @@ export interface NewsFetchResult {
   failedSources: NewsFeedFailure[];
   loadedSources: string[];
 }
+
+const NEWS_CACHE_ARTICLE_LIMIT = 80;
+let cachedNewsDesk: NewsFetchResult | null = null;
+let newsDeskCacheTime = 0;
 
 export const NEWS_SOURCES: NewsSource[] = [
   { name: "Straight Arrow News", url: "https://san.com/feed/", bias: "center", priority: 10, type: "wire" },
@@ -557,16 +562,16 @@ export async function hydrateNewsArticles(articles: NewsArticle[], limit = 6) {
 
 export async function fetchAllNews(options?: { maxArticles?: number }) {
   const { maxArticles = 40 } = options || {};
-  const results = await Promise.allSettled(NEWS_SOURCES.map((source) => fetchSource(source)));
-  const articles = results.flatMap((result) => (result.status === "fulfilled" ? result.value : []));
-
-  const recent = articles.filter(isRecentEnough);
-  const pool = recent.length >= 8 ? recent : articles;
-  return sortArticles(deduplicateArticles(pool)).slice(0, maxArticles);
+  const result = await fetchAllNewsWithStatus({ maxArticles });
+  return result.articles;
 }
 
-export async function fetchAllNewsWithStatus(options?: { maxArticles?: number }): Promise<NewsFetchResult> {
-  const { maxArticles = 40 } = options || {};
+async function fetchNewsDesk(forceRefresh = false): Promise<NewsFetchResult> {
+  const now = Date.now();
+  if (!forceRefresh && cachedNewsDesk && now - newsDeskCacheTime < NEWS_CACHE_TTL_MS) {
+    return cachedNewsDesk;
+  }
+
   const results = await Promise.allSettled(NEWS_SOURCES.map((source) => fetchSource(source)));
   const articles = results.flatMap((result) => (result.status === "fulfilled" ? result.value : []));
   const failedSources = results.flatMap((result, index) => {
@@ -582,10 +587,22 @@ export async function fetchAllNewsWithStatus(options?: { maxArticles?: number })
   const recent = articles.filter(isRecentEnough);
   const pool = recent.length >= 8 ? recent : articles;
 
-  return {
-    articles: sortArticles(deduplicateArticles(pool)).slice(0, maxArticles),
+  cachedNewsDesk = {
+    articles: sortArticles(deduplicateArticles(pool)).slice(0, NEWS_CACHE_ARTICLE_LIMIT),
     failedSources,
     loadedSources,
+  };
+  newsDeskCacheTime = now;
+
+  return cachedNewsDesk;
+}
+
+export async function fetchAllNewsWithStatus(options?: { maxArticles?: number; forceRefresh?: boolean }): Promise<NewsFetchResult> {
+  const { maxArticles = 40, forceRefresh = false } = options || {};
+  const result = await fetchNewsDesk(forceRefresh);
+  return {
+    ...result,
+    articles: result.articles.slice(0, maxArticles),
   };
 }
 
@@ -620,8 +637,8 @@ export async function fetchNewsForQuery(query: string, maxArticles = 18) {
   return ranked.slice(0, maxArticles);
 }
 
-export async function fetchNewsForQueryWithStatus(query: string, maxArticles = 18): Promise<NewsFetchResult> {
-  const result = await fetchAllNewsWithStatus({ maxArticles: 80 });
+export async function fetchNewsForQueryWithStatus(query: string, maxArticles = 18, forceRefresh = false): Promise<NewsFetchResult> {
+  const result = await fetchAllNewsWithStatus({ maxArticles: 80, forceRefresh });
   const terms = queryTerms(query);
 
   if (terms.length === 0) {
@@ -641,6 +658,11 @@ export async function fetchNewsForQueryWithStatus(query: string, maxArticles = 1
     ...result,
     articles: ranked.slice(0, maxArticles),
   };
+}
+
+export function clearNewsCache() {
+  cachedNewsDesk = null;
+  newsDeskCacheTime = 0;
 }
 
 export function buildNewsReasoningContext(articles: NewsArticle[], query?: string, limit = 5) {

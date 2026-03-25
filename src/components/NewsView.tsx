@@ -302,6 +302,7 @@ export function NewsView({ initialQuery = "", onClose, onReturn, hasBackgroundTa
   const [articles, setArticles] = useState<NewsArticle[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [hydrating, setHydrating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState(initialQuery);
   const [searchInput, setSearchInput] = useState(initialQuery);
@@ -312,9 +313,11 @@ export function NewsView({ initialQuery = "", onClose, onReturn, hasBackgroundTa
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [failedSources, setFailedSources] = useState<NewsFeedFailure[]>([]);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const loadTokenRef = useRef(0);
 
   const loadNews = useCallback(
     async (searchQuery: string, forceRefresh = false) => {
+      const loadToken = ++loadTokenRef.current;
       setLoading(true);
       setError(null);
       if (forceRefresh) {
@@ -323,17 +326,37 @@ export function NewsView({ initialQuery = "", onClose, onReturn, hasBackgroundTa
 
       try {
         const result = searchQuery.trim()
-          ? await fetchNewsForQueryWithStatus(searchQuery.trim())
-          : await fetchAllNewsWithStatus();
-        const hydrated = await hydrateNewsArticles(result.articles, 8);
-        setArticles(hydrated);
+          ? await fetchNewsForQueryWithStatus(searchQuery.trim(), 18, forceRefresh)
+          : await fetchAllNewsWithStatus({ forceRefresh });
+        if (loadToken !== loadTokenRef.current) {
+          return;
+        }
+
+        setArticles(result.articles);
         setFailedSources(result.failedSources);
-      } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : "Failed to load news.");
-        setFailedSources([]);
-      } finally {
         setLoading(false);
         setRefreshing(false);
+        setHydrating(true);
+
+        void hydrateNewsArticles(result.articles, 8)
+          .then((hydrated) => {
+            if (loadToken === loadTokenRef.current) {
+              setArticles(hydrated);
+            }
+          })
+          .finally(() => {
+            if (loadToken === loadTokenRef.current) {
+              setHydrating(false);
+            }
+          });
+      } catch (loadError) {
+        if (loadToken === loadTokenRef.current) {
+          setError(loadError instanceof Error ? loadError.message : "Failed to load news.");
+          setFailedSources([]);
+          setLoading(false);
+          setRefreshing(false);
+          setHydrating(false);
+        }
       }
     },
     [],
@@ -597,6 +620,11 @@ ${userMessage}`;
                           <p className="mt-1">
                             Missing: {failedSources.map((entry) => entry.source.name).join(", ")}
                           </p>
+                        </div>
+                      ) : null}
+                      {hydrating ? (
+                        <div className="rounded-2xl border border-gray-200 bg-gray-50/90 px-3 py-3 text-xs leading-6 text-gray-700 dark:border-gray-700 dark:bg-gray-950/40 dark:text-gray-200">
+                          Enriching thumbnails and primary-source links in the background.
                         </div>
                       ) : null}
                     </div>
