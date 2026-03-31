@@ -10,8 +10,17 @@ import type { SolutionSource, SolveMode } from "../types";
 import { embedSourcesInSolution } from "../utils/solution";
 import { isLikelyHomeworkRequest, shouldAskClarifyingQuestions } from "../utils/request";
 
-function getAiClient() {
-  return new GoogleGenAI({ apiKey: import.meta.env.GEMINI_API_KEY });
+export function resolveGeminiApiKey(apiKeyOverride?: string) {
+  return apiKeyOverride?.trim() || import.meta.env.GEMINI_API_KEY?.trim() || "";
+}
+
+function getAiClient(apiKeyOverride?: string) {
+  const apiKey = resolveGeminiApiKey(apiKeyOverride);
+  if (!apiKey) {
+    throw new Error("A Gemini API key is required.");
+  }
+
+  return new GoogleGenAI({ apiKey });
 }
 
 async function blobToBase64(blob: Blob) {
@@ -135,7 +144,7 @@ WEB SEARCH:
 When the user explicitly wants further reading, official pages, primary documents, or a short list of links, include:
 [WEB_SEARCH: "descriptive web search query"]`;
 
-const SYSTEM_PROMPT = `You are an elite academic tutor and research assistant. You solve questions with rigorous accuracy across EVERY domain: mathematics, physics, chemistry, biology, computer science, engineering, history, literature, philosophy, economics, law, medicine, linguistics, and more.
+export const SYSTEM_PROMPT = `You are an elite academic tutor and research assistant. You solve questions with rigorous accuracy across EVERY domain: mathematics, physics, chemistry, biology, computer science, engineering, history, literature, philosophy, economics, law, medicine, linguistics, and more.
 
 YOUR CORE PRINCIPLES:
 1. ACCURACY IS PARAMOUNT. Double-check every calculation. Verify every fact.
@@ -165,7 +174,22 @@ DATA VISUALIZATION:
 - For function graphs, include enough sample points to make the curve look correct, and mention key intercepts, extrema, asymptotes, or discontinuities in prose.
 - Use charts for: function plots, data distributions, physics trajectories, economic trends, comparative series, and scatter data.
 
+FIGURES, TABLES, STATS, AND DEMOS:
+- When a structured visual explanation would help, output a \`\`\`figure block with JSON matching one of these types: timeline, comparison, process, geometry, concept_map.
+- When a compact metrics summary would help, output a \`\`\`stats block with JSON: {"title":"...","caption":"...","items":[{"label":"...","value":"...","change":"...","detail":"..."}]}
+- When a compact data table would help, output a \`\`\`table block with JSON: {"title":"...","caption":"...","columns":["A","B"],"rows":[["x","y"],["m","n"]]}
+- When an interactive concept demo would materially improve understanding, output a \`\`\`demo block with JSON using types: kinematics, pendulum, function_transform, distribution.
+- Never invent a visual just to decorate the answer. Use figures, stats, tables, and demos only when they clarify the concept.
+
 ${MEDIA_MARKER_PROMPT}
+
+WEATHER:
+When current weather or current local conditions matter, include:
+[WEATHER: "city, region"]
+
+MAPS:
+When the user would benefit from a real location handoff, include:
+[MAP: "place name or address"]
 
 VIDEO REQUESTS:
 - If the user asks for a video, tutorial, or YouTube content, include a [VIDEO_SEARCH: "query"] marker so the client can render an actual video.
@@ -235,6 +259,7 @@ When search grounding is active:
 - For time-sensitive identity questions such as the current president, prime minister, CEO, or office holder, verify the answer live and give the exact date context of that answer.
 - Do NOT rely on forums, homework mills, or anonymous community posts unless absolutely unavoidable.
 - Be explicitly truth-seeking: separate verified facts from interpretation, and avoid partisan framing or sensational language.
+- For worldview and moral questions, be patient and direct. If a Christian answer is relevant, give reasons from Scripture, philosophy, history, and human nature where appropriate instead of slogans.
 - Use inline citations like [1], [2], [3] in the answer body when a claim depends on a source.
 - Do NOT add a separate "Sources:" list at the end; the client renders sources separately.`;
 
@@ -503,6 +528,7 @@ function wait(ms: number) {
 async function generateWithFallback(
   modelCandidates: Array<string | undefined>,
   params: Omit<GenerateContentParameters, "model">,
+  apiKeyOverride?: string,
 ): Promise<GenerateContentResponse> {
   const tried = new Set<string>();
   let lastError: unknown;
@@ -515,7 +541,7 @@ async function generateWithFallback(
     tried.add(candidate);
     for (let attempt = 0; attempt < MAX_RATE_LIMIT_ATTEMPTS_PER_MODEL; attempt += 1) {
       try {
-        return await getAiClient().models.generateContent({
+        return await getAiClient(apiKeyOverride).models.generateContent({
           ...params,
           model: candidate,
         });
@@ -565,7 +591,21 @@ export function buildRequestPlan(mode: SolveMode, text: string, detailed: boolea
   };
 }
 
-function buildConfig(mode: SolveMode, subject: string, detailed: boolean, requestText = "") {
+interface BuildSystemInstructionOptions {
+  subject: string;
+  detailed: boolean;
+  requestText: string;
+  providerSupportsGrounding: boolean;
+  includeGroundingWarning: boolean;
+}
+
+export function buildUniversalSystemInstruction({
+  subject,
+  detailed,
+  requestText,
+  providerSupportsGrounding,
+  includeGroundingWarning,
+}: BuildSystemInstructionOptions) {
   let prompt = SYSTEM_PROMPT;
   if (subject !== "Auto-detect") {
     prompt += `\n\nThe user has specified the subject is: ${subject}. Tailor your response to this domain's conventions and notation.`;
@@ -593,6 +633,25 @@ function buildConfig(mode: SolveMode, subject: string, detailed: boolean, reques
 - if sources disagree, say so plainly and explain which source is primary`;
   }
 
+  if (!providerSupportsGrounding && includeGroundingWarning) {
+    prompt += `\n\nThis provider does not have live Google grounding in this app.
+- Do not pretend you have live browsing.
+- If the request needs up-to-date headlines or verified current reporting, prefer [ACTION: show_news].
+- If you answer from general knowledge, explicitly state that the answer may be outdated.`;
+  }
+
+  return prompt;
+}
+
+function buildConfig(mode: SolveMode, subject: string, detailed: boolean, requestText = "") {
+  const prompt = buildUniversalSystemInstruction({
+    subject,
+    detailed,
+    requestText,
+    providerSupportsGrounding: true,
+    includeGroundingWarning: false,
+  });
+
   const config: Record<string, unknown> = { systemInstruction: prompt };
 
   if (mode === "deep") {
@@ -602,11 +661,37 @@ function buildConfig(mode: SolveMode, subject: string, detailed: boolean, reques
   return config;
 }
 
+export function buildTutorSystemInstruction(providerSupportsGrounding: boolean) {
+  return `You are a helpful tutor answering follow-up questions. Be concise, readable, and directly useful inside a narrow chat panel. If the user asks whether their work is right, verify it directly before expanding. Use LaTeX for math. Include Python code or charts only when computation genuinely helps.
+
+IMPORTANT: Always keep the original question in mind when answering follow-ups. Reference specific aspects of the original question and any original image when relevant. Build upon or correct the original reasoning as needed.
+
+Formatting rules for follow-up replies:
+- Start with the direct answer or next step, not a long intro.
+- Prefer short paragraphs and flat bullet lists.
+- Keep most replies to 3-6 tight bullets or short paragraphs.
+- If you give steps, number them.
+- Do not restate the whole prior solution unless the user asks for a full rewrite.
+
+If the follow-up is too vague to answer correctly, ask concise clarification questions instead of guessing.
+When you ask for clarification, offer 2-4 concrete numbered choices the user can answer quickly.
+Keep each clarification choice short enough to fit in a compact UI card, ideally one sentence fragment rather than a paragraph.
+If the user gives a short reply after a clarification, treat it as their choice and continue the task.
+If the original problem is clearly coursework, continue teaching method-first and keep any final result isolated in the **Answer:** section only.
+
+${MEDIA_MARKER_PROMPT}
+
+${providerSupportsGrounding ? "" : "You do not have live browsing in this mode. If the user asks for current headlines or freshest reporting, use [ACTION: show_news] instead of pretending to cite live web results."}
+
+If the user asks for a picture, diagram, video, YouTube result, or a set of links, emit the appropriate marker so the client can render it directly.`;
+}
+
 export async function solveQuestion(
   base64Image: string,
   mode: SolveMode,
   subject = "Auto-detect",
   detailed = false,
+  apiKeyOverride?: string,
 ): Promise<string> {
   const requestText = getRequestText(subject === "Auto-detect" ? "" : `Subject: ${subject}`);
   const plan = buildRequestPlan(mode, requestText, detailed);
@@ -632,7 +717,7 @@ If the image is only the question prompt, solve it directly. Assume this may be 
 If the image is too ambiguous to answer correctly, ask concise clarification questions instead of guessing.`,
     ],
     config,
-  });
+  }, apiKeyOverride);
   return finalizeResponse(response, requestText);
 }
 
@@ -641,6 +726,7 @@ export async function solveTextQuestion(
   mode: SolveMode,
   subject = "Auto-detect",
   detailed = false,
+  apiKeyOverride?: string,
 ): Promise<string> {
   const requestText = getRequestText(text);
   const plan = buildRequestPlan(mode, requestText, detailed);
@@ -663,7 +749,7 @@ ${looksLikeHomework ? "This looks like student coursework. Teach the underlying 
 ${shouldClarify ? "This may be too vague for a correct answer. If key details are missing, ask up to 3 concise clarification questions and stop there." : ""}`,
     ],
     config,
-  });
+  }, apiKeyOverride);
   return finalizeResponse(response, requestText);
 }
 
@@ -671,6 +757,7 @@ export async function chatWithTutor(
   history: { role: string; text: string }[],
   message: string,
   originalQuestion?: { text?: string; imageBase64?: string },
+  apiKeyOverride?: string,
 ): Promise<string> {
   if (!message.trim()) throw new Error("Message must not be empty.");
 
@@ -741,34 +828,14 @@ export async function chatWithTutor(
   const response = await generateWithFallback(plan.modelCandidates, {
     contents,
     config: {
-      systemInstruction:
-        `You are a helpful tutor answering follow-up questions. Be concise, readable, and directly useful inside a narrow chat panel. If the user asks whether their work is right, verify it directly before expanding. Use LaTeX for math. Include Python code or charts only when computation genuinely helps.
-
-IMPORTANT: Always keep the original question in mind when answering follow-ups. Reference specific aspects of the original question and any original image when relevant. Build upon or correct the original reasoning as needed.
-
-Formatting rules for follow-up replies:
-- Start with the direct answer or next step, not a long intro.
-- Prefer short paragraphs and flat bullet lists.
-- Keep most replies to 3-6 tight bullets or short paragraphs.
-- If you give steps, number them.
-- Do not restate the whole prior solution unless the user asks for a full rewrite.
-
-If the follow-up is too vague to answer correctly, ask concise clarification questions instead of guessing.
-When you ask for clarification, offer 2-4 concrete numbered choices the user can answer quickly.
-Keep each clarification choice short enough to fit in a compact UI card, ideally one sentence fragment rather than a paragraph.
-If the user gives a short reply after a clarification, treat it as their choice and continue the task.
-If the original problem is clearly coursework, continue teaching method-first and keep any final result isolated in the **Answer:** section only.
-
-${MEDIA_MARKER_PROMPT}
-
-If the user asks for a picture, diagram, video, YouTube result, or a set of links, emit the appropriate marker so the client can render it directly.`,
+      systemInstruction: buildTutorSystemInstruction(true),
       ...(plan.useGrounding ? { tools: [{ googleSearch: {} }] } : {}),
     },
-  });
+  }, apiKeyOverride);
   return finalizeResponse(response, message);
 }
 
-export async function transcribeAudio(audioBlob: Blob): Promise<string> {
+export async function transcribeAudio(audioBlob: Blob, apiKeyOverride?: string): Promise<string> {
   if (!audioBlob.size) {
     throw new Error("Audio recording was empty.");
   }
@@ -796,7 +863,7 @@ Rules:
       systemInstruction:
         "You are a precise transcription assistant. Return only the user's transcript with clean punctuation.",
     },
-  });
+  }, apiKeyOverride);
 
   return (response.text ?? "").trim();
 }

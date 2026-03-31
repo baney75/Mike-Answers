@@ -12,7 +12,7 @@ interface InputPreviewProps {
 }
 
 const BTN_BASE =
-  "w-full sm:w-auto flex items-center justify-center gap-2 border-2 border-gray-900 dark:border-gray-100 px-6 py-3 rounded-xl font-bold transition-all neo-shadow hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(17,24,39,1)] dark:hover:shadow-[6px_6px_0px_0px_rgba(243,244,246,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none min-h-[44px]";
+  "flex min-h-[44px] w-full items-center justify-center gap-2 rounded-full border px-6 py-3 text-sm font-semibold transition sm:w-auto";
 
 export function InputPreview({
   imagePreviewUrl,
@@ -38,42 +38,39 @@ export function InputPreview({
   }, [imagePreviewUrl, textInput]);
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-xl border-2 border-gray-900 dark:border-gray-100 neo-shadow overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500 no-print">
-      {/* Header */}
-      <div className="p-4 bg-gray-100 dark:bg-gray-800 border-b-2 border-gray-900 dark:border-gray-100 flex justify-between items-center">
-        <h2 className="text-sm font-bold font-mono text-gray-900 dark:text-gray-100 uppercase tracking-wider">
-          Input Preview
+    <div className="no-print paper-panel overflow-hidden p-0 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="flex items-center justify-between border-b-2 border-[var(--aqs-border)] bg-[var(--aqs-paper-strong)] p-5 dark:bg-slate-900/40">
+        <h2 className="text-sm font-black uppercase tracking-[0.3em] text-[var(--aqs-accent-strong)] dark:text-[var(--aqs-accent-dark)]">
+          Input review
         </h2>
         <button
           type="button"
           onClick={onClear}
-          className="text-gray-900 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors p-2 rounded-lg border-2 border-transparent hover:border-gray-900 dark:hover:border-gray-100 min-h-[44px] min-w-[44px] flex items-center justify-center"
+          className="neo-border-thin neo-shadow-sm flex h-10 w-10 items-center justify-center rounded-full bg-white transition-all hover:-translate-y-0.5 active:translate-y-px dark:bg-slate-950"
           title="Clear input"
         >
-          <X className="w-5 h-5" />
+          <X className="h-5 w-5 text-[var(--aqs-accent)]" />
         </button>
       </div>
 
-      <div className="p-6 flex flex-col items-center">
-        {/* Image or text preview */}
+      <div className="flex flex-col items-center p-6 md:p-8">
         {imagePreviewUrl && (
-          <div className="w-full space-y-5">
-            <div className="rounded-[1.75rem] border-2 border-gray-900 bg-gray-50 p-4 dark:border-gray-100 dark:bg-gray-950">
+          <div className="w-full space-y-6">
+            <div className="neo-border-thin neo-shadow-sm overflow-hidden rounded-[2rem] bg-white p-2 dark:bg-slate-950">
               <img
                 src={imagePreviewUrl}
                 alt="Question preview"
-                className="max-h-[420px] w-full object-contain rounded-2xl"
+                className="max-h-[480px] w-full object-contain rounded-[1.6rem]"
               />
             </div>
-            <p className="text-sm leading-6 text-gray-600 dark:text-gray-300">
-              The tutor will inspect the image first. If your work is already shown, it will say what is correct
-              before fixing the first real issue.
+            <p className="text-center text-sm font-medium leading-relaxed text-slate-600 dark:text-slate-300">
+              Mike will inspect the image first. If your work is already shown, it will be validated before corrections.
             </p>
           </div>
         )}
         {textInput !== null && !imagePreviewUrl && (
           <div className="w-full space-y-4">
-            <div className="rounded-[1.75rem] border-2 border-gray-900 bg-white p-1 dark:border-gray-100 dark:bg-gray-950">
+            <div className="neo-border-thin rounded-[2rem] bg-white p-1 focus-within:ring-4 focus-within:ring-[color:rgba(139,30,63,0.08)] dark:bg-slate-950">
               <textarea
                 ref={textAreaRef}
                 value={textInput}
@@ -91,21 +88,28 @@ export function InputPreview({
                   }
                 }}
                 placeholder="Type or paste your question here."
-                className="min-h-[220px] w-full resize-y rounded-[1.35rem] bg-transparent px-5 py-5 font-mono text-base text-gray-900 outline-none placeholder:text-gray-400 dark:text-gray-100 dark:placeholder:text-gray-500"
+                className="min-h-[220px] w-full resize-y rounded-[1.8rem] bg-transparent px-6 py-6 text-lg font-medium leading-relaxed text-[var(--aqs-ink)] outline-none placeholder:text-slate-400 dark:text-white md:min-h-[280px]"
               />
             </div>
           </div>
         )}
 
-        {/* Solve buttons */}
-        <div className="mt-8 flex w-full flex-col items-center gap-5">
-          <div className="flex w-full flex-col justify-center gap-4 sm:flex-row sm:flex-wrap">
-            <button type="button" onClick={() => onSolve("fast")} className={`${BTN_BASE} bg-[var(--aqs-accent)] text-white hover:bg-[var(--aqs-accent-strong)]`}>
-              <Zap className="w-5 h-5 text-[var(--aqs-gold)]" />
+        <div className="mt-10 flex w-full flex-col items-center gap-6">
+          <div className="flex w-full flex-col justify-center gap-5 sm:flex-row sm:flex-wrap">
+            <button
+              type="button"
+              onClick={() => onSolve("fast")}
+              className="neo-border neo-shadow flex flex-1 items-center justify-center gap-3 rounded-2xl bg-[var(--aqs-accent)] px-8 py-5 text-lg font-black text-white transition-all hover:-translate-y-1 active:translate-y-px active:shadow-none sm:max-w-[280px]"
+            >
+              <Zap className="h-6 w-6 text-[var(--aqs-gold)] fill-[var(--aqs-gold)]" />
               Ask Fast
             </button>
-            <button type="button" onClick={() => onSolve("deep")} className={`${BTN_BASE} bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700`}>
-              <BrainCircuit className="w-5 h-5" />
+            <button
+              type="button"
+              onClick={() => onSolve("deep")}
+              className="neo-border-thin neo-shadow-sm flex flex-1 items-center justify-center gap-3 rounded-2xl bg-white px-8 py-5 text-lg font-black text-[var(--aqs-ink)] transition-all hover:-translate-y-1 active:translate-y-px active:shadow-none dark:bg-slate-900 dark:text-white sm:max-w-[280px]"
+            >
+              <BrainCircuit className="h-6 w-6 text-[var(--aqs-accent)]" />
               Deep Walkthrough
             </button>
           </div>

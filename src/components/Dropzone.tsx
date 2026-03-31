@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Mic, Square, UploadCloud } from "lucide-react";
+import { Mic, Square, UploadCloud, Zap } from "lucide-react";
 import { shouldSubmitTextShortcut } from "../utils/input";
-import { transcribeAudio } from "../services/gemini";
 
 interface DropzoneProps {
   onImageSelected: (file: File) => void;
@@ -9,6 +8,7 @@ interface DropzoneProps {
   onQuickSubmit?: (text: string) => void;
   onError: (msg: string) => void;
   onVoiceInput?: (text: string) => void;
+  onAudioTranscribe?: (audioBlob: Blob) => Promise<string>;
 }
 
 function isEditableTarget(target: EventTarget | null) {
@@ -27,6 +27,7 @@ export function Dropzone({
   onQuickSubmit,
   onError,
   onVoiceInput,
+  onAudioTranscribe,
 }: DropzoneProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [isListening, setIsListening] = useState(false);
@@ -238,9 +239,11 @@ export function Dropzone({
         setIsTranscribing(true);
         setVoiceStatus("Transcribing...");
         try {
-          const transcript = await transcribeAudio(
-            new Blob(chunks, { type: outputMimeType }),
-          );
+          if (!onAudioTranscribe) {
+            throw new Error("No audio transcription handler configured.");
+          }
+
+          const transcript = await onAudioTranscribe(new Blob(chunks, { type: outputMimeType }));
           if (!transcript) {
             throw new Error("Empty transcript");
           }
@@ -277,6 +280,7 @@ export function Dropzone({
     clearRecordingTimeout,
     isListening,
     isTranscribing,
+    onAudioTranscribe,
     onError,
     onVoiceInput,
   ]);
@@ -456,7 +460,7 @@ export function Dropzone({
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <input
         id="file-input"
         type="file"
@@ -468,200 +472,97 @@ export function Dropzone({
         aria-hidden="true"
       />
 
-      <div className="hidden md:block">
-        <div className="relative">
-          {onVoiceInput && (
+      <div
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        className={`studio-panel overflow-hidden bg-white/50 p-0 backdrop-blur-sm dark:bg-slate-900/50 ${
+          isDragging
+            ? "border-[var(--aqs-accent)] ring-4 ring-[color:rgba(139,30,63,0.1)]"
+            : ""
+        }`}
+      >
+        <div className="flex flex-col gap-4 border-b-2 border-[var(--aqs-border)] bg-[var(--aqs-paper-strong)] px-5 py-5 dark:bg-slate-950/40 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-wrap items-center gap-3">
             <button
               type="button"
-              onClick={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                void (isListening ? stopListening() : startListening());
-              }}
-              aria-label={
-                isListening
-                  ? "Stop voice recording"
-                  : isTranscribing
-                    ? "Transcribing voice input"
-                    : "Start voice recording"
-              }
-              title={
-                isListening
-                  ? "Stop voice recording"
-                  : isTranscribing
-                    ? "Transcribing voice input"
-                    : "Start voice recording"
-              }
-              disabled={isTranscribing}
-              className={`absolute right-6 top-6 z-30 inline-flex h-16 w-16 items-center justify-center rounded-full border-2 neo-shadow-sm transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-70 ${
-                isListening
-                  ? "border-[var(--aqs-accent-strong)] bg-[var(--aqs-accent)] text-white"
-                  : "border-gray-900 bg-[var(--aqs-accent-soft)] text-[var(--aqs-accent)] dark:border-gray-100 dark:bg-[color:rgba(122,31,52,0.2)] dark:text-[var(--aqs-accent-dark)]"
-              }`}
-            >
-              {isListening ? (
-                <Square className="h-6 w-6" />
-              ) : (
-                <Mic className="h-6 w-6" />
-              )}
-            </button>
-          )}
-          <div
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            className={`relative block w-full overflow-hidden rounded-[2.2rem] border-2 px-8 py-14 text-center transition-all duration-200 neo-shadow focus-within:outline-none focus-within:ring-4 focus-within:ring-[color:rgba(122,31,52,0.18)] ${
-              isDragging
-                ? "border-[var(--aqs-accent)] bg-[var(--aqs-accent-soft)] translate-x-[2px] translate-y-[2px] shadow-none dark:bg-[color:rgba(122,31,52,0.2)]"
-                : "border-gray-900 bg-white hover:-translate-y-1 dark:border-gray-100 dark:bg-gray-900"
-            }`}
-          >
-            <button
-              type="button"
-              aria-label="Upload image"
               onClick={triggerFilePicker}
-              className="absolute inset-y-0 left-0 right-28 z-10 cursor-pointer rounded-[2.2rem] border-0 bg-transparent p-0"
-            />
+              className="studio-card inline-flex items-center gap-2 bg-white px-5 py-2.5 text-sm font-black text-[var(--aqs-ink)] transition-all dark:bg-slate-900"
+            >
+              <UploadCloud className="h-4 w-4 text-[var(--aqs-accent)]" />
+              Upload Image
+            </button>
 
-            <div className="pointer-events-none relative z-0">
-              <div className="mx-auto mb-7 flex h-28 w-28 items-center justify-center rounded-[2rem] border-2 border-gray-900 bg-[var(--aqs-accent-soft)] text-[var(--aqs-accent)] neo-shadow-sm dark:border-gray-100 dark:bg-[color:rgba(122,31,52,0.2)] dark:text-[var(--aqs-accent-dark)]">
-                <UploadCloud className="h-10 w-10" />
-              </div>
+            {onVoiceInput ? (
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  void (isListening ? stopListening() : startListening());
+                }}
+                disabled={isTranscribing}
+                className={`studio-card inline-flex items-center gap-2 px-5 py-2.5 text-sm font-black transition-all disabled:opacity-50 ${
+                  isListening
+                    ? "bg-[var(--aqs-accent)] text-white"
+                    : "bg-white text-[var(--aqs-ink)] dark:bg-slate-900 dark:text-white"
+                }`}
+              >
+                {isListening ? <Square className="h-4 w-4 fill-white" /> : <Mic className="h-4 w-4 text-[var(--aqs-accent)]" />}
+                {isListening ? "Stop Now" : "Voice Solve"}
+              </button>
+            ) : null}
+          </div>
 
-              <h2 className="mx-auto max-w-4xl text-4xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
-                Start typing anywhere, paste an image, or click to upload.
-              </h2>
-
-              <div className="mx-auto mt-8 inline-flex max-w-3xl flex-wrap items-center justify-center gap-3 rounded-full border-2 border-gray-900 bg-white px-5 py-3 font-mono text-sm text-gray-600 neo-shadow-sm dark:border-gray-100 dark:bg-gray-950 dark:text-gray-300">
-                <span>
-                  Type to open the question box, or paste a screenshot with
-                </span>
-                <span className="rounded-xl bg-[var(--aqs-accent-soft)] px-3 py-1 font-bold text-[var(--aqs-accent-strong)] dark:bg-[color:rgba(122,31,52,0.22)] dark:text-[var(--aqs-accent-dark)]">
-                  Cmd+V
-                </span>
-              </div>
-              {voiceStatus && (
-                <div className="mx-auto mt-4 max-w-2xl font-mono text-sm text-[var(--aqs-accent-strong)] dark:text-[var(--aqs-accent-dark)]">
-                  {voiceStatus}
-                </div>
-              )}
-            </div>
+          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+            <div className="h-1.5 w-1.5 rounded-full bg-slate-300 dark:bg-slate-700" />
+            Paste / Drop Support
           </div>
         </div>
-      </div>
 
-      <div className="rounded-[2rem] border-2 border-gray-900 bg-white p-5 neo-shadow dark:border-gray-100 dark:bg-gray-900 md:hidden">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
-              Type, paste, or upload fast.
-            </h2>
-            <p className="mt-2 text-sm leading-6 text-gray-600 dark:text-gray-300">
-              Press Enter to ask fast. Shift+Enter for a new line.
-            </p>
+        <div className="px-5 py-6">
+          <div className="neo-border-thin studio-focus rounded-3xl bg-white px-1 py-1 dark:bg-slate-950">
+            <textarea
+              value={textInput}
+              onChange={(e) => setTextInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Type a complex problem, paste a screenshot, or use voice..."
+              className="min-h-[160px] w-full resize-none rounded-2xl bg-transparent px-6 py-6 text-xl font-medium leading-relaxed text-[var(--aqs-ink)] outline-none placeholder:text-slate-400 dark:text-white md:min-h-[220px]"
+            />
           </div>
-          {onVoiceInput && (
+
+          <div className="mt-8 flex flex-col gap-4 md:flex-row">
             <button
               type="button"
-              onClick={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                void (isListening ? stopListening() : startListening());
-              }}
-              aria-label={
-                isListening
-                  ? "Stop voice recording"
-                  : isTranscribing
-                    ? "Transcribing voice input"
-                    : "Start voice recording"
-              }
-              title={
-                isListening
-                  ? "Stop voice recording"
-                  : isTranscribing
-                    ? "Transcribing voice input"
-                    : "Start voice recording"
-              }
-              disabled={isTranscribing}
-              className={`relative z-20 inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-2 neo-shadow-sm transition disabled:cursor-not-allowed disabled:opacity-70 ${
-                isListening
-                  ? "border-[var(--aqs-accent-strong)] bg-[var(--aqs-accent)] text-white"
-                  : "border-gray-900 bg-[var(--aqs-accent-soft)] text-[var(--aqs-accent)] dark:border-gray-100 dark:bg-[color:rgba(122,31,52,0.2)] dark:text-[var(--aqs-accent-dark)]"
-              }`}
+              onClick={() => handleTextSubmit()}
+              disabled={!textInput.trim()}
+              className="neo-border neo-shadow flex flex-1 items-center justify-center gap-3 rounded-[1.25rem] bg-[var(--aqs-accent)] py-5 text-lg font-black text-white transition-all hover:-translate-y-1 active:translate-y-px disabled:opacity-50"
             >
-              {isListening ? (
-                <Square className="h-5 w-5" />
-              ) : (
-                <Mic className="h-5 w-5" />
-              )}
+              <Zap className="h-5 w-5 fill-white" />
+              Ask Mike Fast
             </button>
-          )}
-        </div>
+            <button
+              type="button"
+              onClick={() => handleTextSubmit(false)}
+              disabled={!textInput.trim()}
+              className="studio-card inline-flex items-center justify-center px-10 py-5 text-lg font-bold text-[var(--aqs-ink)] dark:text-white"
+            >
+              Review Method
+            </button>
+          </div>
 
-        <div
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          className={`relative mt-4 block w-full rounded-[1.6rem] border-2 p-5 transition-all duration-200 focus-within:outline-none focus-within:ring-4 focus-within:ring-[color:rgba(122,31,52,0.18)] ${
-            isDragging
-              ? "border-[var(--aqs-accent)] bg-[var(--aqs-accent-soft)] dark:bg-[color:rgba(122,31,52,0.2)]"
-              : "border-gray-900 bg-gray-50 dark:border-gray-100 dark:bg-gray-950"
-          }`}
-        >
-          <button
-            type="button"
-            aria-label="Upload image"
-            onClick={triggerFilePicker}
-            className="absolute inset-y-0 left-0 right-20 z-10 cursor-pointer rounded-[1.6rem] border-0 bg-transparent p-0"
-          />
-          <div className="pointer-events-none relative z-0 flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-[1.2rem] border-2 border-gray-900 bg-[var(--aqs-accent-soft)] text-[var(--aqs-accent)] neo-shadow-sm dark:border-gray-100 dark:bg-[color:rgba(122,31,52,0.2)] dark:text-[var(--aqs-accent-dark)]">
-              <UploadCloud className="h-5 w-5" />
-            </div>
-            <div>
-              <div className="font-bold text-gray-900 dark:text-gray-100">
-                Tap to upload a screenshot
+          {voiceStatus ? (
+            <div className="mt-6 flex items-center gap-4 rounded-2xl bg-[var(--aqs-accent-soft)] p-4 dark:bg-[color:rgba(139,30,63,0.1)]">
+              <div className="flex h-3 w-3 items-center justify-center">
+                <div className="absolute h-3 w-3 animate-ping rounded-full bg-[var(--aqs-accent)] opacity-75" />
+                <div className="relative h-2 w-2 rounded-full bg-[var(--aqs-accent)]" />
               </div>
-              <div className="mt-1 font-mono text-xs text-gray-500 dark:text-gray-400">
-                Cmd+V also works
+              <div className="text-xs font-black uppercase tracking-widest text-[var(--aqs-accent-strong)] dark:text-[var(--aqs-accent-dark)]">
+                {voiceStatus}
               </div>
             </div>
-          </div>
+          ) : null}
         </div>
-
-        <div className="mt-4 rounded-2xl border-2 border-gray-900 bg-white p-1 dark:border-gray-100 dark:bg-gray-950">
-          <textarea
-            value={textInput}
-            onChange={(e) => setTextInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Type or paste your question here."
-            className="min-h-[160px] w-full resize-none rounded-[1.1rem] bg-transparent px-4 py-4 font-mono text-base text-gray-900 outline-none placeholder:text-gray-400 dark:text-gray-100 dark:placeholder:text-gray-500"
-          />
-        </div>
-
-        <div className="mt-4 grid grid-cols-1 gap-3">
-          <button
-            type="button"
-            onClick={() => handleTextSubmit()}
-            disabled={!textInput.trim()}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl border-2 border-[var(--aqs-accent)] bg-[var(--aqs-accent)] px-5 py-3 font-bold text-white neo-shadow-sm transition hover:bg-[var(--aqs-accent-strong)] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Ask Fast
-          </button>
-          <button
-            type="button"
-            onClick={() => handleTextSubmit(false)}
-            disabled={!textInput.trim()}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl border-2 border-gray-900 bg-white px-5 py-3 font-bold text-gray-900 neo-shadow-sm transition disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-100 dark:bg-gray-900 dark:text-gray-100"
-          >
-            Review Options
-          </button>
-        </div>
-        {voiceStatus && (
-          <div className="mt-3 font-mono text-sm text-[var(--aqs-accent-strong)] dark:text-[var(--aqs-accent-dark)]">
-            {voiceStatus}
-          </div>
-        )}
       </div>
     </div>
   );

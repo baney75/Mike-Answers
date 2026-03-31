@@ -1,0 +1,273 @@
+import type { ProviderId, SolveMode } from "../types";
+import {
+  buildRequestPlan,
+  buildTutorSystemInstruction,
+  buildUniversalSystemInstruction,
+} from "./gemini";
+import { isLikelyHomeworkRequest, shouldAskClarifyingQuestions } from "../utils/request";
+
+type OpenAICompatibleMessage =
+  | {
+      role: "system" | "user" | "assistant";
+      content:
+        | string
+        | Array<
+            | { type: "text"; text: string }
+            | { type: "image_url"; image_url: { url: string } }
+          >;
+    };
+
+interface OpenAICompatibleChatResponse {
+  error?: {
+    message?: string;
+  };
+  choices?: Array<{
+    message?: {
+      content?:
+        | string
+        | Array<{
+            type?: string;
+            text?: string;
+          }>;
+    };
+  }>;
+}
+
+interface OpenAICompatibleRequestOptions {
+  providerId: ProviderId;
+  apiKey: string;
+  baseUrl: string;
+  model: string;
+}
+
+function normalizeContent(value: OpenAICompatibleChatResponse["choices"]) {
+  const content = value?.[0]?.message?.content;
+  if (typeof content === "string") {
+    return content.trim();
+  }
+
+  if (Array.isArray(content)) {
+    return content
+      .map((part) => (part.type === "text" ? part.text ?? "" : ""))
+      .join("")
+      .trim();
+  }
+
+  return "";
+}
+
+function buildHeaders(options: OpenAICompatibleRequestOptions) {
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${options.apiKey}`,
+    "Content-Type": "application/json",
+  };
+
+  if (options.providerId === "openrouter") {
+    const referer = typeof window !== "undefined" ? window.location.origin : "https://mike-net.top";
+    headers["HTTP-Referer"] = referer;
+    headers["X-Title"] = "Mike Answers";
+  }
+
+  return headers;
+}
+
+async function postChatCompletion(
+  options: OpenAICompatibleRequestOptions,
+  body: Record<string, unknown>,
+) {
+  const response = await fetch(`${options.baseUrl.replace(/\/$/, "")}/chat/completions`, {
+    method: "POST",
+    headers: buildHeaders(options),
+    body: JSON.stringify(body),
+  });
+
+  const payload = (await response.json().catch(() => ({}))) as OpenAICompatibleChatResponse;
+  if (!response.ok) {
+    const message = payload.error?.message ?? `${options.providerId} request failed (${response.status}).`;
+    throw new Error(message);
+  }
+
+  const text = normalizeContent(payload.choices);
+  if (!text) {
+    throw new Error(`${options.providerId} returned an empty response.`);
+  }
+
+  return text;
+}
+
+export async function solveTextQuestionWithOpenAICompatible(options: {
+  providerId: ProviderId;
+  apiKey: string;
+  baseUrl: string;
+  model: string;
+  text: string;
+  mode: Exclude<SolveMode, "research">;
+  subject?: string;
+  detailed?: boolean;
+}) {
+  const {
+    providerId,
+    apiKey,
+    baseUrl,
+    model,
+    text,
+    mode,
+    subject = "Auto-detect",
+    detailed = false,
+  } = options;
+  const requestPlan = buildRequestPlan(mode, text, detailed);
+  const looksLikeHomework = isLikelyHomeworkRequest(text, { subject });
+  const shouldClarify = shouldAskClarifyingQuestions(text);
+  const systemInstruction = buildUniversalSystemInstruction({
+    subject,
+    detailed,
+    requestText: text,
+    providerSupportsGrounding: false,
+    includeGroundingWarning: requestPlan.useGrounding,
+  });
+
+  return postChatCompletion(
+    { providerId, apiKey, baseUrl, model },
+    {
+      model,
+      temperature: mode === "deep" ? 0.2 : 0.45,
+      messages: [
+        { role: "system", content: systemInstruction },
+        {
+          role: "user",
+          content: `User request:\n\n${text}\n\nIf the user pasted their own attempt, notes, or answer, proactively check that work first and then continue tutoring. If it is just a question, solve it directly.\n\n${looksLikeHomework ? "This looks like student coursework. Teach the underlying method first and keep the final answer confined to the **Answer:** section only." : ""}\n${shouldClarify ? "This may be too vague for a correct answer. If key details are missing, ask up to 3 concise clarification questions and stop there." : ""}`,
+        },
+      ] satisfies OpenAICompatibleMessage[],
+    },
+  );
+}
+
+export async function solveImageQuestionWithOpenAICompatible(options: {
+  providerId: ProviderId;
+  apiKey: string;
+  baseUrl: string;
+  model: string;
+  base64Image: string;
+  mode: Exclude<SolveMode, "research">;
+  subject?: string;
+  detailed?: boolean;
+}) {
+  const {
+    providerId,
+    apiKey,
+    baseUrl,
+    model,
+    base64Image,
+    mode,
+    subject = "Auto-detect",
+    detailed = false,
+  } = options;
+  const systemInstruction = buildUniversalSystemInstruction({
+    subject,
+    detailed,
+    requestText: subject === "Auto-detect" ? "" : `Subject: ${subject}`,
+    providerSupportsGrounding: false,
+    includeGroundingWarning: false,
+  });
+
+  return postChatCompletion(
+    { providerId, apiKey, baseUrl, model },
+    {
+      model,
+      temperature: mode === "deep" ? 0.2 : 0.45,
+      messages: [
+        { role: "system", content: systemInstruction },
+        {
+          role: "user",
+          content: [
+            {
+              type: "image_url",
+              image_url: {
+                url: `data:image/jpeg;base64,${base64Image}`,
+              },
+            },
+            {
+              type: "text",
+              text: `Analyze the uploaded image carefully. It may contain a question, a partial attempt, completed student work, or both.\n\nIf the image includes the user's work, proactively check it before giving the final answer:\n- say what is correct,\n- identify the first mistake or missing step,\n- continue from the last correct idea,\n- and then provide the corrected solution.\n\nIf the image is only the question prompt, solve it directly. Assume this may be coursework. Teach the method first and keep any final numeric/result statement isolated in the **Answer:** section only.\n\nIf the image is too ambiguous to answer correctly, ask concise clarification questions instead of guessing.`,
+            },
+          ],
+        },
+      ] satisfies OpenAICompatibleMessage[],
+    },
+  );
+}
+
+export async function chatWithOpenAICompatible(options: {
+  providerId: ProviderId;
+  apiKey: string;
+  baseUrl: string;
+  model: string;
+  history: { role: string; text: string }[];
+  message: string;
+  originalQuestion?: { text?: string; imageBase64?: string };
+}) {
+  const {
+    providerId,
+    apiKey,
+    baseUrl,
+    model,
+    history,
+    message,
+    originalQuestion,
+  } = options;
+
+  if (!message.trim()) {
+    throw new Error("Message must not be empty.");
+  }
+
+  const messages: OpenAICompatibleMessage[] = [
+    {
+      role: "system",
+      content: buildTutorSystemInstruction(false),
+    },
+  ];
+
+  if (originalQuestion?.text || originalQuestion?.imageBase64) {
+    const content: OpenAICompatibleMessage["content"] = [];
+    if (originalQuestion.imageBase64) {
+      content.push({
+        type: "image_url",
+        image_url: {
+          url: `data:image/jpeg;base64,${originalQuestion.imageBase64}`,
+        },
+      });
+    }
+    if (originalQuestion.text) {
+      content.push({
+        type: "text",
+        text: `The user originally asked: ${originalQuestion.text}`,
+      });
+    }
+    messages.push({ role: "user", content });
+    messages.push({
+      role: "assistant",
+      content: "Understood. I will keep the original question context in mind.",
+    });
+  }
+
+  for (const item of history) {
+    messages.push({
+      role: item.role === "user" ? "user" : "assistant",
+      content: item.text,
+    });
+  }
+
+  messages.push({
+    role: "user",
+    content: message,
+  });
+
+  return postChatCompletion(
+    { providerId, apiKey, baseUrl, model },
+    {
+      model,
+      temperature: 0.35,
+      messages,
+    },
+  );
+}

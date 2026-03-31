@@ -1,6 +1,8 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
+  readonly VITE_CLERK_PUBLISHABLE_KEY?: string;
+  readonly VITE_CONVEX_URL?: string;
   readonly GEMINI_API_KEY: string;
   readonly GEMINI_FAST_MODEL?: string;
   readonly GEMINI_GROUNDED_MODEL?: string;

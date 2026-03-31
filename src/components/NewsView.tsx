@@ -78,10 +78,10 @@ function SourceToggle({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`rounded-full border px-3 py-1.5 text-xs font-mono font-bold uppercase tracking-[0.18em] transition ${
+      className={`rounded-full border-2 px-4 py-1.5 text-[10px] font-black uppercase tracking-widest transition-all ${
         active
-          ? "border-[var(--aqs-accent)] bg-[var(--aqs-accent)] text-white"
-          : "border-gray-300 bg-white/70 text-gray-600 hover:border-[var(--aqs-accent)] hover:text-[var(--aqs-accent-strong)] dark:border-gray-700 dark:bg-gray-900/60 dark:text-gray-300"
+          ? "border-[var(--aqs-accent)] bg-[var(--aqs-accent)] text-white shadow-sm"
+          : "border-slate-200 bg-white text-slate-500 hover:border-[var(--aqs-accent)] hover:text-[var(--aqs-accent-strong)] dark:border-slate-800 dark:bg-slate-900"
       }`}
     >
       {label}
@@ -97,13 +97,15 @@ function ArticleMeta({
   compact?: boolean;
 }) {
   return (
-    <div className={`flex flex-wrap items-center gap-2 ${compact ? "text-[11px]" : "text-xs"} font-mono uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400`}>
-      <span className="rounded-full border border-[var(--aqs-accent)]/30 bg-[var(--aqs-accent-soft)] px-2.5 py-1 text-[var(--aqs-accent-strong)] dark:bg-[color:rgba(122,31,52,0.18)] dark:text-[var(--aqs-accent-dark)]">
+    <div className={`flex flex-wrap items-center gap-3 ${compact ? "text-[10px]" : "text-xs"} font-black uppercase tracking-widest text-slate-400`}>
+      <span className="rounded-full bg-[var(--aqs-accent-soft)] px-3 py-1 text-[var(--aqs-accent-strong)] dark:bg-[color:rgba(122,31,52,0.2)] dark:text-[var(--aqs-accent-dark)]">
         {article.source}
       </span>
-      <span>{article.sourceBias}</span>
-      <span>{article.sourceType === "wire" ? "direct reporting" : "analysis"}</span>
-      <span className="inline-flex items-center gap-1">
+      <span className="hidden sm:inline opacity-40">•</span>
+      <span className="hidden sm:inline">{article.sourceBias}</span>
+      <span className="hidden md:inline opacity-40">•</span>
+      <span className="hidden md:inline">{article.sourceType === "wire" ? "Primary Report" : "Analysis"}</span>
+      <span className="inline-flex items-center gap-1.5 ml-auto">
         <Clock3 className="h-3.5 w-3.5" />
         {formatRelativeTime(article.pubDate)}
       </span>
@@ -119,34 +121,34 @@ function ArticleButtons({
   onAsk: (article: NewsArticle) => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-wrap items-center gap-3">
       <a
         href={article.directArticleUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center gap-2 rounded-xl border-2 border-gray-900 bg-white px-3 py-2 text-sm font-bold text-gray-900 transition hover:-translate-y-0.5 hover:bg-gray-50 dark:border-gray-100 dark:bg-gray-900 dark:text-gray-100 dark:hover:bg-gray-800"
+        className="studio-card inline-flex items-center gap-2 px-4 py-2.5 text-xs font-black transition-all"
       >
-        Direct Article
-        <ExternalLink className="h-4 w-4" />
+        Source Article
+        <ExternalLink className="h-3.5 w-3.5" />
       </a>
       {article.primarySourceUrl ? (
         <a
           href={article.primarySourceUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 rounded-xl border-2 border-[var(--aqs-accent)] bg-[var(--aqs-accent-soft)] px-3 py-2 text-sm font-bold text-[var(--aqs-accent-strong)] transition hover:-translate-y-0.5 dark:bg-[color:rgba(122,31,52,0.18)] dark:text-[var(--aqs-accent-dark)]"
+          className="studio-card inline-flex items-center gap-2 bg-[var(--aqs-accent-soft)] px-4 py-2.5 text-xs font-black text-[var(--aqs-accent-strong)] dark:bg-slate-800 dark:text-white"
         >
-          Primary Source
-          <ShieldCheck className="h-4 w-4" />
+          Primary Evidence
+          <ShieldCheck className="h-3.5 w-3.5" />
         </a>
       ) : null}
       <button
         type="button"
         onClick={() => onAsk(article)}
-        className="inline-flex items-center gap-2 rounded-xl border-2 border-gray-900 bg-[var(--aqs-accent)] px-3 py-2 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-[var(--aqs-accent-strong)] dark:border-gray-100"
+        className="neo-border-thin neo-shadow-sm ml-auto inline-flex items-center gap-2 rounded-xl bg-[var(--aqs-accent)] px-5 py-2.5 text-xs font-black text-white transition-all hover:-translate-y-0.5 active:translate-y-px"
       >
-        Ask About This
-        <MessageCircle className="h-4 w-4" />
+        Investigate
+        <MessageCircle className="h-3.5 w-3.5" />
       </button>
     </div>
   );
@@ -160,53 +162,60 @@ function LeadStory({
   onAsk: (article: NewsArticle) => void;
 }) {
   return (
-    <article className="self-start rounded-[2rem] border-2 border-gray-900 bg-white p-4 text-gray-900 neo-shadow dark:border-gray-100 dark:bg-gray-900 dark:text-gray-100 md:p-5">
-      <div className="grid gap-5 lg:grid-cols-[1.25fr_0.95fr]">
-        <div className="overflow-hidden rounded-[1.4rem] border-2 border-gray-900 bg-[var(--aqs-accent-soft)] dark:border-gray-100 dark:bg-[color:rgba(122,31,52,0.16)]">
+    <article className="studio-panel overflow-hidden bg-white p-5 dark:bg-slate-900 md:p-8">
+      <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
+        <div className="group relative aspect-[4/3] overflow-hidden rounded-[1.8rem] border-2 border-[var(--aqs-border)]">
           {article.thumbnail ? (
             <img
               src={article.thumbnail}
               alt={article.title}
-              width={960}
-              height={720}
               loading="eager"
-              className="h-full w-full object-cover"
+              className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
             />
           ) : (
-            <div className="flex aspect-[4/3] items-center justify-center">
-              <Newspaper className="h-12 w-12 text-[var(--aqs-accent)] dark:text-[var(--aqs-accent-dark)]" aria-hidden="true" />
+            <div className="flex h-full items-center justify-center bg-[var(--aqs-paper-strong)] dark:bg-slate-950">
+              <Newspaper className="h-16 w-16 text-slate-200 dark:text-slate-800" aria-hidden="true" />
             </div>
           )}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
         </div>
 
-        <div className="flex flex-col justify-between gap-4">
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-[0.28em] text-[var(--aqs-accent-strong)] dark:text-[var(--aqs-accent-dark)]">
-              <Sparkles className="h-4 w-4" />
-              Lead Story
+        <div className="flex flex-col justify-between py-2">
+          <div className="space-y-6">
+            <div className="flex items-center gap-3">
+              <div className="patch flex items-center gap-2 bg-white text-[9px] dark:bg-slate-800">
+                <Sparkles className="h-3 w-3 text-[var(--aqs-gold)]" />
+                Lead Analysis
+              </div>
+              <div className="h-[1px] flex-1 bg-slate-100 dark:bg-slate-800" />
             </div>
-            <ArticleMeta article={article} />
-            <div>
-              <h2 className="text-2xl font-black leading-tight md:text-[2rem]">
+            
+            <div className="space-y-4">
+              <h2 className="text-3xl font-black leading-[1.1] tracking-tight text-[var(--aqs-ink)] dark:text-white md:text-4xl lg:text-5xl">
                 {article.title}
               </h2>
-              <p className="mt-4 text-base leading-7 text-gray-700 dark:text-gray-300">
+              <p className="text-lg font-medium leading-relaxed text-slate-600 dark:text-slate-300">
                 {article.description}
               </p>
             </div>
+
+            <ArticleMeta article={article} />
+
             {article.contentText ? (
-              <div className="rounded-[1.2rem] border border-gray-200 bg-gray-50/80 p-4 dark:border-gray-700 dark:bg-gray-950/60">
-                <p className="text-xs font-mono uppercase tracking-[0.22em] text-gray-500 dark:text-gray-400">
-                  Report snapshot
+              <div className="rounded-[1.5rem] bg-slate-50 p-6 dark:bg-slate-950/50">
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">
+                  Data Extract
                 </p>
-                <p className="mt-3 line-clamp-6 text-sm leading-7 text-gray-700 dark:text-gray-300">
+                <p className="mt-4 line-clamp-5 text-sm font-medium leading-relaxed text-slate-700 dark:text-slate-300">
                   {article.contentText}
                 </p>
               </div>
             ) : null}
           </div>
 
-          <ArticleButtons article={article} onAsk={onAsk} />
+          <div className="mt-8 border-t-2 border-slate-50 pt-8 dark:border-slate-800">
+            <ArticleButtons article={article} onAsk={onAsk} />
+          </div>
         </div>
       </div>
     </article>
@@ -221,24 +230,23 @@ function LatestStory({
   onAsk: (article: NewsArticle) => void;
 }) {
   return (
-    <article className="rounded-[1.4rem] border-2 border-gray-900 bg-white p-4 neo-shadow-sm dark:border-gray-100 dark:bg-gray-900">
-      <ArticleMeta article={article} compact />
-      <h3 className="mt-3 text-lg font-bold leading-tight text-gray-900 dark:text-white">
-        {article.title}
-      </h3>
-      <p className="mt-2 line-clamp-2 text-sm leading-6 text-gray-600 dark:text-gray-400">
-        {article.description}
-      </p>
-      <div className="mt-4 flex items-center justify-between gap-2">
-        <span className="text-[11px] font-mono uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">
+    <article className="studio-card flex flex-col justify-between gap-4 bg-white p-5 dark:bg-slate-900">
+      <div className="space-y-3">
+        <ArticleMeta article={article} compact />
+        <h3 className="text-base font-black leading-snug text-[var(--aqs-ink)] dark:text-white">
+          {article.title}
+        </h3>
+      </div>
+      <div className="flex items-center justify-between border-t border-slate-50 pt-4 dark:border-slate-800">
+        <span className="text-[10px] font-bold text-slate-400">
           {formatPublishedLabel(article.pubDate)}
         </span>
         <button
           type="button"
           onClick={() => onAsk(article)}
-          className="text-sm font-bold text-[var(--aqs-accent-strong)] hover:underline dark:text-[var(--aqs-accent-dark)]"
+          className="text-xs font-black uppercase tracking-widest text-[var(--aqs-accent)] hover:underline"
         >
-          Open brief
+          Details
         </button>
       </div>
     </article>
@@ -253,39 +261,39 @@ function StoryCard({
   onAsk: (article: NewsArticle) => void;
 }) {
   return (
-    <article className="overflow-hidden rounded-[1.4rem] border-2 border-gray-900 bg-white neo-shadow transition hover:-translate-y-1 dark:border-gray-100 dark:bg-gray-900">
-      <div className="aspect-[16/9] overflow-hidden border-b-2 border-gray-900 dark:border-gray-100">
+    <article className="studio-card overflow-hidden bg-white dark:bg-slate-900">
+      <div className="group relative aspect-[16/9] overflow-hidden border-b-2 border-[var(--aqs-border)]">
         {article.thumbnail ? (
           <img
             src={article.thumbnail}
             alt={article.title}
-            width={640}
-            height={360}
             loading="lazy"
-            className="h-full w-full object-cover"
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
         ) : (
-          <div className="flex h-full items-center justify-center bg-[var(--aqs-accent-soft)] dark:bg-[color:rgba(122,31,52,0.18)]">
-            <Newspaper className="h-9 w-9 text-[var(--aqs-accent)] dark:text-[var(--aqs-accent-dark)]" aria-hidden="true" />
+          <div className="flex h-full items-center justify-center bg-slate-50 dark:bg-slate-950">
+            <Newspaper className="h-10 w-10 text-slate-200 dark:text-slate-800" aria-hidden="true" />
           </div>
         )}
       </div>
-      <div className="space-y-3 p-4">
+      <div className="space-y-4 p-6">
         <ArticleMeta article={article} compact />
-        <div>
-          <h3 className="text-lg font-bold leading-tight text-gray-900 dark:text-white">{article.title}</h3>
-          <p className="mt-2 line-clamp-3 text-sm leading-6 text-gray-600 dark:text-gray-400">
+        <div className="space-y-2">
+          <h3 className="text-xl font-black leading-tight text-[var(--aqs-ink)] dark:text-white">{article.title}</h3>
+          <p className="line-clamp-3 text-sm font-medium leading-relaxed text-slate-500 dark:text-slate-400">
             {article.description}
           </p>
         </div>
-        <div className="flex flex-wrap gap-2 text-xs font-mono uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">
-          {article.categories.slice(0, 3).map((category) => (
-            <span key={category} className="rounded-full bg-gray-100 px-2.5 py-1 dark:bg-gray-800">
+        <div className="mt-6 flex flex-wrap gap-2">
+          {article.categories.slice(0, 2).map((category) => (
+            <span key={category} className="patch text-[8px] bg-slate-50 text-slate-400 border-slate-100 dark:bg-slate-800 dark:border-slate-700">
               {category}
             </span>
           ))}
         </div>
-        <ArticleButtons article={article} onAsk={onAsk} />
+        <div className="mt-6 pt-6 border-t border-slate-50 dark:border-slate-800">
+          <ArticleButtons article={article} onAsk={onAsk} />
+        </div>
       </div>
     </article>
   );
@@ -293,20 +301,22 @@ function StoryCard({
 
 function BackgroundTaskBanner({ onReturn }: { onReturn: () => void }) {
   return (
-    <div className="flex items-center justify-between gap-4 rounded-[1.4rem] border-2 border-amber-300 bg-amber-100 px-4 py-3 dark:border-amber-700 dark:bg-amber-900/20">
-      <div className="flex items-center gap-3">
-        <div className="h-5 w-5 rounded-full border-2 border-amber-600 border-t-transparent animate-spin dark:border-amber-400" />
-        <span className="text-sm font-medium text-amber-900 dark:text-amber-100">
-          Your earlier question is still running in the background.
+    <div className="neo-border-thin flex items-center justify-between gap-4 rounded-2xl bg-amber-50 px-6 py-4 dark:bg-amber-950/20">
+      <div className="flex items-center gap-4">
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/40">
+          <RefreshCw className="h-4 w-4 animate-spin text-amber-600 dark:text-amber-400" />
+        </div>
+        <span className="text-sm font-black text-amber-900 dark:text-amber-100 uppercase tracking-widest">
+          Analyst Task Running in Background
         </span>
       </div>
       <button
         type="button"
         onClick={onReturn}
-        className="inline-flex items-center gap-2 rounded-xl bg-amber-600 px-3 py-2 text-sm font-bold text-white hover:bg-amber-700"
+        className="studio-card bg-white px-5 py-2 text-xs font-black uppercase tracking-widest text-amber-700 hover:bg-amber-50"
       >
-        View Answer
-        <ArrowRight className="h-4 w-4" />
+        View Solution
+        <ArrowRight className="ml-2 inline h-3.5 w-3.5" />
       </button>
     </div>
   );
@@ -518,101 +528,101 @@ ${userMessage}`;
   }, [filteredArticles]);
 
   return (
-    <div className="space-y-5 animate-in fade-in duration-500">
+    <div className="space-y-6 animate-in fade-in duration-700">
       {hasBackgroundTask && onReturn ? <BackgroundTaskBanner onReturn={onReturn} /> : null}
 
-      <section className="overflow-hidden rounded-[2.2rem] border-2 border-gray-900 bg-[linear-gradient(135deg,rgba(122,31,52,0.1),rgba(255,255,255,0.9))] neo-shadow dark:border-gray-100 dark:bg-[linear-gradient(135deg,rgba(122,31,52,0.24),rgba(10,14,25,0.96))]">
-        <div className="border-b-2 border-gray-900 px-5 py-5 dark:border-gray-100 md:px-8 lg:px-10 dark:bg-transparent">
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-start">
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
+      <section className="studio-panel overflow-hidden bg-white dark:bg-slate-950">
+        <div className="border-b-2 border-[var(--aqs-border)]/5 bg-[linear-gradient(135deg,rgba(139,30,63,0.04),transparent)] px-5 py-8 md:px-8 lg:px-12">
+          <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-start">
+            <div className="space-y-6">
+              <div className="flex items-center gap-4">
                 {onReturn ? (
                   <button
                     type="button"
                     onClick={onReturn}
-                    className="rounded-xl border-2 border-gray-900 bg-white p-2 text-gray-900 transition hover:-translate-y-0.5 dark:border-gray-100 dark:bg-gray-900 dark:text-gray-100"
+                    className="studio-card h-12 w-12 bg-white transition-all dark:bg-slate-900"
                     aria-label="Back to answer"
                   >
-                    <ArrowLeft className="h-5 w-5" />
+                    <ArrowLeft className="mx-auto h-5 w-5" />
                   </button>
                 ) : null}
-                <div className="rounded-2xl border-2 border-gray-900 bg-[var(--aqs-accent)] p-3 text-white dark:border-gray-100">
-                  <Newspaper className="h-7 w-7" />
+                <div className="neo-border-thin neo-shadow-sm flex h-16 w-16 shrink-0 items-center justify-center rounded-[1.4rem] bg-[var(--aqs-accent)] text-white">
+                  <Newspaper className="h-8 w-8" />
                 </div>
                 <div>
-                  <p className="text-xs font-mono font-bold uppercase tracking-[0.28em] text-[var(--aqs-accent-strong)] dark:text-[var(--aqs-accent-dark)]">
-                    Verified News Desk
+                  <p className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--aqs-accent-strong)] dark:text-[var(--aqs-accent-dark)]">
+                    Verified Editorial Desk
                   </p>
-                  <h1 className="mt-1 max-w-4xl text-3xl font-black tracking-tight text-gray-900 dark:text-white md:text-5xl">
-                    Latest reporting, direct links, primary references.
+                  <h1 className="mt-2 max-w-4xl text-4xl font-black tracking-tighter text-[var(--aqs-ink)] dark:text-white md:text-5xl">
+                    Truth-seeking <span className="text-[var(--aqs-accent)]">intelligence.</span>
                   </h1>
                 </div>
               </div>
-              <p className="max-w-4xl text-sm leading-7 text-gray-600 dark:text-gray-300 md:text-lg">
-                A live desk built from your selected feeds. Direct article links stay visible, and upstream references surface when the reporting exposes them.
+              <p className="max-w-4xl text-lg font-medium leading-relaxed text-slate-600 dark:text-slate-300">
+                A live research surface built from verified news feeds. Mike provides direct source links and primary evidence analysis.
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 xl:justify-end">
+            <div className="flex flex-wrap items-center gap-3 xl:justify-end">
               <button
                 type="button"
                 onClick={() => setShowChat((value) => !value)}
-                className={`rounded-xl border-2 px-4 py-3 text-sm font-bold transition ${
+                className={`studio-card px-6 py-4 text-sm font-black transition-all ${
                   showChat
-                    ? "border-gray-900 bg-[var(--aqs-accent)] text-white dark:border-gray-100"
-                    : "border-gray-900 bg-white text-gray-900 hover:-translate-y-0.5 dark:border-gray-100 dark:bg-gray-900 dark:text-gray-100"
+                    ? "bg-[var(--aqs-accent)] text-white"
+                    : "bg-white text-[var(--aqs-ink)] dark:bg-slate-900 dark:text-white"
                 }`}
                 aria-expanded={showChat}
                 aria-controls="floating-news-chat"
               >
-                <MessageCircle className="mr-2 inline h-4 w-4" />
+                <MessageCircle className="mr-2 inline h-5 w-5" />
                 Desk Chat
               </button>
               <button
                 type="button"
                 onClick={() => void loadNews(query, true)}
                 disabled={refreshing}
-                className="rounded-xl border-2 border-gray-900 bg-white px-4 py-3 text-sm font-bold text-gray-900 transition hover:-translate-y-0.5 dark:border-gray-100 dark:bg-gray-900 dark:text-gray-100"
+                className="studio-card bg-white px-6 py-4 text-sm font-black text-[var(--aqs-ink)] dark:bg-slate-900 dark:text-white"
               >
                 <RefreshCw className={`mr-2 inline h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
-                Refresh
+                Refresh Feed
               </button>
               {onClose ? (
                 <button
                   type="button"
                   onClick={onClose}
-                  className="rounded-xl border-2 border-gray-900 bg-white px-4 py-3 text-sm font-bold text-gray-900 transition hover:-translate-y-0.5 dark:border-gray-100 dark:bg-gray-900 dark:text-gray-100"
+                  className="studio-card bg-white px-6 py-4 text-sm font-black text-[var(--aqs-ink)] dark:bg-slate-900 dark:text-white"
                 >
                   <X className="mr-2 inline h-4 w-4" />
-                  Close
+                  Exit
                 </button>
               ) : null}
             </div>
           </div>
 
-          <form onSubmit={handleSearch} className="mt-6 grid gap-3 xl:grid-cols-[minmax(0,1fr)_auto]">
+          <form onSubmit={handleSearch} className="mt-10 grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto]">
             <label className="relative block">
-              <span className="sr-only">Search the live news feed</span>
-              <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+              <span className="sr-only">Search the editorial feed</span>
+              <Search className="pointer-events-none absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 value={searchInput}
                 onChange={(event) => setSearchInput(event.target.value)}
-                placeholder="Search this live news set…"
+                placeholder="Search the live feed for topics, entities, or events…"
                 name="news-search"
                 autoComplete="off"
-                className="w-full rounded-[1.2rem] border-2 border-gray-900 bg-white py-3 pl-12 pr-4 text-gray-900 focus:border-[var(--aqs-accent)] focus:outline-none focus:ring-4 focus:ring-[color:rgba(122,31,52,0.18)] dark:border-gray-100 dark:bg-gray-900 dark:text-gray-100"
+                className="neo-border-thin studio-focus w-full rounded-[1.25rem] bg-white py-4 pl-14 pr-6 text-lg font-medium text-[var(--aqs-ink)] dark:bg-slate-950 dark:text-white"
               />
             </label>
             <button
               type="submit"
-              className="rounded-[1.2rem] border-2 border-gray-900 bg-[var(--aqs-accent)] px-5 py-3 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-[var(--aqs-accent-strong)] dark:border-gray-100"
+              className="neo-border neo-shadow inline-flex items-center justify-center gap-2 rounded-[1.25rem] bg-[var(--aqs-accent)] px-8 py-4 text-base font-black text-white transition-all hover:-translate-y-1 active:translate-y-px"
             >
-              Search News
+              Update Desk
             </button>
           </form>
 
-          <div className="mt-5 flex flex-wrap gap-2">
+          <div className="mt-8 flex flex-wrap gap-3">
             {NEWS_SOURCES.map((source) => (
               <SourceToggle
                 key={source.name}
@@ -624,96 +634,103 @@ ${userMessage}`;
           </div>
         </div>
 
-        <div className="p-5 md:p-7 lg:p-8">
+        <div className="p-5 md:p-8 lg:p-12">
           {loading ? (
-            <div className="flex min-h-[280px] flex-col items-center justify-center gap-4">
-              <Loader2 className="h-10 w-10 animate-spin text-[var(--aqs-accent)]" />
-              <p className="text-gray-600 dark:text-gray-300">Fetching news feeds...</p>
+            <div className="flex min-h-[320px] flex-col items-center justify-center gap-6">
+              <div className="relative">
+                <div className="h-16 w-16 animate-spin rounded-full border-4 border-[var(--aqs-border)]/5 border-t-[var(--aqs-accent)]" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Newspaper className="h-6 w-6 text-[var(--aqs-accent)]" />
+                </div>
+              </div>
+              <p className="text-lg font-medium text-slate-500 dark:text-slate-400">Syncing verified editorial feeds...</p>
             </div>
           ) : error ? (
-            <div className="flex min-h-[280px] flex-col items-center justify-center gap-4 rounded-[1.4rem] border-2 border-gray-900 bg-white p-6 dark:border-gray-100 dark:bg-gray-900">
-              <p className="text-center text-gray-700 dark:text-gray-300">{error}</p>
+            <div className="flex min-h-[320px] flex-col items-center justify-center gap-6 rounded-[2.2rem] border-2 border-[var(--aqs-border)]/10 bg-white p-10 dark:bg-slate-900">
+              <p className="text-center text-xl font-bold text-[var(--aqs-ink)] dark:text-white">{error}</p>
               <button
                 type="button"
                 onClick={() => void loadNews(query, true)}
-                className="rounded-xl border-2 border-gray-900 bg-[var(--aqs-accent)] px-4 py-2 font-bold text-white dark:border-gray-100"
+                className="neo-border neo-shadow inline-flex items-center gap-3 rounded-2xl bg-[var(--aqs-accent)] px-8 py-4 font-black text-white"
               >
-                Try Again
+                <RefreshCw className="h-5 w-5" />
+                Retry Sync
               </button>
             </div>
           ) : filteredArticles.length === 0 || !leadArticle ? (
-            <div className="flex min-h-[280px] flex-col items-center justify-center gap-4 rounded-[1.4rem] border-2 border-gray-900 bg-white p-6 dark:border-gray-100 dark:bg-gray-900">
-              <Newspaper className="h-10 w-10 text-gray-400" />
-              <p className="text-center text-gray-600 dark:text-gray-300">
-                No articles matched that filter. Try another query or clear some source toggles.
+            <div className="flex min-h-[320px] flex-col items-center justify-center gap-6 rounded-[2.2rem] border-2 border-[var(--aqs-border)]/10 bg-white p-10 dark:bg-slate-900">
+              <Newspaper className="h-12 w-12 text-slate-300" />
+              <p className="text-center text-xl font-bold text-slate-500 dark:text-slate-400">
+                No matching reports in the current desk set.
               </p>
             </div>
           ) : (
-            <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.75fr)_360px] 2xl:grid-cols-[minmax(0,1.95fr)_380px]">
-              <div className="space-y-8">
-                <LeadStory article={leadArticle} onAsk={(article) => void sendNewsQuestion(`Explain this story: ${article.title}`, article)} />
+            <div className="grid items-start gap-8 xl:grid-cols-[minmax(0,1fr)_380px] 2xl:grid-cols-[minmax(0,1fr)_420px]">
+              <div className="space-y-12">
+                <LeadStory article={leadArticle} onAsk={(article) => void sendNewsQuestion(`Provide an essential analyst summary of: ${article.title}`, article)} />
 
                 {deckArticles.length > 0 ? (
-                  <div>
-                    <div className="mb-4 flex items-center justify-between gap-4">
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between border-b-2 border-[var(--aqs-border)]/5 pb-4">
                       <div>
-                        <p className="text-xs font-mono font-bold uppercase tracking-[0.28em] text-[var(--aqs-accent-strong)] dark:text-[var(--aqs-accent-dark)]">
-                          More Coverage
+                        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--aqs-accent-strong)] dark:text-[var(--aqs-accent-dark)]">
+                          Expanded Coverage
                         </p>
-                        <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
-                          Additional reporting from the same live desk.
+                        <p className="mt-2 text-sm font-medium text-slate-500 dark:text-slate-400">
+                          Primary reporting from same editorial context.
                         </p>
                       </div>
                       {selectedSources.size > 0 ? (
                         <button
                           type="button"
                           onClick={() => setSelectedSources(new Set())}
-                          className="text-sm font-bold text-[var(--aqs-accent-strong)] hover:underline dark:text-[var(--aqs-accent-dark)]"
+                          className="text-xs font-black uppercase tracking-widest text-[var(--aqs-accent-strong)] hover:underline dark:text-[var(--aqs-accent-dark)]"
                         >
-                          Clear filters
+                          Show All
                         </button>
                       ) : null}
                     </div>
-                    <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(17rem,1fr))] 2xl:[grid-template-columns:repeat(auto-fit,minmax(18.5rem,1fr))]">
+                    <div className="grid gap-6 sm:grid-cols-[repeat(auto-fit,minmax(20rem,1fr))]">
                       {deckArticles.map((article) => (
-                        <StoryCard key={article.link} article={article} onAsk={(selectedArticle) => void sendNewsQuestion(`Give me the essentials on this article.`, selectedArticle)} />
+                        <StoryCard key={article.link} article={article} onAsk={(selectedArticle) => void sendNewsQuestion(`Summarize essential findings from this article.`, selectedArticle)} />
                       ))}
                     </div>
                   </div>
                 ) : null}
               </div>
 
-              <aside className="space-y-4 xl:sticky xl:top-6">
-                  <div className="rounded-[1.4rem] border-2 border-gray-900 bg-white p-4 neo-shadow-sm dark:border-gray-100 dark:bg-gray-900">
-                    <p className="text-xs font-mono font-bold uppercase tracking-[0.28em] text-[var(--aqs-accent-strong)] dark:text-[var(--aqs-accent-dark)]">
-                      Latest Desk
+              <aside className="space-y-6 xl:sticky xl:top-6">
+                  <div className="studio-card p-6">
+                    <p className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--aqs-accent-strong)] dark:text-[var(--aqs-accent-dark)]">
+                      Latest Feed
                     </p>
-                    <div className="mt-4 space-y-3">
+                    <div className="mt-6 space-y-4">
                       {latestRail.map((article) => (
                         <LatestStory key={article.link} article={article} onAsk={(selectedArticle) => void sendNewsQuestion(`What matters most in this article?`, selectedArticle)} />
                       ))}
                     </div>
                   </div>
 
-                  <div className="rounded-[1.4rem] border-2 border-gray-900 bg-white p-4 neo-shadow-sm dark:border-gray-100 dark:bg-gray-900">
-                    <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-[0.28em] text-[var(--aqs-accent-strong)] dark:text-[var(--aqs-accent-dark)]">
+                  <div className="studio-card bg-slate-50/50 p-6 dark:bg-slate-900/50">
+                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.4em] text-[var(--aqs-accent-strong)] dark:text-[var(--aqs-accent-dark)]">
                       <Rss className="h-4 w-4" />
-                      Feed Status
+                      Studio Intelligence
                     </div>
-                    <div className="mt-4 space-y-3 text-sm text-gray-700 dark:text-gray-300">
+                    <div className="mt-6 space-y-4 text-sm font-medium text-slate-600 dark:text-slate-300">
                       <p>
-                        Showing <strong>{filteredArticles.length}</strong> current article{filteredArticles.length === 1 ? "" : "s"}.
+                        Current set: <strong className="text-[var(--aqs-ink)] dark:text-white">{filteredArticles.length}</strong> verified reports.
                       </p>
                       <p>
-                        Active outlets:{" "}
-                        <span className="font-medium">{sourceSummary.map((source) => source.name).join(", ")}</span>
+                        Sources:{" "}
+                        <span className="font-bold text-[var(--aqs-ink)] dark:text-white">{sourceSummary.map((source) => source.name).join(", ")}</span>
                       </p>
-                      <p className="text-xs font-mono uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">
-                        Every card links to the direct article. Primary-source buttons appear when the feed or article metadata exposes them.
+                      <p className="text-[11px] font-medium leading-relaxed text-slate-400">
+                        Desk chat uses direct article text and surfaces primary evidence.
                       </p>
                       {hydrating ? (
-                        <div className="rounded-2xl border border-gray-200 bg-gray-50/90 px-3 py-3 text-xs leading-6 text-gray-700 dark:border-gray-700 dark:bg-gray-950/40 dark:text-gray-200">
-                          Enriching thumbnails and primary-source links in the background.
+                        <div className="mt-4 flex items-center gap-3 rounded-2xl bg-white/80 p-4 shadow-sm dark:bg-slate-950/80">
+                          <RefreshCw className="h-4 w-4 animate-spin text-[var(--aqs-accent)]" />
+                          <span className="text-xs font-bold text-slate-500">Enriching primary links...</span>
                         </div>
                       ) : null}
                     </div>
@@ -725,71 +742,63 @@ ${userMessage}`;
       </section>
 
       {showChat ? (
-        <div className="pointer-events-none fixed inset-x-3 bottom-3 z-40 flex justify-end sm:inset-x-auto sm:bottom-6 sm:right-6">
+        <div className="fixed inset-x-3 bottom-3 z-40 flex justify-end sm:inset-x-auto sm:bottom-6 sm:right-6">
           <section
             id="floating-news-chat"
             role="dialog"
             aria-label="News chat"
-            className="pointer-events-auto w-full max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-[1.8rem] border-2 border-gray-900 bg-white neo-shadow dark:border-gray-100 dark:bg-gray-900 sm:w-[26rem]"
+            className="studio-panel flex w-full flex-col bg-white p-0 backdrop-blur-xl dark:bg-slate-950 sm:w-[28rem]"
           >
-              <div className="flex items-start justify-between gap-4 border-b-2 border-gray-900 bg-[var(--aqs-accent-soft)] px-4 py-4 dark:border-gray-100 dark:bg-[color:rgba(122,31,52,0.14)]">
+              <div className="flex items-start justify-between gap-4 border-b-2 border-[var(--aqs-border)]/5 bg-[var(--aqs-accent-soft)] px-6 py-6 dark:bg-[color:rgba(139,30,63,0.1)]">
                 <div>
-                  <p className="text-xs font-mono font-bold uppercase tracking-[0.28em] text-[var(--aqs-accent-strong)] dark:text-[var(--aqs-accent-dark)]">
-                    Floating Desk Chat
+                  <p className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--aqs-accent-strong)] dark:text-[var(--aqs-accent-dark)]">
+                    Analyst Desk Chat
                   </p>
-                  <p className="mt-1 text-sm leading-6 text-gray-700 dark:text-gray-300">
-                    Ask for comparisons, timelines, or what the direct reporting actually supports.
+                  <p className="mt-2 text-sm font-medium leading-relaxed text-slate-700 dark:text-slate-300">
+                    Ask for comparisons, evidence checks, or sourcing provenance.
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowChat(false)}
-                  className="rounded-xl border-2 border-gray-900 bg-white p-2 text-gray-900 dark:border-gray-100 dark:bg-gray-900 dark:text-gray-100"
-                  aria-label="Close news chat"
+                  className="studio-card h-10 w-10 bg-white dark:bg-slate-900"
+                  aria-label="Close chat"
                 >
-                  <X className="h-5 w-5" />
+                  <X className="mx-auto h-5 w-5" />
                 </button>
               </div>
 
-              <div className="space-y-4 p-4">
-                <div className="rounded-[1.2rem] border border-gray-300 bg-gray-50/80 px-3 py-3 text-sm leading-6 text-gray-600 dark:border-gray-700 dark:bg-gray-800/40 dark:text-gray-300">
-                  {filteredArticles.length > 0
-                    ? `Working from ${filteredArticles.length} live article${filteredArticles.length === 1 ? "" : "s"} in the current desk.`
-                    : "No current articles are loaded yet."}
-                </div>
-
+              <div className="flex-1 space-y-6 overflow-hidden p-6">
                 {chatMessages.length === 0 ? (
-                  <div className="rounded-[1.4rem] border-2 border-dashed border-gray-300 px-4 py-8 text-center dark:border-gray-700">
-                    <MessageCircle className="mx-auto h-10 w-10 text-gray-300 dark:text-gray-600" />
-                    <p className="mt-3 text-sm leading-6 text-gray-600 dark:text-gray-300">
-                      Try: “Compare the lead story with the second one,” or “What is the direct source behind this report?”
+                  <div className="rounded-3xl border-2 border-dashed border-slate-200 px-6 py-10 text-center dark:border-slate-800">
+                    <MessageCircle className="mx-auto h-12 w-12 text-slate-200 dark:text-slate-800" />
+                    <p className="mt-4 text-sm font-medium leading-relaxed text-slate-500 dark:text-slate-400">
+                      "Compare the lead story with coverage from WSJ." <br/> "What primary evidence is cited for this event?"
                     </p>
                   </div>
                 ) : (
-                  <div className="scroll-panel max-h-[min(46vh,420px)] space-y-4 overflow-y-auto rounded-[1.4rem] border border-gray-300 bg-gray-50/70 p-3 dark:border-gray-700 dark:bg-gray-950/30">
+                  <div className="scroll-studio max-h-[46vh] space-y-6 overflow-y-auto rounded-3xl bg-slate-50/50 p-4 dark:bg-slate-900/30">
                     {chatMessages.map((message, index) => (
                       <div key={`${message.role}-${index}`} className={message.role === "user" ? "flex justify-end" : "flex justify-start"}>
                         <div
-                          className={`max-w-[92%] rounded-[1.3rem] border-2 px-4 py-3 ${
+                          className={`max-w-[92%] rounded-[1.5rem] border-2 px-5 py-4 ${
                             message.role === "user"
-                              ? "border-gray-900 bg-[var(--aqs-accent)] text-white dark:border-gray-100"
-                              : "border-gray-900 bg-white text-gray-900 dark:border-gray-100 dark:bg-gray-900 dark:text-gray-100"
+                              ? "border-[var(--aqs-border)] bg-[var(--aqs-accent)] text-white"
+                              : "border-[var(--aqs-border)] bg-white text-[var(--aqs-ink)] dark:bg-slate-900 dark:text-white"
                           }`}
                         >
-                          <p className={`mb-2 text-[11px] font-mono uppercase tracking-[0.18em] ${message.role === "user" ? "text-white/80" : "text-gray-500 dark:text-gray-400"}`}>
-                            {message.role === "user" ? "You" : "Desk"}
+                          <p className={`mb-2 text-[9px] font-black uppercase tracking-widest ${message.role === "user" ? "text-white/60" : "text-slate-400"}`}>
+                            {message.role === "user" ? "Inquiry" : "Analysis"}
                           </p>
-                          {message.role === "tutor" ? <RichResponse text={message.text} compact /> : <p className="text-sm leading-7">{message.text}</p>}
+                          {message.role === "tutor" ? <RichResponse text={message.text} compact /> : <p className="text-sm font-medium leading-relaxed">{message.text}</p>}
                         </div>
                       </div>
                     ))}
                     {isChatLoading ? (
                       <div className="flex justify-start">
-                        <div className="rounded-[1.4rem] border-2 border-gray-900 bg-white px-4 py-3 dark:border-gray-100 dark:bg-gray-900">
-                          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                            Thinking through the feed set...
-                          </div>
+                        <div className="studio-card flex items-center gap-3 bg-white px-5 py-3 dark:bg-slate-900">
+                          <Loader2 className="h-4 w-4 animate-spin text-[var(--aqs-accent)]" />
+                          <span className="text-xs font-black uppercase tracking-widest text-slate-500">Processing Desk...</span>
                         </div>
                       </div>
                     ) : null}
@@ -797,57 +806,37 @@ ${userMessage}`;
                   </div>
                 )}
 
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    "Summarize the top stories.",
-                    "Which article has the strongest direct sourcing?",
-                    "What changed in the last 24 hours?",
-                  ].map((suggestion) => (
-                    <button
-                      key={suggestion}
-                      type="button"
-                      onClick={() => {
-                        setChatInput("");
-                        void sendNewsQuestion(suggestion);
-                      }}
-                      disabled={isChatLoading || filteredArticles.length === 0}
-                      className="rounded-full border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:border-[var(--aqs-accent)] hover:text-[var(--aqs-accent-strong)] disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
-                    >
-                      {suggestion}
-                    </button>
-                  ))}
-                </div>
-
                 <form
                   onSubmit={(event) => {
                     event.preventDefault();
                     handleChatSubmit();
                   }}
-                  className="space-y-3"
+                  className="space-y-4"
                 >
-                  <textarea
-                    ref={chatInputRef}
-                    value={chatInput}
-                    onChange={(event) => setChatInput(event.target.value)}
-                    placeholder="Ask what matters, what changed, or what the sourcing actually proves…"
-                    aria-label="Ask about the current articles"
-                    name="news-chat"
-                    autoComplete="off"
-                    disabled={isChatLoading}
-                    rows={3}
-                    onKeyDown={handleChatInputKeyDown}
-                    className="w-full resize-none rounded-[1.2rem] border-2 border-gray-900 bg-white px-4 py-3 text-gray-900 focus:border-[var(--aqs-accent)] focus:outline-none focus:ring-4 focus:ring-[color:rgba(122,31,52,0.18)] disabled:opacity-50 dark:border-gray-100 dark:bg-gray-900 dark:text-gray-100"
-                  />
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Enter sends. Shift+Enter adds a new line.</p>
+                  <div className="neo-border-thin studio-focus rounded-2xl bg-white p-1 dark:bg-slate-950">
+                    <textarea
+                      ref={chatInputRef}
+                      value={chatInput}
+                      onChange={(event) => setChatInput(event.target.value)}
+                      placeholder="Ask about the current feed set..."
+                      aria-label="Ask about current articles"
+                      name="news-chat"
+                      autoComplete="off"
+                      disabled={isChatLoading}
+                      rows={3}
+                      onKeyDown={handleChatInputKeyDown}
+                      className="w-full resize-none bg-transparent px-4 py-3 text-base font-medium text-[var(--aqs-ink)] outline-none dark:text-white"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between gap-4">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Enter to Send Analysis</p>
                     <button
                       type="submit"
                       disabled={!chatInput.trim() || isChatLoading}
-                      className="inline-flex items-center gap-2 rounded-[1.2rem] border-2 border-gray-900 bg-[var(--aqs-accent)] px-4 py-3 text-white transition hover:-translate-y-0.5 disabled:opacity-50 dark:border-gray-100"
-                      aria-label="Send news question"
+                      className="neo-border neo-shadow flex items-center gap-3 rounded-xl bg-[var(--aqs-accent)] px-6 py-3 text-sm font-black text-white transition-all hover:-translate-y-1 disabled:opacity-50"
                     >
-                      <Send className="h-5 w-5" />
-                      Ask Desk
+                      <Send className="h-4 w-4" />
+                      Ask Mike
                     </button>
                   </div>
                 </form>

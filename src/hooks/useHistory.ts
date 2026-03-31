@@ -46,5 +46,5 @@ export function useHistory() {
     }
   }, []);
 
-  return { items, push, clear };
+  return { items, push, clear, label: "Browser local" };
 }

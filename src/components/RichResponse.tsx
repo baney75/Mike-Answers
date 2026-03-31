@@ -9,7 +9,11 @@ import "katex/dist/katex.min.css";
 
 import { CodeBlock } from "./CodeBlock";
 import { ChartBlock } from "./ChartBlock";
+import { DemoBlock } from "./DemoBlock";
+import { FigureBlock } from "./FigureBlock";
 import { ImageRenderer } from "./ImageRenderer";
+import { StatBlock } from "./StatBlock";
+import { TableBlock } from "./TableBlock";
 import { VideoEmbed } from "./VideoEmbed";
 import {
   getGoogleImageSearchUrl,
@@ -22,6 +26,8 @@ import {
   type SearchResult,
   type VideoResult,
 } from "../services/search";
+import { buildGoogleMapsDirectionsUrl, buildGoogleMapsSearchUrl, buildGoogleMapsStreetViewUrl } from "../services/maps";
+import { getWeatherSnapshot } from "../services/weather";
 import { extractEmbeddedSources } from "../utils/solution";
 import type { SolutionSource } from "../types";
 
@@ -30,7 +36,7 @@ interface RichResponseProps {
   compact?: boolean;
 }
 
-type RichElementType = "image" | "video" | "definition" | "web";
+type RichElementType = "image" | "video" | "definition" | "web" | "weather" | "map";
 
 interface RichElement {
   type: RichElementType;
@@ -301,43 +307,47 @@ function DefinitionCard({ content, compact = false }: { content: string; compact
 
   return (
     <div
-      className={`my-4 rounded-[1.4rem] border-2 border-amber-400 bg-amber-50 p-5 dark:border-amber-600 dark:bg-amber-900/20 ${
-        compact ? "" : "md:p-6"
+      className={`neo-border neo-shadow my-6 rounded-3xl bg-amber-50 p-5 dark:bg-amber-950/20 ${
+        compact ? "" : "md:p-8"
       }`}
     >
-      <div className="mb-4 flex items-baseline gap-3">
-        <h3 className={`${compact ? "text-xl" : "text-2xl"} font-bold text-gray-900 dark:text-gray-100`}>
+      <div className="mb-5 flex items-baseline gap-4">
+        <h3 className={`${compact ? "text-2xl" : "text-3xl"} font-black text-gray-900 dark:text-gray-100`}>
           {word}
         </h3>
         {phonetic ? (
-          <span className="font-mono text-base text-gray-600 dark:text-gray-400">/{phonetic}/</span>
+          <span className="font-mono text-lg font-medium text-amber-700/80 dark:text-amber-400/80">/{phonetic}/</span>
         ) : null}
       </div>
 
-      {partsOfSpeech.map((part, index) => (
-        <div key={`${part.type}-${index}`} className="mb-4">
-          <span className="mb-2 inline-block rounded bg-amber-200 px-2 py-1 font-mono text-xs font-bold uppercase text-amber-900 dark:bg-amber-800 dark:text-amber-100">
-            {part.type}
-          </span>
-          <ol className="ml-2 list-inside list-decimal space-y-2">
-            {part.definitions.map((definition, defIndex) => (
-              <li key={`${part.type}-${defIndex}-${definition.def.slice(0, 24)}`} className="text-gray-900 dark:text-gray-100">
-                <span className="font-medium">{definition.def}</span>
-                {definition.example ? (
-                  <p className="ml-6 mt-1 text-sm italic text-gray-600 dark:text-gray-400">
-                    &ldquo;{definition.example}&rdquo;
-                  </p>
-                ) : null}
-              </li>
-            ))}
-          </ol>
-        </div>
-      ))}
+      <div className="space-y-6">
+        {partsOfSpeech.map((part, index) => (
+          <div key={`${part.type}-${index}`} className="relative">
+            <span className="neo-border-thin mb-3 inline-block rounded-lg bg-amber-200 px-3 py-1 font-mono text-xs font-black uppercase text-amber-900 dark:bg-amber-800 dark:text-amber-100">
+              {part.type}
+            </span>
+            <ol className="ml-4 list-outside list-decimal space-y-3">
+              {part.definitions.map((definition, defIndex) => (
+                <li key={`${part.type}-${defIndex}-${definition.def.slice(0, 24)}`} className="pl-2 text-gray-900 dark:text-gray-100 font-medium leading-relaxed">
+                  <span className="text-lg">{definition.def}</span>
+                  {definition.example ? (
+                    <p className="mt-2 text-sm italic font-semibold text-amber-800/70 dark:text-amber-300/60">
+                      &ldquo;{definition.example}&rdquo;
+                    </p>
+                  ) : null}
+                </li>
+              ))}
+            </ol>
+          </div>
+        ))}
+      </div>
 
       {synonyms.length ? (
-        <p className="text-sm text-gray-700 dark:text-gray-300">
-          <span className="font-semibold">Synonyms:</span> {synonyms.join(", ")}
-        </p>
+        <div className="mt-6 border-t-2 border-amber-200 pt-4 dark:border-amber-800/40">
+          <p className="text-sm text-amber-900 dark:text-amber-200">
+            <span className="font-black uppercase tracking-wider">Synonyms:</span> {synonyms.join(", ")}
+          </p>
+        </div>
       ) : null}
     </div>
   );
@@ -386,27 +396,27 @@ function ImageSearchResult({ query, compact = false }: { query: string; compact?
 
   if (loading) {
     return (
-      <div className="my-4 flex items-center justify-center rounded-xl border-2 border-gray-300 bg-gray-100 p-6 text-sm text-gray-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400">
-        Loading image...
+      <div className="neo-border-thin my-6 flex h-48 items-center justify-center rounded-2xl bg-gray-100 p-6 text-sm font-bold uppercase tracking-widest text-gray-500 dark:bg-gray-800">
+        Finding image...
       </div>
     );
   }
 
   if (!imageUrl) {
     return (
-      <div className="my-4 rounded-[1.4rem] border-2 border-gray-300 bg-gray-100 p-5 dark:border-gray-600 dark:bg-gray-800">
+      <div className="neo-border-thin neo-shadow-sm my-6 rounded-[1.6rem] bg-gray-100 p-6 dark:bg-gray-800">
         <div className="text-center">
-          <div className="text-sm font-semibold text-gray-700 dark:text-gray-200">
-            Image preview is unavailable right now.
+          <div className="text-sm font-black uppercase tracking-widest text-gray-700 dark:text-gray-200">
+            Image Unavailable
           </div>
-          <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-            Open image results for &quot;{query}&quot; in a new tab.
+          <div className="mt-2 text-sm font-medium text-gray-500 dark:text-gray-400">
+            Could not resolve a stable preview for &quot;{query}&quot;.
           </div>
           <a
             href={getGoogleImageSearchUrl(query)}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-4 inline-flex items-center justify-center rounded-xl border-2 border-gray-900 bg-white px-4 py-2 font-bold text-gray-900 transition hover:bg-gray-50 dark:border-gray-100 dark:bg-gray-950 dark:text-gray-100 dark:hover:bg-gray-900"
+            className="neo-border-thin neo-shadow-sm mt-5 inline-flex items-center justify-center rounded-xl bg-white px-4 py-2 text-sm font-black text-gray-900 transition hover:bg-gray-50 dark:bg-slate-900 dark:text-white"
           >
             Search Images
           </a>
@@ -416,8 +426,8 @@ function ImageSearchResult({ query, compact = false }: { query: string; compact?
   }
 
   return (
-    <div className={compact ? "my-3" : "my-4"}>
-      <ImageRenderer src={imageUrl} alt={query} />
+    <div className={compact ? "my-4" : "my-6"}>
+      <ImageRenderer src={imageUrl} alt={query} className="neo-border neo-shadow-sm rounded-[1.8rem]" />
     </div>
   );
 }
@@ -490,14 +500,16 @@ function VideoSearchResult({ query, compact = false }: { query: string; compact?
 
   if (loading) {
     return (
-      <div className="my-4 rounded-[1.4rem] border-2 border-gray-300 bg-gray-100/90 p-5 dark:border-gray-600 dark:bg-gray-800/80">
-        <div className="grid gap-4 md:grid-cols-[minmax(0,1.15fr)_minmax(16rem,0.85fr)]">
-          <div className="aspect-video animate-pulse rounded-[1.2rem] border border-gray-300 bg-gray-200/80 dark:border-gray-700 dark:bg-gray-700/60" />
-          <div className="space-y-3">
-            <div className="h-4 w-28 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
-            <div className="h-8 w-full animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
-            <div className="h-20 w-full animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
-            <div className="h-24 w-full animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+      <div className="neo-border-thin my-6 rounded-[1.8rem] bg-gray-50 p-6 dark:bg-slate-900/40">
+        <div className="grid gap-6 md:grid-cols-[minmax(0,1.15fr)_minmax(16rem,0.85fr)]">
+          <div className="aspect-video animate-pulse rounded-2xl border-2 border-slate-200 bg-slate-100 dark:border-slate-800 dark:bg-slate-800" />
+          <div className="space-y-4">
+            <div className="h-4 w-32 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
+            <div className="h-10 w-full animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
+            <div className="space-y-2">
+              <div className="h-4 w-full animate-pulse rounded bg-slate-100 dark:bg-slate-800/60" />
+              <div className="h-4 w-5/6 animate-pulse rounded bg-slate-100 dark:bg-slate-800/60" />
+            </div>
           </div>
         </div>
       </div>
@@ -506,51 +518,28 @@ function VideoSearchResult({ query, compact = false }: { query: string; compact?
 
   if (!video) {
     return (
-      <div className="my-4 rounded-[1.4rem] border-2 border-gray-300 bg-gray-100/95 p-5 dark:border-gray-600 dark:bg-gray-800/90">
-        <div className="grid gap-4 md:grid-cols-[minmax(0,1.1fr)_minmax(16rem,0.9fr)]">
+      <div className="neo-border neo-shadow-sm my-6 rounded-[1.8rem] bg-gray-50 p-6 dark:bg-slate-900/40">
+        <div className="grid gap-6 md:grid-cols-[minmax(0,1.1fr)_minmax(16rem,0.9fr)]">
           <div>
-            <p className="text-xs font-mono font-bold uppercase tracking-[0.2em] text-[var(--aqs-accent-strong)] dark:text-[var(--aqs-accent-dark)]">
-              Video Search
-            </p>
-            <h3 className="mt-2 text-lg font-bold leading-7 text-gray-900 dark:text-gray-100">
-              No stable preview yet for &quot;{query}&quot;.
+            <span className="patch">Video Search</span>
+            <h3 className="mt-4 text-xl font-black leading-tight text-gray-900 dark:text-white">
+              No stable preview for &quot;{query}&quot;.
             </h3>
-            <p className="mt-3 text-sm leading-7 text-gray-600 dark:text-gray-300">
-              The app could not resolve a reliable embeddable YouTube hit from the current free client-side path. The result is still usable if you open search directly and pick a credible channel.
+            <p className="mt-4 text-sm font-medium leading-relaxed text-slate-600 dark:text-slate-300">
+              The app could not resolve a reliable embeddable YouTube hit. The result is still usable if you open search directly and pick a credible channel.
             </p>
-            <div className="mt-4 rounded-[1.1rem] border border-gray-300 bg-white/80 p-4 dark:border-gray-700 dark:bg-gray-900/60">
-              <p className="text-xs font-mono font-bold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">
-                Best Next Move
-              </p>
-              <p className="mt-2 text-sm leading-6 text-gray-700 dark:text-gray-300">
-                Open YouTube search, choose a worked example from a credible channel, then ask a follow-up like “summarize the method this video shows” or “what formula is the video using?”
-              </p>
-            </div>
           </div>
 
-          <div className="rounded-[1.2rem] border border-gray-300 bg-white/80 p-4 dark:border-gray-700 dark:bg-gray-900/60">
-            <p className="text-xs font-mono font-bold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">
-              Strong Follow-Ups
+          <div className="neo-border-thin rounded-2xl bg-white p-5 dark:bg-slate-950">
+            <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Best Next Move</div>
+            <p className="mt-3 text-sm font-medium leading-relaxed text-slate-700 dark:text-slate-200">
+              Open YouTube search, choose a worked example from a credible channel, then ask a follow-up about that specific video.
             </p>
-            <div className="mt-3 space-y-2">
-              {[
-                "Find one credible video and tell me what to watch for.",
-                "Turn the chosen video into five study bullets.",
-                "Compare the video method with the written answer above.",
-              ].map((item) => (
-                <div
-                  key={item}
-                  className="rounded-xl border border-gray-300 bg-[var(--aqs-accent-soft)] px-3 py-3 text-sm font-medium leading-6 text-gray-700 dark:border-gray-700 dark:bg-[color:rgba(122,31,52,0.18)] dark:text-gray-200"
-                >
-                  {item}
-                </div>
-              ))}
-            </div>
             <a
               href={getYouTubeSearchUrl(query)}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-4 inline-flex items-center justify-center rounded-xl border-2 border-gray-900 bg-white px-4 py-2 font-bold text-gray-900 transition hover:bg-gray-50 dark:border-gray-100 dark:bg-gray-950 dark:text-gray-100 dark:hover:bg-gray-900"
+              className="neo-border-thin neo-shadow-sm mt-5 inline-flex w-full items-center justify-center rounded-xl bg-white py-3 text-sm font-black text-gray-900 transition hover:bg-gray-50 dark:bg-slate-900 dark:text-white"
             >
               Search YouTube
             </a>
@@ -568,17 +557,17 @@ function VideoSearchResult({ query, compact = false }: { query: string; compact?
   const watchUrl = getYouTubeWatchUrl(video.videoId);
 
   return (
-    <div className={compact ? "my-3" : "my-4"}>
-      <div className={`grid gap-4 ${compact ? "" : "xl:grid-cols-[minmax(0,1.35fr)_minmax(18rem,0.8fr)]"}`}>
-        <VideoEmbed videoId={video.videoId} title={video.title} channelTitle={video.channelTitle} />
+    <div className={compact ? "my-4" : "my-6"}>
+      <div className={`grid gap-6 ${compact ? "" : "xl:grid-cols-[minmax(0,1.35fr)_minmax(18rem,0.8fr)]"}`}>
+        <div className="neo-border neo-shadow-sm overflow-hidden rounded-[2rem]">
+          <VideoEmbed videoId={video.videoId} title={video.title} channelTitle={video.channelTitle} />
+        </div>
 
-        <aside className="rounded-[1.4rem] border-2 border-gray-300 bg-gray-100/80 p-4 dark:border-gray-600 dark:bg-gray-800/60">
-          <div className="flex items-start justify-between gap-3">
+        <aside className="neo-border-thin rounded-[1.8rem] bg-gray-50 p-5 dark:bg-slate-900/40">
+          <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-xs font-mono font-bold uppercase tracking-[0.2em] text-[var(--aqs-accent-strong)] dark:text-[var(--aqs-accent-dark)]">
-                Video Brief
-              </p>
-              <h3 className="mt-2 text-base font-bold leading-6 text-gray-900 dark:text-gray-100">
+              <span className="patch">Video Brief</span>
+              <h3 className="mt-3 text-lg font-black leading-snug text-gray-900 dark:text-white">
                 {video.title}
               </h3>
             </div>
@@ -586,41 +575,34 @@ function VideoSearchResult({ query, compact = false }: { query: string; compact?
               href={watchUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-gray-300 bg-white px-2.5 py-2 text-xs font-bold text-gray-700 transition hover:border-[var(--aqs-accent)] hover:text-[var(--aqs-accent-strong)] dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
+              className="neo-border-thin neo-shadow-sm flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white transition hover:bg-[var(--aqs-accent-soft)] dark:bg-slate-950"
             >
-              Watch
-              <ExternalLink className="h-3.5 w-3.5" />
+              <ExternalLink className="h-4 w-4 text-[var(--aqs-accent)]" />
             </a>
           </div>
 
-          <div className="mt-3 flex flex-wrap gap-2 text-xs font-mono uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">
+          <div className="mt-4 flex flex-wrap gap-3 font-mono text-[10px] font-black uppercase tracking-widest text-slate-400">
             <span>{video.channelTitle || "YouTube"}</span>
+            <span className="opacity-30">•</span>
             <span>{formatVideoDate(video.publishedAt)}</span>
           </div>
 
-          <div className="mt-4 space-y-3">
+          <div className="mt-5 space-y-3">
             {keyPoints.map((point) => (
-              <div key={point} className="rounded-xl border border-gray-300 bg-white/90 px-3 py-3 text-sm leading-6 text-gray-700 dark:border-gray-700 dark:bg-gray-900/70 dark:text-gray-300">
+              <div key={point} className="neo-border-thin rounded-xl bg-white px-4 py-3 text-sm font-medium leading-relaxed text-slate-700 dark:bg-slate-950 dark:text-slate-300">
                 {point}
               </div>
             ))}
           </div>
 
-          <div className="mt-4 rounded-xl border border-gray-300 bg-white/90 p-3 dark:border-gray-700 dark:bg-gray-900/70">
-            <p className="text-xs font-mono font-bold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">
-              Transcript / Notes
-            </p>
-            <p className="scroll-panel mt-2 max-h-48 overflow-y-auto pr-2 text-sm leading-6 text-gray-700 dark:text-gray-300">
+          <div className="neo-border-thin mt-5 rounded-2xl bg-white p-4 dark:bg-slate-950">
+            <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Transcript Preview</div>
+            <p className="scroll-panel mt-3 max-h-48 overflow-y-auto pr-2 text-sm font-medium leading-relaxed text-slate-700 dark:text-slate-300">
               {transcriptOrNotes
                 ? `${transcriptOrNotes}${
                     (transcriptPreview ? transcriptPreview.length : cleanedDescription.length) > transcriptOrNotes.length ? "..." : ""
                   }`
-                : "No public caption track or usable creator notes were available for this result yet."}
-            </p>
-            <p className="mt-2 text-xs leading-5 text-gray-500 dark:text-gray-400">
-              {transcriptPreview
-                ? "Pulled from a free public caption track when the video exposed one."
-                : "A free public caption track was not exposed from the current client-side path, so this preview falls back to the creator description."}
+                : "No public caption track was available."}
             </p>
           </div>
         </aside>
@@ -665,7 +647,7 @@ function WebSearchResult({ query, compact = false }: { query: string; compact?: 
 
   if (loading) {
     return (
-      <div className="my-4 flex items-center justify-center rounded-xl border-2 border-gray-300 bg-gray-100 p-6 text-sm text-gray-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400">
+      <div className="neo-border-thin my-6 flex h-24 items-center justify-center rounded-2xl bg-gray-100 text-sm font-bold uppercase tracking-widest text-gray-500 dark:bg-gray-800">
         Loading links...
       </div>
     );
@@ -676,28 +658,148 @@ function WebSearchResult({ query, compact = false }: { query: string; compact?: 
   }
 
   return (
-    <div className={`my-4 grid gap-3 ${compact ? "" : "md:grid-cols-2 xl:grid-cols-3"}`}>
+    <div className={`my-6 grid gap-4 ${compact ? "" : "md:grid-cols-2 xl:grid-cols-3"}`}>
       {results.map((result) => (
         <a
           key={result.link}
           href={result.link}
           target="_blank"
           rel="noopener noreferrer"
-          className="rounded-[1.2rem] border-2 border-gray-900 bg-white p-4 text-left transition hover:-translate-y-0.5 hover:bg-gray-50 dark:border-gray-100 dark:bg-gray-950 dark:hover:bg-gray-900"
+          className="neo-border-thin neo-shadow-sm rounded-[1.6rem] bg-white p-5 text-left transition-all hover:-translate-y-1 hover:shadow-[5px_5px_0px_0px_var(--aqs-border)] dark:bg-slate-950"
         >
-          <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <div className="line-clamp-2 text-base font-bold text-gray-900 dark:text-gray-100">
+              <div className="line-clamp-2 text-lg font-black leading-tight text-gray-900 dark:text-white">
                 {result.title}
               </div>
-              <div className="mt-2 font-mono text-xs text-gray-500 dark:text-gray-400">{result.displayLink}</div>
+              <div className="mt-2 font-mono text-[10px] font-black uppercase tracking-widest text-slate-400">{result.displayLink}</div>
             </div>
-            <ExternalLink className="mt-1 h-4 w-4 shrink-0 text-[var(--aqs-accent)] dark:text-[var(--aqs-accent-dark)]" />
+            <div className="neo-border-thin flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--aqs-accent-soft)] dark:bg-[color:rgba(139,30,63,0.2)]">
+              <ExternalLink className="h-4 w-4 text-[var(--aqs-accent)]" />
+            </div>
           </div>
-          <p className="mt-3 text-sm leading-6 text-gray-700 dark:text-gray-300">{result.snippet}</p>
+          <p className="mt-4 text-sm font-medium leading-relaxed text-slate-600 dark:text-slate-300">{result.snippet}</p>
         </a>
       ))}
     </div>
+  );
+}
+
+function WeatherResult({ query, compact = false }: { query: string; compact?: boolean }) {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [snapshot, setSnapshot] = useState<Awaited<ReturnType<typeof getWeatherSnapshot>>>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadWeather() {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const result = await getWeatherSnapshot(query);
+        if (active) {
+          setSnapshot(result);
+        }
+      } catch (err) {
+        if (active) {
+          setError(err instanceof Error ? err.message : "Weather lookup failed.");
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadWeather();
+    return () => {
+      active = false;
+    };
+  }, [query]);
+
+  if (loading) {
+    return (
+      <div className="neo-border-thin my-6 h-48 animate-pulse rounded-[1.8rem] bg-gray-100 dark:bg-gray-800" />
+    );
+  }
+
+  if (!snapshot || error) {
+    return (
+      <div className="neo-border-thin my-6 rounded-[1.8rem] bg-gray-50 p-6 dark:bg-slate-900/40">
+        <span className="patch">Weather Brief</span>
+        <h3 className="mt-4 text-xl font-black text-gray-900 dark:text-white">Lookup unavailable for “{query}”.</h3>
+        <p className="mt-3 text-sm font-medium leading-relaxed text-slate-600 dark:text-slate-300">{error ?? "Try a more specific city or region name."}</p>
+      </div>
+    );
+  }
+
+  return (
+    <section className="neo-border neo-shadow-sm my-8 rounded-[2rem] bg-white p-6 dark:bg-slate-950">
+      <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
+        <div>
+          <span className="patch">Local Weather</span>
+          <h3 className="mt-4 text-2xl font-black tracking-tight text-[var(--aqs-ink)] dark:text-white">
+            {snapshot.location.name}
+            {snapshot.location.admin1 ? `, ${snapshot.location.admin1}` : ""}
+          </h3>
+          <p className="mt-2 font-mono text-[10px] font-black uppercase tracking-widest text-slate-400">
+            {snapshot.sourceLabel} <span className="mx-2 opacity-30">•</span> {new Date(snapshot.fetchedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+          </p>
+        </div>
+        <a
+          href={buildGoogleMapsSearchUrl(
+            `${snapshot.location.name}${snapshot.location.admin1 ? ` ${snapshot.location.admin1}` : ""}`,
+          )}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="neo-border-thin neo-shadow-sm flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-black text-[var(--aqs-ink)] transition-all hover:-translate-y-0.5 active:translate-y-px dark:bg-slate-900 dark:text-white"
+        >
+          Map View
+          <ExternalLink className="h-4 w-4 text-[var(--aqs-accent)]" />
+        </a>
+      </div>
+
+      <div className={`mt-8 grid gap-4 ${compact ? "sm:grid-cols-2" : "sm:grid-cols-3"}`}>
+        {[
+          { label: "Temp", value: `${snapshot.temperatureC.toFixed(1)}°C` },
+          { label: "Feels", value: `${snapshot.apparentTemperatureC.toFixed(1)}°C` },
+          { label: "Wind", value: `${snapshot.windSpeedKph.toFixed(0)} km/h` },
+        ].map((stat) => (
+          <div key={stat.label} className="neo-border-thin rounded-2xl bg-[var(--aqs-paper-strong)] p-5 dark:bg-slate-900">
+            <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">{stat.label}</div>
+            <div className="mt-2 text-2xl font-black text-[var(--aqs-ink)] dark:text-white">{stat.value}</div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function MapResult({ query }: { query: string }) {
+  return (
+    <section className="neo-border neo-shadow-sm my-8 rounded-[2rem] bg-[var(--aqs-paper)] p-6 dark:bg-slate-900">
+      <span className="patch">Map Brief</span>
+      <h3 className="mt-4 text-xl font-black text-[var(--aqs-ink)] dark:text-white">{query}</h3>
+      <div className="mt-6 grid gap-4 sm:grid-cols-3">
+        {[
+          { label: "Search Map", url: buildGoogleMapsSearchUrl(query) },
+          { label: "Directions", url: buildGoogleMapsDirectionsUrl(query) },
+          { label: "Street View", url: buildGoogleMapsStreetViewUrl(query) },
+        ].map((link) => (
+          <a
+            key={link.label}
+            href={link.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="neo-border-thin neo-shadow-sm flex items-center justify-center rounded-2xl bg-white py-4 text-sm font-black text-[var(--aqs-ink)] transition-all hover:-translate-y-1 active:translate-y-px dark:bg-slate-950 dark:text-white"
+          >
+            {link.label}
+          </a>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -708,20 +810,20 @@ function SourcesPanel({ sources, compact = false }: { sources: SolutionSource[];
 
   if (compact) {
     return (
-      <div className="mt-4 grid gap-2">
+      <div className="mt-5 grid gap-3">
         {sources.map((source) => (
           <a
             key={`${source.index}-${source.url}`}
             href={source.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-xl border border-gray-300 bg-[var(--aqs-accent-soft)]/70 px-3 py-2 text-sm transition hover:bg-[var(--aqs-accent-soft)] dark:border-gray-700 dark:bg-[color:rgba(122,31,52,0.18)] dark:hover:bg-[color:rgba(122,31,52,0.24)]"
+            className="neo-border-thin rounded-xl bg-white px-3 py-2 transition-all hover:-translate-y-0.5 active:translate-y-px dark:bg-slate-900"
           >
-            <div className="font-semibold text-gray-900 dark:text-gray-100">
-              [{source.index}] {source.title}
+            <div className="font-bold text-gray-900 dark:text-gray-100">
+              <span className="text-[var(--aqs-accent)]">[{source.index}]</span> {source.title}
             </div>
-            <div className="mt-1 font-mono text-xs text-gray-500 dark:text-gray-400">
-              {source.category} · {source.host}
+            <div className="mt-1 font-mono text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              {source.category} <span className="mx-1 opacity-30">•</span> {source.host}
             </div>
           </a>
         ))}
@@ -730,36 +832,38 @@ function SourcesPanel({ sources, compact = false }: { sources: SolutionSource[];
   }
 
   return (
-    <section className="mb-8 rounded-[1.6rem] border-2 border-gray-900 bg-[var(--aqs-accent-soft)] p-5 dark:border-gray-100 dark:bg-[color:rgba(122,31,52,0.18)]">
-      <div>
-        <h3 className="text-lg font-bold tracking-tight text-gray-900 dark:text-gray-100">
+    <section className="neo-border mb-10 rounded-[1.8rem] bg-[var(--aqs-accent-soft)] p-6 dark:bg-[color:rgba(139,30,63,0.12)]">
+      <div className="mb-6 flex flex-col gap-2">
+        <h3 className="text-xl font-black tracking-tight text-[var(--aqs-ink)] dark:text-white">
           Verified Sources
         </h3>
-        <p className="mt-1 text-sm text-gray-700 dark:text-gray-300">
+        <p className="text-sm font-medium leading-relaxed text-slate-700 dark:text-slate-300">
           Automatically filtered toward official, scholarly, and high-trust reporting sources.
         </p>
       </div>
 
-      <div className="mt-5 grid gap-3 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2">
         {sources.map((source) => (
           <a
             key={`${source.index}-${source.url}`}
             href={source.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-[1.2rem] border-2 border-gray-900 bg-white p-4 text-left transition hover:-translate-y-0.5 hover:bg-gray-50 dark:border-gray-100 dark:bg-gray-950 dark:hover:bg-gray-900"
+            className="neo-border-thin neo-shadow-sm rounded-2xl bg-white p-4 text-left transition-all hover:-translate-y-1 hover:shadow-[5px_5px_0px_0px_var(--aqs-border)] dark:bg-slate-950"
           >
-            <div className="flex items-start gap-3">
-              <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[var(--aqs-accent)] bg-[var(--aqs-accent-soft)] font-mono text-sm font-bold text-[var(--aqs-accent-strong)] dark:border-[var(--aqs-accent-dark)] dark:bg-[color:rgba(122,31,52,0.22)] dark:text-[var(--aqs-accent-dark)]">
-                [{source.index}]
+            <div className="flex items-start gap-4">
+              <span className="neo-border-thin flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--aqs-accent-soft-strong)] font-mono text-sm font-black text-[var(--aqs-accent-strong)] dark:bg-[color:rgba(139,30,63,0.3)] dark:text-white">
+                {source.index}
               </span>
               <div className="min-w-0">
                 <div className="text-base font-bold leading-6 text-gray-900 dark:text-gray-100">
                   {source.title}
                 </div>
-                <div className="mt-2 font-mono text-xs text-gray-500 dark:text-gray-400">{source.host}</div>
-                <div className="mt-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--aqs-accent-strong)] dark:text-[var(--aqs-accent-dark)]">
-                  {source.category}
+                <div className="mt-2 font-mono text-xs font-bold text-slate-500 uppercase tracking-widest">{source.host}</div>
+                <div className="mt-2">
+                  <span className="patch">
+                    {source.category}
+                  </span>
                 </div>
               </div>
             </div>
@@ -798,6 +902,18 @@ function processRichText(text: string): {
     return `\n\n__WEB_MARKER_${id}__\n\n`;
   });
 
+  processed = processed.replace(/\[WEATHER:\s*"([^"]+)"\]/g, (_, query) => {
+    const id = `weather-${idCounter++}`;
+    elements.push({ type: "weather", id, content: query });
+    return `\n\n__WEATHER_MARKER_${id}__\n\n`;
+  });
+
+  processed = processed.replace(/\[MAP:\s*"([^"]+)"\]/g, (_, query) => {
+    const id = `map-${idCounter++}`;
+    elements.push({ type: "map", id, content: query });
+    return `\n\n__MAP_MARKER_${id}__\n\n`;
+  });
+
   processed = processed.replace(/\[DEFINITION\]([\s\S]*?)\[END_DEFINITION\]/g, (_, content) => {
     const id = `def-${idCounter++}`;
     elements.push({ type: "definition", id, content: content.trim() });
@@ -808,6 +924,8 @@ function processRichText(text: string): {
     .replace(/\[IMAGE_SEARCH:[^\]]*\]/g, "")
     .replace(/\[VIDEO_SEARCH:[^\]]*\]/g, "")
     .replace(/\[WEB_SEARCH:[^\]]*\]/g, "")
+    .replace(/\[WEATHER:[^\]]*\]/g, "")
+    .replace(/\[MAP:[^\]]*\]/g, "")
     .replace(/\[DEFINITION\](?!(\s|\S)*\[END_DEFINITION\])/g, "")
     .replace(/\[END_DEFINITION\]/g, "");
 
@@ -819,7 +937,7 @@ export function RichResponse({ text, compact = false }: RichResponseProps) {
 
   const parts = useMemo(() => {
     const result: Array<{ type: RichElementType | "markdown"; content: string; id?: string }> = [];
-    const markerRegex = /__(IMAGE_MARKER_|VIDEO_MARKER_|WEB_MARKER_|DEFINITION_MARKER_)([^_]+)__/g;
+    const markerRegex = /__(IMAGE_MARKER_|VIDEO_MARKER_|WEB_MARKER_|WEATHER_MARKER_|MAP_MARKER_|DEFINITION_MARKER_)([^_]+)__/g;
     let lastIndex = 0;
     let match = markerRegex.exec(processed);
 
@@ -846,11 +964,11 @@ export function RichResponse({ text, compact = false }: RichResponseProps) {
   }, [elements, processed]);
 
   const proseClass = compact
-    ? "prose prose-sm max-w-none text-[15px] leading-7 text-gray-800 dark:prose-invert dark:text-gray-100 prose-p:my-3 prose-p:leading-7 prose-headings:mb-3 prose-headings:mt-5 prose-headings:font-sans prose-headings:font-bold prose-strong:text-gray-900 dark:prose-strong:text-gray-100 prose-ul:my-3 prose-ul:pl-5 prose-ol:my-3 prose-ol:pl-5 prose-li:my-1.5 prose-li:leading-7 prose-pre:bg-gray-50 dark:prose-pre:bg-gray-900 prose-pre:border prose-pre:border-gray-300 dark:prose-pre:border-gray-700 prose-pre:rounded-xl prose-blockquote:border-l-4 prose-blockquote:border-[var(--aqs-accent)] prose-blockquote:bg-[var(--aqs-accent-soft)]/40 prose-blockquote:px-4 prose-blockquote:py-2 dark:prose-blockquote:bg-[color:rgba(122,31,52,0.12)] prose-a:text-[var(--aqs-accent)] dark:prose-a:text-[var(--aqs-accent-dark)]"
-    : "prose prose-lg prose-gray max-w-none dark:prose-invert prose-p:leading-relaxed prose-pre:bg-gray-50 dark:prose-pre:bg-gray-800 prose-pre:text-gray-900 dark:prose-pre:text-gray-100 prose-pre:border-2 prose-pre:border-gray-900 dark:prose-pre:border-gray-100 prose-pre:rounded-xl prose-pre:neo-shadow-sm prose-headings:font-sans prose-headings:font-bold prose-headings:tracking-tight prose-a:text-[var(--aqs-accent)] dark:prose-a:text-[var(--aqs-accent-dark)] prose-table:border-2 prose-table:border-gray-900 dark:prose-table:border-gray-100 prose-th:border-b-2 prose-th:border-gray-900 dark:prose-th:border-gray-100 prose-td:border-b prose-td:border-gray-200 dark:prose-td:border-gray-700";
+    ? "prose prose-sm max-w-none text-[16px] leading-8 text-slate-800 dark:prose-invert dark:text-slate-100 prose-p:my-4 prose-p:leading-8 prose-headings:mb-4 prose-headings:mt-6 prose-headings:font-sans prose-headings:font-black prose-strong:text-slate-900 dark:prose-strong:text-white prose-ul:my-4 prose-ul:pl-6 prose-ol:my-4 prose-ol:pl-6 prose-li:my-2 prose-li:leading-8 prose-pre:bg-white dark:prose-pre:bg-slate-950 prose-pre:border-2 prose-pre:border-[var(--aqs-border)] prose-pre:rounded-2xl prose-blockquote:border-l-[6px] prose-blockquote:border-[var(--aqs-accent)] prose-blockquote:bg-[var(--aqs-accent-soft)] prose-blockquote:px-6 prose-blockquote:py-3 dark:prose-blockquote:bg-[color:rgba(139,30,63,0.1)] prose-a:text-[var(--aqs-accent)] dark:prose-a:text-[var(--aqs-accent-dark)] prose-a:font-bold prose-a:underline prose-a:underline-offset-4"
+    : "prose prose-lg prose-gray max-w-none dark:prose-invert prose-p:leading-relaxed prose-pre:bg-white dark:prose-pre:bg-slate-950 prose-pre:text-gray-900 dark:prose-pre:text-gray-100 prose-pre:border-[3px] prose-pre:border-[var(--aqs-border)] prose-pre:rounded-[1.8rem] prose-pre:neo-shadow prose-headings:font-sans prose-headings:font-black prose-headings:tracking-tight prose-headings:text-[var(--aqs-ink)] dark:prose-headings:text-white prose-a:text-[var(--aqs-accent)] dark:prose-a:text-[var(--aqs-accent-dark)] prose-a:font-black prose-a:underline prose-a:underline-offset-4 prose-table:border-[3px] prose-table:border-[var(--aqs-border)] prose-table:rounded-2xl prose-table:overflow-hidden prose-th:border-b-[3px] prose-th:border-[var(--aqs-border)] prose-th:bg-[var(--aqs-paper-strong)] dark:prose-th:bg-slate-900 prose-td:border-b-2 prose-td:border-slate-100 dark:prose-td:border-slate-800";
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-4">
       {!compact ? <SourcesPanel sources={sources} /> : null}
 
       {parts.map((part, index) => {
@@ -864,6 +982,14 @@ export function RichResponse({ text, compact = false }: RichResponseProps) {
 
         if (part.type === "web") {
           return <WebSearchResult key={part.id || `web-${index}`} query={part.content} compact={compact} />;
+        }
+
+        if (part.type === "weather") {
+          return <WeatherResult key={part.id || `weather-${index}`} query={part.content} compact={compact} />;
+        }
+
+        if (part.type === "map") {
+          return <MapResult key={part.id || `map-${index}`} query={part.content} />;
         }
 
         if (part.type === "definition") {
@@ -888,6 +1014,22 @@ export function RichResponse({ text, compact = false }: RichResponseProps) {
 
                   if (language === "chart") {
                     return <ChartBlock json={content} />;
+                  }
+
+                  if (language === "stats") {
+                    return <StatBlock json={content} />;
+                  }
+
+                  if (language === "table") {
+                    return <TableBlock json={content} />;
+                  }
+
+                  if (language === "figure") {
+                    return <FigureBlock json={content} />;
+                  }
+
+                  if (language === "demo") {
+                    return <DemoBlock json={content} />;
                   }
 
                   if (language) {

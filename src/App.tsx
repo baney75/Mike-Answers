@@ -1,33 +1,69 @@
-import React, { useState, useCallback, useEffect, useRef } from "react";
-import { ChevronDown, Newspaper, BookOpen, ArrowLeft, Clock } from "lucide-react";
+import React, { Suspense, lazy, type ReactNode, useState, useCallback, useEffect, useMemo, useRef } from "react";
+import { BookOpen, BrainCircuit, ChevronDown, Download, Newspaper, ShieldCheck, Zap } from "lucide-react";
 
-import type { AppState, SolveMode, ChatMessage, HistoryItem, BackgroundTask, SavedState } from "./types";
+import type {
+  AppState,
+  SolveMode,
+  ChatMessage,
+  HistoryItem,
+  BackgroundTask,
+  SavedState,
+  AuthWorkspaceState,
+  HistoryController,
+  SecureBackendController,
+  UserPreferencesSnapshot,
+} from "./types";
 import { useDarkMode } from "./hooks/useDarkMode";
 import { useHistory } from "./hooks/useHistory";
 import { useFilePreview } from "./hooks/useFilePreview";
+import { useAISettings } from "./hooks/useAISettings";
+import { useProviderCatalog } from "./hooks/useProviderCatalog";
 import { resizeImage } from "./utils/image";
 import { stripSolutionClientArtifacts } from "./utils/solution";
 import { isLikelyHomeworkRequest } from "./utils/request";
-import { solveQuestion, solveTextQuestion, chatWithTutor } from "./services/gemini";
+import {
+  chatWithTutorWithProvider,
+  isRuntimeProviderReady,
+  solveImageQuestionWithProvider,
+  solveTextQuestionWithProvider,
+  transcribeAudioWithProvider,
+} from "./services/ai";
+import { getMikeEmblemAsset, getMikeHeroAsset } from "./services/assets";
+import { describeEvidencePlan, formatEvidencePills } from "./services/evidencePlan";
 import { deriveNewsQuery } from "./services/news";
+import { isStandalonePwa, registerInstallPrompt, type InstallPromptEvent } from "./services/pwa";
+import { buildEvidencePlan } from "./services/requestRouter";
+import { getProviderDescriptor, getProviderLabel } from "./services/providers/registry";
 
 import { Header } from "./components/Header";
 import { Dropzone } from "./components/Dropzone";
 import { InputPreview } from "./components/InputPreview";
-import { SolutionDisplay } from "./components/SolutionDisplay";
 import { ActionBar } from "./components/ActionBar";
-import { ChatPanel } from "./components/ChatPanel";
 import { LoadingState } from "./components/LoadingState";
 import { ErrorState } from "./components/ErrorState";
-import { HistorySidebar } from "./components/HistorySidebar";
-import { WordOfTheDay } from "./components/WordOfTheDay";
-import { NewsView } from "./components/NewsView";
+import { SetupGuide } from "./components/SetupGuide";
+
+const SolutionDisplay = lazy(async () => ({
+  default: (await import("./components/SolutionDisplay")).SolutionDisplay,
+}));
+const ChatPanel = lazy(async () => ({
+  default: (await import("./components/ChatPanel")).ChatPanel,
+}));
+const HistorySidebar = lazy(async () => ({
+  default: (await import("./components/HistorySidebar")).HistorySidebar,
+}));
+const WordOfTheDay = lazy(async () => ({
+  default: (await import("./components/WordOfTheDay")).WordOfTheDay,
+}));
+const NewsView = lazy(async () => ({
+  default: (await import("./components/NewsView")).NewsView,
+}));
 
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
-const DEFAULT_SOLVE_MODE: SolveMode = "fast";
+const DEFAULT_SOLVE_MODE: Exclude<SolveMode, "research"> = "fast";
 
 interface SolveRequest {
-  mode: SolveMode;
+  mode: Exclude<SolveMode, "research">;
   detailed?: boolean;
   nextImageFile?: File | null;
   nextTextInput?: string | null;
@@ -104,17 +140,53 @@ function buildFollowUpStarters(solution: string, hideAnswerByDefault: boolean) {
   return [...new Set(starters)].slice(0, 4);
 }
 
-export default function App() {
+function formatModelLabel(model: string | undefined, fallback: string) {
+  const value = model?.trim() || fallback;
+  return value.length > 28 ? `${value.slice(0, 25)}...` : value;
+}
+
+interface AppProps {
+  authState?: AuthWorkspaceState;
+  accountControls?: ReactNode;
+  externalHistory?: HistoryController;
+  remotePreferences?: UserPreferencesSnapshot | null;
+  secureBackend?: SecureBackendController;
+  onPreferencesChange?: (snapshot: UserPreferencesSnapshot) => void | Promise<void>;
+}
+
+async function blobToBase64(blob: Blob) {
+  const buffer = await blob.arrayBuffer();
+  let binary = "";
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 0x8000;
+
+  for (let index = 0; index < bytes.length; index += chunkSize) {
+    const chunk = bytes.subarray(index, index + chunkSize);
+    binary += String.fromCharCode(...chunk);
+  }
+
+  return btoa(binary);
+}
+
+export default function App({
+  authState,
+  accountControls,
+  externalHistory,
+  remotePreferences,
+  secureBackend,
+  onPreferencesChange,
+}: AppProps) {
   // ── Core application state ──────────────────────────────────────────
   const [appState, setAppState] = useState<AppState>("IDLE");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [lastMode, setLastMode] = useState<SolveMode>(DEFAULT_SOLVE_MODE);
+  const [lastMode, setLastMode] = useState<Exclude<SolveMode, "research">>(DEFAULT_SOLVE_MODE);
 
   // ── Input state ─────────────────────────────────────────────────────
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [textInput, setTextInput] = useState<string | null>(null);
   const [subject, setSubject] = useState("Auto-detect");
   const imagePreviewUrl = useFilePreview(imageFile);
+  const [showSetup, setShowSetup] = useState(false);
 
   // ── Solution state ───────────────────────────────────────────────────
   const [solution, setSolution] = useState<string | null>(null);
@@ -126,6 +198,8 @@ export default function App() {
 
   // ── Sidebar state ───────────────────────────────────────────────────
   const [showHistory, setShowHistory] = useState(false);
+  const [installPromptEvent, setInstallPromptEvent] = useState<InstallPromptEvent | null>(null);
+  const [standalonePwa, setStandalonePwa] = useState(() => isStandalonePwa());
   const idleDraftBufferRef = useRef("");
   const idleDraftCaptureTimeoutRef = useRef<number | null>(null);
 
@@ -142,12 +216,54 @@ export default function App() {
 
   // ── Hooks ───────────────────────────────────────────────────────────
   const [darkMode, toggleDarkMode] = useDarkMode();
-  const history = useHistory();
+  const localHistory = useHistory();
+  const history = externalHistory ?? localHistory;
   const appStateRef = useRef<AppState>("IDLE");
+  const { settings, updateSettings, updateProviderSettings, resetSettings } = useAISettings({
+    remoteSnapshot: remotePreferences,
+    onPreferencesChange,
+  });
+  const selectedProviderId = settings.selectedProviderId;
+  const selectedProvider = getProviderDescriptor(selectedProviderId);
+  const secureProviderReady = Boolean(secureBackend?.keyStatus[selectedProviderId]);
+  const runtimeProviderReady = secureProviderReady || isRuntimeProviderReady(settings);
+  const providerCatalog = useProviderCatalog(settings);
+  const selectedProviderConfig = settings.providers[selectedProviderId];
 
   useEffect(() => {
     appStateRef.current = appState;
   }, [appState]);
+
+  useEffect(() => {
+    setStandalonePwa(isStandalonePwa());
+    const unregisterPrompt = registerInstallPrompt((event) => {
+      setInstallPromptEvent(event);
+    });
+    const handleInstalled = () => {
+      setInstallPromptEvent(null);
+      setStandalonePwa(true);
+    };
+
+    window.addEventListener("appinstalled", handleInstalled);
+    return () => {
+      unregisterPrompt();
+      window.removeEventListener("appinstalled", handleInstalled);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (settings.preferredSubject && subject === "Auto-detect") {
+      setSubject(settings.preferredSubject);
+    }
+  }, [settings.preferredSubject, subject]);
+
+  useEffect(() => {
+    if (subject === settings.preferredSubject) {
+      return;
+    }
+
+    updateSettings({ preferredSubject: subject });
+  }, [settings.preferredSubject, subject, updateSettings]);
 
   // ── Helpers ─────────────────────────────────────────────────────────
 
@@ -266,6 +382,13 @@ export default function App() {
       nextImageFile = imageFile,
       nextTextInput = textInput,
     }: SolveRequest) => {
+      if (!runtimeProviderReady) {
+        setShowSetup(true);
+        setErrorMsg("Complete provider setup before asking a question.");
+        setAppState("ERROR");
+        return;
+      }
+
       const trimmedText = nextTextInput?.trim() ?? null;
       const taskId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
       currentTaskIdRef.current = taskId;
@@ -290,11 +413,38 @@ export default function App() {
 
       try {
         let result: string;
+        let resolvedModel: string | undefined;
+        let resolvedProvider = selectedProviderId;
         let originalImageBase64: string | undefined;
 
         if (nextImageFile) {
           originalImageBase64 = await resizeImage(nextImageFile);
-          result = await solveQuestion(originalImageBase64, mode, subject, detailed);
+          const canUseSecureImageSolve =
+            Boolean(secureBackend?.keyStatus[selectedProviderId]) &&
+            (
+              selectedProvider.capabilities.supportsImageInputInBrowser ||
+              Boolean(selectedProviderConfig.options?.useSecureBackendForAdvanced)
+            );
+          const response =
+            secureBackend && canUseSecureImageSolve
+              ? await secureBackend.solveImage({
+                  provider: selectedProviderId,
+                  base64Image: originalImageBase64,
+                  mode,
+                  subject,
+                  detailed,
+                  settings,
+                })
+              : await solveImageQuestionWithProvider(
+                  originalImageBase64,
+                  mode,
+                  subject,
+                  detailed,
+                  settings,
+                );
+          result = response.text;
+          resolvedModel = response.model;
+          resolvedProvider = response.provider;
         } else if (trimmedText) {
           if (isWordOfTheDayRequest(trimmedText)) {
             setAppState("WOTD");
@@ -307,7 +457,26 @@ export default function App() {
             return;
           }
 
-          result = await solveTextQuestion(trimmedText, mode, subject, detailed);
+          const response =
+            secureBackend && secureBackend.keyStatus[selectedProviderId]
+              ? await secureBackend.solveText({
+                  provider: selectedProviderId,
+                  text: trimmedText,
+                  mode,
+                  subject,
+                  detailed,
+                  settings,
+                })
+              : await solveTextQuestionWithProvider(
+                  trimmedText,
+                  mode,
+                  subject,
+                  detailed,
+                  settings,
+                );
+          result = response.text;
+          resolvedModel = response.model;
+          resolvedProvider = response.provider;
         } else {
           throw new Error("No input provided.");
         }
@@ -385,6 +554,8 @@ export default function App() {
           requestText: trimmedText ?? undefined,
           subject,
           mode,
+          provider: resolvedProvider,
+          model: resolvedModel,
         });
       } catch (err) {
         if (currentTaskIdRef.current !== taskId) {
@@ -394,24 +565,24 @@ export default function App() {
         const msg = err instanceof Error ? err.message : String(err);
         if (msg.includes("No input provided"))
           setErrorMsg("Add a question or paste an image to continue.");
-        else if (msg.includes("No usable Gemini model"))
-          setErrorMsg("The configured Gemini model alias is unavailable. Check GEMINI_FAST_MODEL, GEMINI_GROUNDED_MODEL, or GEMINI_PRO_MODEL.");
+        else if (msg.includes("No usable Gemini model") || msg.includes("selected OpenRouter model"))
+          setErrorMsg(msg);
         else if (msg.includes("429") || msg.includes("quota"))
           setErrorMsg("Too many requests — please wait a moment and try again.");
         else if (msg.includes("offline") || msg.includes("fetch"))
           setErrorMsg("No internet connection. Please check your network.");
-        else if (msg.includes("API key") || msg.includes("403"))
-          setErrorMsg("Invalid API key. Please check GEMINI_API_KEY in your .env.local file.");
+        else if (msg.includes("API key") || msg.includes("403") || msg.includes("OpenRouter API key") || msg.includes("Gemini API key"))
+          setErrorMsg(msg);
         else
           setErrorMsg("Something went wrong. Please try again.");
         setAppState("ERROR");
       }
     },
-    [imageFile, textInput, subject, history, solution, solutionHideAnswerDefault, chatHistory, lastMode, appState],
+    [appState, chatHistory, history, imageFile, lastMode, runtimeProviderReady, secureBackend, selectedProvider, selectedProviderConfig.options?.useSecureBackendForAdvanced, selectedProviderId, settings, solution, solutionHideAnswerDefault, subject, textInput],
   );
 
   const handleSolve = useCallback(
-    (mode: SolveMode, detailed = false) => {
+    (mode: Exclude<SolveMode, "research">, detailed = false) => {
       void runSolve({ mode, detailed });
     },
     [runSolve],
@@ -610,10 +781,38 @@ export default function App() {
 
         let reply: string;
         try {
-          reply = await chatWithTutor([...context, ...historyBeforeCurrentTurn], effectiveMessage, originalQuestionRef.current);
+          reply =
+            secureBackend && secureBackend.keyStatus[selectedProviderId]
+              ? await secureBackend.chat({
+                  provider: selectedProviderId,
+                  history: [...context, ...historyBeforeCurrentTurn],
+                  message: effectiveMessage,
+                  originalQuestion: originalQuestionRef.current ?? undefined,
+                  settings,
+                })
+              : await chatWithTutorWithProvider(
+                  [...context, ...historyBeforeCurrentTurn],
+                  effectiveMessage,
+                  originalQuestionRef.current ?? undefined,
+                  settings,
+                );
         } catch (firstError) {
           await new Promise((resolve) => window.setTimeout(resolve, 350));
-          reply = await chatWithTutor([...context, ...historyBeforeCurrentTurn], effectiveMessage, originalQuestionRef.current);
+          reply =
+            secureBackend && secureBackend.keyStatus[selectedProviderId]
+              ? await secureBackend.chat({
+                  provider: selectedProviderId,
+                  history: [...context, ...historyBeforeCurrentTurn],
+                  message: effectiveMessage,
+                  originalQuestion: originalQuestionRef.current ?? undefined,
+                  settings,
+                })
+              : await chatWithTutorWithProvider(
+                  [...context, ...historyBeforeCurrentTurn],
+                  effectiveMessage,
+                  originalQuestionRef.current ?? undefined,
+                  settings,
+                );
           console.warn("Recovered follow-up chat after retry.", firstError);
         }
 
@@ -630,7 +829,7 @@ export default function App() {
         setIsChatLoading(false);
       }
     },
-    [solution, chatHistory],
+    [chatHistory, secureBackend, selectedProviderId, settings, solution],
   );
 
   // ── History handler ─────────────────────────────────────────────────
@@ -680,20 +879,72 @@ export default function App() {
     return handleSendChat(lastFollowUpQuestion, { retryLast: true });
   }, [handleSendChat, lastFollowUpQuestion]);
 
+  const handleInstallApp = useCallback(async () => {
+    if (!installPromptEvent) {
+      return;
+    }
+
+    await installPromptEvent.prompt();
+    await installPromptEvent.userChoice.catch(() => null);
+    setInstallPromptEvent(null);
+  }, [installPromptEvent]);
+
+  const providerName = getProviderLabel(selectedProviderId);
+  const providerStatus = secureProviderReady
+    ? "account vault key ready"
+    : runtimeProviderReady
+      ? "browser key ready"
+      : "key needed";
+  const visibleOpenRouterModels =
+    settings.providers.openrouter.options?.freeOnly
+      ? providerCatalog.models.filter((model) => model.free)
+      : providerCatalog.models;
+  const accountControlsNode = accountControls ?? (
+    <div className="rounded-full border border-[var(--aqs-ink)]/10 bg-white/80 px-4 py-2 text-sm font-medium text-slate-600 dark:border-white/10 dark:bg-slate-950/60 dark:text-slate-300">
+      Local-only mode
+    </div>
+  );
+  const heroAsset = getMikeHeroAsset(subject);
+  const emblemAsset = getMikeEmblemAsset();
+  const evidencePlan = useMemo(() => buildEvidencePlan(textInput?.trim() ?? ""), [textInput]);
+  const evidencePlanPills = useMemo(() => {
+    const pills = formatEvidencePills(evidencePlan);
+    if (pills.length > 0) {
+      return pills;
+    }
+
+    return ["Citations", "Research", "Weather", "Maps"];
+  }, [evidencePlan]);
+  const evidencePlanDescription = textInput?.trim()
+    ? describeEvidencePlan(evidencePlan)
+    : "Mike stays direct by default, but it switches to live evidence, calculations, figures, demos, weather, or maps links when those actually make the answer stronger.";
+  const subjectDescriptor = subject === "Auto-detect" ? "General reasoning studio" : `${subject} studio`;
+  const localContextLabel = settings.preferredLocation?.trim()
+    ? `Preferred location: ${settings.preferredLocation.trim()}`
+    : "Typed city stays local until you decide to use it.";
+  const fastModelLabel = formatModelLabel(
+    selectedProviderConfig.models.fastModel,
+    selectedProvider.defaultModels.fastModel || "Set fast model",
+  );
+  const deepModelLabel = formatModelLabel(
+    selectedProviderConfig.models.deepModel,
+    selectedProvider.defaultModels.deepModel || "Set deep model",
+  );
+
   const subjectControl = (
-    <div className="flex flex-col items-end gap-2 no-print sm:flex-row sm:items-center sm:justify-end">
+    <div className="flex flex-col gap-2 no-print sm:flex-row sm:items-center">
       <label
         htmlFor="subject-select"
-        className="text-sm font-bold font-mono tracking-[0.18em] text-[var(--aqs-accent-strong)] dark:text-[var(--aqs-accent-dark)]"
+        className="text-[11px] font-bold uppercase tracking-[0.24em] text-slate-500 dark:text-slate-400"
       >
-        SUBJECT:
+        Subject
       </label>
       <div className="relative">
         <select
           id="subject-select"
           value={subject}
           onChange={(e) => setSubject(e.target.value)}
-          className="select-themed appearance-none rounded-2xl border-2 border-gray-900 bg-white px-4 py-3 pr-12 text-base font-semibold text-gray-900 shadow-[3px_3px_0px_0px_rgba(17,24,39,1)] outline-none transition focus-visible:-translate-y-0.5 focus-visible:border-[var(--aqs-accent)] focus-visible:ring-4 focus-visible:ring-[color:rgba(122,31,52,0.18)] dark:border-gray-100 dark:bg-gray-900 dark:text-gray-100 dark:shadow-[3px_3px_0px_0px_rgba(243,244,246,1)] dark:focus-visible:border-[var(--aqs-accent-dark)] dark:focus-visible:ring-[color:rgba(216,148,163,0.2)]"
+          className="select-themed appearance-none rounded-full border border-[var(--aqs-ink)]/10 bg-white/92 px-4 py-3 pr-12 text-sm font-semibold text-[var(--aqs-ink)] outline-none transition focus-visible:border-[var(--aqs-accent)] focus-visible:ring-4 focus-visible:ring-[color:rgba(122,31,52,0.14)] dark:border-white/10 dark:bg-slate-950 dark:text-white"
         >
           <option>Auto-detect</option>
           <option>Mathematics</option>
@@ -716,157 +967,441 @@ export default function App() {
     </div>
   );
 
+  const studySignals = [
+    {
+      title: "Truth-first",
+      body: "Current questions get live evidence and exact date framing when needed.",
+    },
+    {
+      title: "Visual when useful",
+      body: "Charts, figures, tables, and demos appear only when they clarify the answer.",
+    },
+    {
+      title: "Local by choice",
+      body: localContextLabel,
+    },
+  ];
+
+  const mascotStage = (
+    <aside className="studio-panel relative overflow-hidden bg-white p-6 dark:bg-slate-900 md:p-8">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(184,140,58,0.12),transparent_50%),radial-gradient(circle_at_bottom_left,rgba(139,30,63,0.1),transparent_40%)]" />
+
+      <div className="relative flex h-full flex-col gap-5">
+        <div className="flex items-center justify-between">
+          <div className="inline-flex items-center px-4 py-1.5 patch">
+            {subjectDescriptor}
+          </div>
+          <div className="h-2 w-12 rounded-full bg-[var(--aqs-border)]/5" />
+        </div>
+
+        <div className="relative overflow-hidden rounded-[2rem] border border-[var(--aqs-ink)]/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.72),rgba(252,245,238,0.96))] px-4 pt-5 dark:border-white/10 dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.62),rgba(29,18,26,0.86))]">
+          <div className="absolute inset-x-[8%] bottom-6 h-40 rounded-[50%] bg-[radial-gradient(circle,rgba(139,30,63,0.16),transparent_70%)] blur-3xl dark:bg-[radial-gradient(circle,rgba(240,163,182,0.14),transparent_70%)]" />
+          <div className="mb-4 text-[10px] font-black uppercase tracking-[0.32em] text-slate-400">
+            Subject art direction
+          </div>
+          <img
+            src={heroAsset.webp}
+            alt={`${subjectDescriptor} mascot`}
+            className="relative z-10 mx-auto max-h-[250px] w-full object-contain object-top drop-shadow-[0_28px_48px_rgba(20,17,21,0.24)] transition-transform duration-700 hover:scale-[1.03] md:max-h-[310px] xl:max-h-[340px] animate-in zoom-in-95"
+          />
+        </div>
+
+        <div className="space-y-3">
+          <h3 className="text-3xl font-black tracking-tighter text-[var(--aqs-ink)] dark:text-white">
+            {subject === "Auto-detect" ? "Universal Agent" : `Master ${subject}`}
+          </h3>
+          <p className="text-sm font-medium leading-relaxed text-slate-500 dark:text-slate-400">
+            Mike’s visual profile shifts with the studio subject, while the runtime stays explicit about speed, depth, and evidence.
+          </p>
+        </div>
+
+        <div className="grid gap-3 border-t-2 border-[var(--aqs-border)]/5 pt-4 sm:grid-cols-3 xl:grid-cols-1">
+          {studySignals.map((signal) => (
+            <div key={signal.title} className="flex items-start gap-3">
+              <div className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--aqs-accent)]" />
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-wider text-[var(--aqs-ink)] dark:text-white">{signal.title}</p>
+                <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">{signal.body}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </aside>
+  );
+
   // ── Render ──────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 bg-grid-pattern text-gray-900 dark:text-gray-100 font-sans selection:bg-[var(--aqs-accent-soft)] selection:text-[var(--aqs-accent-strong)] dark:selection:bg-[color:rgba(122,31,52,0.55)] dark:selection:text-white transition-colors duration-200">
+    <div className="min-h-screen text-[var(--aqs-ink)] dark:text-gray-100 font-sans selection:bg-[var(--aqs-accent-soft)] selection:text-[var(--aqs-accent-strong)] transition-colors duration-300">
       {showHistory && (
-        <HistorySidebar
-          items={history.items}
-          onSelect={loadHistoryItem}
-          onClose={() => setShowHistory(false)}
-        />
+        <Suspense fallback={<div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm" />}>
+          <HistorySidebar
+            items={history.items}
+            onSelect={loadHistoryItem}
+            onClose={() => setShowHistory(false)}
+          />
+        </Suspense>
       )}
 
       <div
-        className={`mx-auto px-4 py-8 md:py-12 ${
-          appState === "NEWS" ? "max-w-[1780px]" : appState === "WOTD" ? "max-w-6xl" : "max-w-5xl"
+        className={`mx-auto px-4 py-8 transition-all duration-500 md:py-12 ${
+          appState === "NEWS" ? "max-w-[1780px]" : appState === "WOTD" ? "max-w-6xl" : "max-w-[1280px]"
         }`}
       >
         <Header
           darkMode={darkMode}
           onToggleDark={toggleDarkMode}
           onOpenHistory={() => setShowHistory(true)}
+          onToggleSetup={() => setShowSetup((value) => !value)}
+          setupOpen={showSetup}
+          accountControls={accountControlsNode}
+          emblemSrc={emblemAsset.webp}
+          onInstallApp={handleInstallApp}
+          canInstallApp={Boolean(installPromptEvent) && !standalonePwa}
+          providerName={providerName}
+          providerStatus={providerStatus}
         />
 
-        <main className="space-y-8">
-          {/* ── Idle: show dropzone ──────────────────────────────── */}
-          {appState === "IDLE" && (
-            <div className="animate-in fade-in slide-in-from-bottom-4 space-y-6 duration-500">
-              {subjectControl}
-              <Dropzone
-                onImageSelected={handleImageSelected}
-                onTextPasted={handleTextPasted}
-                onQuickSubmit={handleQuickTextSubmit}
-                onError={(msg) => {
-                  setErrorMsg(msg);
-                  setAppState("ERROR");
+        {showSetup && appState !== "NEWS" && appState !== "WOTD" ? (
+          <div className="fixed inset-0 z-40 flex items-start justify-center bg-slate-950/40 px-4 py-6 backdrop-blur-md md:items-center md:p-8">
+            <div className="relative max-h-[calc(100vh-3rem)] w-full max-w-5xl overflow-y-auto rounded-[2.5rem]">
+              <button
+                type="button"
+                onClick={() => setShowSetup(false)}
+                aria-label="Close settings"
+                className="absolute right-6 top-6 z-50 inline-flex h-11 w-11 items-center justify-center rounded-full border-2 border-[var(--aqs-border)] bg-white text-[var(--aqs-ink)] shadow-[4px_4px_0px_0px_var(--aqs-border)] transition-all hover:-translate-y-0.5 active:translate-y-px dark:bg-slate-900 dark:text-white"
+              >
+                ×
+              </button>
+              <SetupGuide
+                settings={settings}
+                authState={authState}
+                accountControls={accountControlsNode}
+                historyLabel={history.label}
+                emblemSrc={emblemAsset.webp}
+                openrouterModels={visibleOpenRouterModels}
+                openrouterLoading={providerCatalog.loading}
+                openrouterError={providerCatalog.error}
+                onRefreshOpenRouterModels={() => {
+                  void providerCatalog.refresh(true);
                 }}
-                onVoiceInput={handleTextPasted}
+                secureKeyStatus={secureBackend?.keyStatus}
+                onStoreSecureKey={secureBackend?.storeProviderKey}
+                onDeleteSecureKey={secureBackend?.removeProviderKey}
+                onUpdateSettings={updateSettings}
+                onUpdateProviderSettings={updateProviderSettings}
+                onResetSettings={resetSettings}
+                onComplete={() => {
+                  updateSettings({ onboardingCompleted: true });
+                  setShowSetup(false);
+                }}
               />
+            </div>
+          </div>
+        ) : null}
 
-              <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
-                <button
-                  type="button"
-                  onClick={() => handleOpenNews()}
-                  className="inline-flex items-center gap-3 rounded-2xl border-2 border-gray-900 bg-white px-6 py-4 font-bold text-gray-900 transition-all hover:-translate-y-1 hover:neo-shadow active:neo-shadow-sm dark:border-gray-100 dark:bg-gray-900 dark:text-gray-100 dark:hover:border-[var(--aqs-accent-dark)]"
-                >
-                  <div className="rounded-lg bg-[var(--aqs-accent)] p-2">
-                    <Newspaper className="w-5 h-5 text-white" />
-                  </div>
-                  <div className="text-left">
-                    <div className="text-sm">Latest</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">News</div>
-                  </div>
-                </button>
+        <main className="space-y-8">
+          <div
+            className={
+              showSetup && appState !== "NEWS" && appState !== "WOTD"
+                ? "pointer-events-none opacity-20 blur-sm grayscale transition duration-500"
+                : "transition duration-500"
+            }
+            aria-hidden={showSetup && appState !== "NEWS" && appState !== "WOTD"}
+          >
+            {/* ── Idle: show dropzone ──────────────────────────────── */}
+            {appState === "IDLE" && (
+              <div className="animate-in fade-in slide-in-from-bottom-6 duration-700">
+                <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_420px]">
+                  <section className="studio-panel relative overflow-hidden p-6 md:p-10">
+                    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(139,30,63,0.06),transparent_40%),radial-gradient(circle_at_top_right,rgba(184,140,58,0.06),transparent_40%)]" />
 
-                <button
-                  type="button"
-                  onClick={handleOpenWotd}
-                  className="inline-flex items-center gap-3 rounded-2xl border-2 border-gray-900 bg-white px-6 py-4 font-bold text-gray-900 transition-all hover:-translate-y-1 hover:neo-shadow active:neo-shadow-sm dark:border-gray-100 dark:bg-gray-900 dark:text-gray-100 dark:hover:border-[var(--aqs-accent-dark)]"
-                >
-                  <div className="rounded-lg bg-[var(--aqs-accent)] p-2">
-                    <BookOpen className="w-5 h-5 text-white" />
-                  </div>
-                  <div className="text-left">
-                    <div className="text-sm">Word of</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">the Day</div>
-                  </div>
-                </button>
+                    <div className="relative space-y-10">
+                      <div className="flex flex-col gap-6 border-b-2 border-[var(--aqs-border)]/5 pb-10 lg:flex-row lg:items-end lg:justify-between">
+                        <div className="max-w-3xl">
+                          <div className="inline-flex items-center gap-2 patch">
+                            <ShieldCheck className="h-4 w-4" />
+                            Secure Academic Studio
+                          </div>
+                          <h2 className="academic-title mt-8 text-[var(--aqs-ink)] dark:text-white">
+                            Ask anything <span className="text-[var(--aqs-accent)]">serious.</span>
+                          </h2>
+                          <p className="mt-6 max-w-2xl text-lg font-medium leading-relaxed text-slate-600 dark:text-slate-300">
+                            The direct path to truth. Mike provides clear reasoning and evidence without the conversational fluff.
+                          </p>
+                        </div>
+
+                        <div className="shrink-0">
+                          {subjectControl}
+                        </div>
+                      </div>
+
+                      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+                        <div className="neo-border-thin rounded-3xl bg-white/50 p-6 dark:bg-slate-950/30">
+                          <div className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">
+                            Studio Heuristics
+                          </div>
+                          <p className="mt-4 text-sm font-medium leading-relaxed text-slate-600 dark:text-slate-300">
+                            {evidencePlanDescription}
+                          </p>
+                          <div className="mt-6 flex flex-wrap gap-2">
+                            {evidencePlanPills.map((pill) => (
+                              <span
+                                key={pill}
+                                className="neo-border-thin rounded-full bg-white px-3 py-1 text-[9px] font-black uppercase tracking-widest text-[var(--aqs-ink)] dark:bg-slate-900 dark:text-white"
+                              >
+                                {pill}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="neo-border-thin rounded-3xl bg-[var(--aqs-accent-soft)] p-6 dark:bg-[color:rgba(139,30,63,0.12)]">
+                          <div className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--aqs-accent-strong)] dark:text-[var(--aqs-accent-dark)]">
+                            Provider Profile
+                          </div>
+                          <div className="mt-3 text-sm font-semibold text-[var(--aqs-ink)] dark:text-white">
+                            {providerName}
+                          </div>
+                          <div className="mt-5 flex flex-col gap-4">
+                            <div className="flex items-center gap-3">
+                              <Zap className="h-5 w-5 text-[var(--aqs-gold)] fill-[var(--aqs-gold)]" />
+                              <div className="min-w-0">
+                                <div className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
+                                  Fast
+                                </div>
+                                <div className="truncate text-sm font-black text-[var(--aqs-ink)] dark:text-white">{fastModelLabel}</div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <BrainCircuit className="h-5 w-5 text-[var(--aqs-accent)]" />
+                              <div className="min-w-0">
+                                <div className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
+                                  Deep
+                                </div>
+                                <div className="truncate text-sm font-black text-[var(--aqs-ink)] dark:text-white">{deepModelLabel}</div>
+                              </div>
+                            </div>
+                          </div>
+                          <p className="mt-4 text-xs font-medium leading-relaxed text-slate-600 dark:text-slate-300">
+                            {selectedProvider.shortDescription}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="relative">
+                        <Dropzone
+                          onImageSelected={handleImageSelected}
+                          onTextPasted={handleTextPasted}
+                          onQuickSubmit={handleQuickTextSubmit}
+                          onError={(msg) => {
+                            setErrorMsg(msg);
+                            setAppState("ERROR");
+                          }}
+                          onVoiceInput={handleTextPasted}
+                          onAudioTranscribe={async (audioBlob) => {
+                            if (
+                              selectedProvider.capabilities.supportsAudioTranscription &&
+                              secureBackend?.transcribeAudio &&
+                              secureBackend.keyStatus[selectedProviderId]
+                            ) {
+                              const audioBase64 = await blobToBase64(audioBlob);
+                              return await secureBackend.transcribeAudio({
+                                provider: selectedProviderId,
+                                audioBase64,
+                                mimeType: audioBlob.type || "audio/ogg",
+                                settings,
+                              });
+                            }
+
+                            return await transcribeAudioWithProvider(audioBlob, settings);
+                          }}
+                        />
+                      </div>
+
+                      <div className="grid gap-4 md:grid-cols-3">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenNews()}
+                          className="studio-card flex items-start justify-between p-6 text-left"
+                        >
+                          <div className="min-w-0 pr-4">
+                            <div className="text-sm font-black text-[var(--aqs-ink)] dark:text-white">Current news</div>
+                            <div className="mt-1.5 text-xs font-medium leading-relaxed text-slate-500 dark:text-slate-400">
+                              Real-time updates from verified editorial sources.
+                            </div>
+                          </div>
+                          <Newspaper className="h-5 w-5 shrink-0 text-[var(--aqs-accent)]" />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={handleOpenWotd}
+                          className="studio-card flex items-start justify-between p-6 text-left"
+                        >
+                          <div className="min-w-0 pr-4">
+                            <div className="text-sm font-black text-[var(--aqs-ink)] dark:text-white">Daily word</div>
+                            <div className="mt-1.5 text-xs font-medium leading-relaxed text-slate-500 dark:text-slate-400">
+                              Expand your vocabulary with MW's word of the day.
+                            </div>
+                          </div>
+                          <BookOpen className="h-5 w-5 shrink-0 text-[var(--aqs-accent)]" />
+                        </button>
+
+                        {Boolean(installPromptEvent) && !standalonePwa ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              void handleInstallApp();
+                            }}
+                            className="studio-card flex items-start justify-between bg-[var(--aqs-gold-soft)] p-6 text-left dark:bg-[color:rgba(198,156,67,0.12)]"
+                          >
+                            <div className="min-w-0 pr-4">
+                              <div className="text-sm font-black text-[var(--aqs-ink)] dark:text-white">Native app</div>
+                              <div className="mt-1.5 text-xs font-medium leading-relaxed text-slate-500 dark:text-slate-400">
+                                Run Mike as a standalone desktop utility.
+                              </div>
+                            </div>
+                            <Download className="h-5 w-5 shrink-0 text-[var(--aqs-gold)]" />
+                          </button>
+                        ) : (
+                          <div className="studio-card flex items-start justify-between bg-slate-100/30 p-6 text-left dark:bg-slate-900/30">
+                            <div className="min-w-0 pr-4">
+                              <div className="text-sm font-black text-slate-400">Pro Cloud</div>
+                              <div className="mt-1.5 text-xs font-medium leading-relaxed text-slate-400">
+                                Connect to Convex for sync and secure storage.
+                              </div>
+                            </div>
+                            <ShieldCheck className="h-5 w-5 shrink-0 text-slate-300" />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </section>
+
+                  {mascotStage}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* ── Previewing: show input + solve buttons ──────────── */}
-          {appState === "PREVIEWING" && (
-            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              {subjectControl}
-              <InputPreview
-                imagePreviewUrl={imagePreviewUrl}
-                textInput={textInput}
-                onTextChange={updateDraftText}
-                onSolve={handleSolve}
+            {/* ── Previewing: show input + solve buttons ──────────── */}
+            {appState === "PREVIEWING" && (
+              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_420px]">
+                  <div className="space-y-8">
+                    <div className="paper-panel p-6 md:p-8">
+                      <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+                        <div className="max-w-2xl">
+                          <span className="patch px-4 py-1.5 text-[10px]">Review Request</span>
+                          <p className="mt-4 text-base font-medium leading-relaxed text-slate-600 dark:text-slate-300">
+                            {evidencePlanDescription}
+                          </p>
+                          <div className="mt-5 flex flex-wrap gap-2">
+                            {evidencePlanPills.map((pill) => (
+                              <span
+                                key={pill}
+                                className="neo-border-thin rounded-full bg-white px-3 py-1 text-[10px] font-black uppercase tracking-wider text-[var(--aqs-ink)] dark:bg-slate-900 dark:text-white"
+                              >
+                                {pill}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="shrink-0">
+                          {subjectControl}
+                        </div>
+                      </div>
+                    </div>
+                    <InputPreview
+                      imagePreviewUrl={imagePreviewUrl}
+                      textInput={textInput}
+                      onTextChange={updateDraftText}
+                      onSolve={handleSolve}
+                      onClear={resetAll}
+                    />
+                  </div>
+
+                  {mascotStage}
+                </div>
+              </div>
+            )}
+
+            {/* ── Loading spinner ──────────────────────────────────── */}
+            {appState === "LOADING" && <LoadingState />}
+
+            {/* ── Error message ────────────────────────────────────── */}
+            {appState === "ERROR" && errorMsg && (
+              <ErrorState
+                message={errorMsg}
+                onRetry={() => {
+                  if (!hasDraftInput) {
+                    resetAll();
+                    return;
+                  }
+
+                  handleSolve(lastMode);
+                }}
                 onClear={resetAll}
               />
-            </div>
-          )}
+            )}
 
-          {/* ── Loading spinner ──────────────────────────────────── */}
-          {appState === "LOADING" && <LoadingState />}
+            {/* ── Solved: show solution + actions + chat ──────────── */}
+            {appState === "SOLVED" && solution && (
+              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <Suspense fallback={<LoadingState />}>
+                  <SolutionDisplay
+                    solution={solution}
+                    hideAnswerByDefault={solutionHideAnswerDefault}
+                  />
+                </Suspense>
 
-          {/* ── Error message ────────────────────────────────────── */}
-          {appState === "ERROR" && errorMsg && (
-            <ErrorState
-              message={errorMsg}
-              onRetry={() => {
-                if (!hasDraftInput) {
-                  resetAll();
-                  return;
-                }
+                <ActionBar
+                  solution={solution}
+                  lastMode={lastMode}
+                  canRetryEdit={hasDraftInput}
+                  onSolveAgain={handleSolve}
+                  onRetry={retryCurrentRequest}
+                  onEditRequest={editCurrentRequest}
+                  onClear={resetAll}
+                />
 
-                handleSolve(lastMode);
-              }}
-              onClear={resetAll}
-            />
-          )}
+                <Suspense fallback={<LoadingState />}>
+                  <ChatPanel
+                    messages={chatHistory}
+                    isLoading={isChatLoading}
+                    lastUserMessage={lastFollowUpQuestion}
+                    onSend={handleSendChat}
+                    onRetryLast={handleRetryChat}
+                    inputRef={chatInputRef}
+                    starterPrompts={buildFollowUpStarters(solution, solutionHideAnswerDefault)}
+                  />
+                </Suspense>
+              </div>
+            )}
 
-          {/* ── Solved: show solution + actions + chat ──────────── */}
-          {appState === "SOLVED" && solution && (
-            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <SolutionDisplay
-                solution={solution}
-                hideAnswerByDefault={solutionHideAnswerDefault}
-              />
+            {/* ── News view ─────────────────────────────────────── */}
+            {appState === "NEWS" && (
+              <Suspense fallback={<LoadingState />}>
+                <NewsView
+                  initialQuery={newsQuery}
+                  onClose={resetAll}
+                  onReturn={isReturning || backgroundTasks.some(t => t.status === "completed") ? handleReturnToPrevious : undefined}
+                  hasBackgroundTask={backgroundTasks.some(t => t.status === "completed")}
+                />
+              </Suspense>
+            )}
 
-              <ActionBar
-                solution={solution}
-                lastMode={lastMode}
-                canRetryEdit={hasDraftInput}
-                onSolveAgain={handleSolve}
-                onRetry={retryCurrentRequest}
-                onEditRequest={editCurrentRequest}
-                onClear={resetAll}
-              />
-
-              <ChatPanel
-                messages={chatHistory}
-                isLoading={isChatLoading}
-                lastUserMessage={lastFollowUpQuestion}
-                onSend={handleSendChat}
-                onRetryLast={handleRetryChat}
-                inputRef={chatInputRef}
-                starterPrompts={buildFollowUpStarters(solution, solutionHideAnswerDefault)}
-              />
-            </div>
-          )}
-
-          {/* ── News view ─────────────────────────────────────── */}
-          {(appState === "NEWS") && (
-            <NewsView
-              initialQuery={newsQuery}
-              onClose={resetAll}
-              onReturn={isReturning || backgroundTasks.some(t => t.status === "completed") ? handleReturnToPrevious : undefined}
-              hasBackgroundTask={backgroundTasks.some(t => t.status === "completed")}
-            />
-          )}
-
-          {/* ── Word of the Day view ─────────────────────────── */}
-          {appState === "WOTD" && (
-            <WordOfTheDay 
-              onClose={resetAll} 
-              onReturn={isReturning || backgroundTasks.some(t => t.status === "completed") ? handleReturnToPrevious : undefined}
-            />
-          )}
+            {/* ── Word of the Day view ─────────────────────────── */}
+            {appState === "WOTD" && (
+              <Suspense fallback={<LoadingState />}>
+                <WordOfTheDay 
+                  onClose={resetAll} 
+                  onReturn={isReturning || backgroundTasks.some(t => t.status === "completed") ? handleReturnToPrevious : undefined}
+                />
+              </Suspense>
+            )}
+          </div>
         </main>
       </div>
     </div>
