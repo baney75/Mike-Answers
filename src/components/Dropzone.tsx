@@ -511,7 +511,7 @@ export function Dropzone({
           <button
             type="button"
             onClick={triggerFilePicker}
-            className="inline-flex items-center gap-1.5 rounded-full border border-(--aqs-ink)/10 bg-white px-2.5 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-(--aqs-ink) transition hover:border-(--aqs-accent)/25 hover:bg-slate-50 dark:border-white/10 dark:bg-slate-900 dark:text-white md:px-3 md:text-xs"
+            className="inline-flex items-center gap-1.5 rounded-full border border-(--aqs-ink)/10 bg-white px-2.5 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-(--aqs-ink) transition hover:border-(--aqs-accent)/25 hover:bg-slate-50 dark:border-white/10 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800 md:px-3 md:text-xs"
           >
             <UploadCloud className="h-3.5 w-3.5 text-(--aqs-accent)" />
             Image

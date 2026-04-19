@@ -416,7 +416,7 @@ function ImageSearchResult({ query, compact = false }: { query: string; compact?
             href={getGoogleImageSearchUrl(query)}
             target="_blank"
             rel="noopener noreferrer"
-            className="neo-border-thin neo-shadow-sm mt-5 inline-flex items-center justify-center rounded-xl bg-white px-4 py-2 text-sm font-black text-gray-900 transition hover:bg-gray-50 dark:bg-slate-900 dark:text-white"
+            className="neo-border-thin neo-shadow-sm mt-5 inline-flex items-center justify-center rounded-xl bg-white px-4 py-2 text-sm font-black text-gray-900 transition hover:bg-gray-50 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800"
           >
             Search Images
           </a>
@@ -539,7 +539,7 @@ function VideoSearchResult({ query, compact = false }: { query: string; compact?
               href={getYouTubeSearchUrl(query)}
               target="_blank"
               rel="noopener noreferrer"
-              className="neo-border-thin neo-shadow-sm mt-5 inline-flex w-full items-center justify-center rounded-xl bg-white py-3 text-sm font-black text-gray-900 transition hover:bg-gray-50 dark:bg-slate-900 dark:text-white"
+              className="neo-border-thin neo-shadow-sm mt-5 inline-flex w-full items-center justify-center rounded-xl bg-white py-3 text-sm font-black text-gray-900 transition hover:bg-gray-50 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800"
             >
               Search YouTube
             </a>
@@ -575,7 +575,7 @@ function VideoSearchResult({ query, compact = false }: { query: string; compact?
               href={watchUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="neo-border-thin neo-shadow-sm flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white transition hover:bg-(--aqs-accent-soft) dark:bg-[#230f18] dark:ring-1 dark:ring-white/10"
+              className="neo-border-thin neo-shadow-sm flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white transition hover:bg-(--aqs-accent-soft) dark:bg-[#230f18] dark:ring-1 dark:ring-white/10 dark:hover:bg-[#2e1420]"
             >
               <ExternalLink className="h-4 w-4 text-(--aqs-accent)" />
             </a>

@@ -95,7 +95,7 @@ function DailyDeskBanner({ onReturn }: { onReturn: () => void }) {
       <button
         type="button"
         onClick={onReturn}
-        className="studio-card bg-white px-5 py-2 text-xs font-black uppercase tracking-widest text-amber-700 hover:bg-amber-50"
+        className="studio-card bg-white px-5 py-2 text-xs font-black uppercase tracking-widest text-amber-700 hover:bg-amber-50 dark:bg-slate-900 dark:text-amber-300 dark:hover:bg-slate-800"
       >
         View Answer
         <ArrowRight className="ml-2 inline h-3.5 w-3.5" />
@@ -1062,7 +1062,7 @@ Answer directly. Stay anchored to the supplied Daily Desk content. If the user a
                     className={`neo-border-thin neo-shadow-sm shrink-0 rounded-2xl px-3.5 py-2 text-[11px] font-black uppercase tracking-[0.24em] transition ${
                       activeView === scene.id
                         ? "bg-(--aqs-accent) text-white"
-                        : "bg-white text-(--aqs-ink) dark:bg-slate-900 dark:text-white"
+                        : "bg-white text-(--aqs-ink) hover:bg-slate-50 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800"
                     }`}
                   >
                     <span className="sm:hidden">{scene.shortLabel}</span>
@@ -1084,7 +1084,7 @@ Answer directly. Stay anchored to the supplied Daily Desk content. If the user a
                   <button
                     type="button"
                     onClick={() => cycleScene(-1)}
-                    className="studio-card h-10 w-10 bg-white dark:bg-slate-950"
+                    className="studio-card h-10 w-10 bg-white hover:bg-slate-50 dark:bg-slate-950 dark:hover:bg-slate-800"
                     aria-label="Previous Daily Desk scene"
                   >
                     <ArrowLeft className="mx-auto h-4 w-4" />
@@ -1092,7 +1092,7 @@ Answer directly. Stay anchored to the supplied Daily Desk content. If the user a
                   <button
                     type="button"
                     onClick={() => cycleScene(1)}
-                    className="studio-card h-10 w-10 bg-white dark:bg-slate-950"
+                    className="studio-card h-10 w-10 bg-white hover:bg-slate-50 dark:bg-slate-950 dark:hover:bg-slate-800"
                     aria-label="Next Daily Desk scene"
                   >
                     <ArrowRight className="mx-auto h-4 w-4" />
@@ -1127,7 +1127,7 @@ Answer directly. Stay anchored to the supplied Daily Desk content. If the user a
                       key={scene.id}
                       type="button"
                       onClick={() => setActiveView(scene.id)}
-                      className="studio-card bg-(--aqs-paper-strong) px-3 py-2 text-[10px] font-black uppercase tracking-[0.22em] text-slate-500 dark:bg-slate-950 dark:text-slate-300"
+                      className="studio-card bg-(--aqs-paper-strong) px-3 py-2 text-[10px] font-black uppercase tracking-[0.22em] text-slate-500 hover:bg-white dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-slate-800"
                     >
                       Jump to {scene.shortLabel}
                     </button>
@@ -1189,7 +1189,7 @@ Answer directly. Stay anchored to the supplied Daily Desk content. If the user a
                       key={suggestion}
                       type="button"
                       onClick={() => setChatInput(suggestion)}
-                      className="studio-card bg-white px-3 py-2 text-left text-[10px] leading-snug font-black text-slate-500 dark:bg-slate-950"
+                      className="studio-card bg-white px-3 py-2 text-left text-[10px] leading-snug font-black text-slate-500 hover:bg-slate-50 dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-slate-800"
                     >
                       {suggestion}
                     </button>

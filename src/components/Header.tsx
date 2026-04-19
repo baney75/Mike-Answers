@@ -37,7 +37,7 @@ function IconButton({
         title={title}
         onClick={onClick}
         disabled={disabled}
-        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-(--aqs-ink)/10 bg-white/88 text-(--aqs-ink) outline-none transition hover:border-(--aqs-accent)/30 hover:bg-white focus-visible:ring-4 focus-visible:ring-[rgba(139,30,63,0.12)] disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10 dark:bg-slate-950/72 dark:text-white md:h-10 md:w-10"
+        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-(--aqs-ink)/10 bg-white/88 text-(--aqs-ink) outline-none transition hover:border-(--aqs-accent)/30 hover:bg-white focus-visible:ring-4 focus-visible:ring-[rgba(139,30,63,0.12)] disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10 dark:bg-slate-950/72 dark:text-white dark:hover:bg-slate-800 md:h-10 md:w-10"
       >
         {children}
       </button>
@@ -140,7 +140,7 @@ export function Header({
             rel="noreferrer"
             aria-label="Support Mike Answers"
             title="Support Mike Answers"
-            className="inline-flex h-9 items-center justify-center rounded-full border border-transparent px-2.5 text-slate-500 transition hover:border-(--aqs-accent)/20 hover:bg-white/80 hover:text-(--aqs-accent-strong) dark:text-slate-300 dark:hover:bg-slate-950 md:h-10 md:px-3"
+            className="inline-flex h-9 items-center justify-center rounded-full border border-transparent px-2.5 text-slate-500 transition hover:border-(--aqs-accent)/20 hover:bg-white/80 hover:text-(--aqs-accent-strong) dark:text-slate-300 dark:hover:bg-slate-800 md:h-10 md:px-3"
           >
             <HandCoins className="h-4.5 w-4.5 text-(--aqs-gold)" />
             <span className="hidden xl:ml-2 xl:inline text-xs font-semibold">Support</span>

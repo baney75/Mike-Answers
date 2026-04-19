@@ -110,6 +110,10 @@
     background: #141115;
   }
 
+  .dark .studio-card:hover {
+    box-shadow: var(--aqs-shadow-hover);
+  }
+
   .neo-shadow { box-shadow: var(--aqs-shadow); }
   .neo-shadow-sm { box-shadow: var(--aqs-shadow-sm); }
   

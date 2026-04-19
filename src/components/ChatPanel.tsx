@@ -218,7 +218,7 @@ export function ChatPanel({
                 onClick={() => {
                   void handleSuggestion(suggestion);
                 }}
-                className="rounded-full border border-(--aqs-ink)/8 bg-white px-2.5 py-1.5 text-[11px] font-bold text-(--aqs-ink) transition hover:border-(--aqs-accent)/20 hover:bg-slate-50 dark:border-white/8 dark:bg-slate-900 dark:text-white"
+                className="rounded-full border border-(--aqs-ink)/8 bg-white px-2.5 py-1.5 text-[11px] font-bold text-(--aqs-ink) transition hover:border-(--aqs-accent)/20 hover:bg-slate-50 dark:border-white/8 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800"
               >
                 {suggestion}
               </button>

@@ -85,7 +85,7 @@ function SourceToggle({
       className={`rounded-full border-2 px-4 py-1.5 text-[10px] font-black uppercase tracking-widest transition-all ${
         active
           ? "border-(--aqs-accent) bg-(--aqs-accent) text-white shadow-sm"
-          : "border-slate-200 bg-white text-slate-500 hover:border-(--aqs-accent) hover:text-(--aqs-accent-strong) dark:border-slate-800 dark:bg-slate-900"
+          : "border-slate-200 bg-white text-slate-500 hover:border-(--aqs-accent) hover:text-(--aqs-accent-strong) dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
       }`}
     >
       {label}
@@ -319,7 +319,7 @@ function BackgroundTaskBanner({ onReturn }: { onReturn: () => void }) {
       <button
         type="button"
         onClick={onReturn}
-        className="studio-card bg-white px-5 py-2 text-xs font-black uppercase tracking-widest text-amber-700 hover:bg-amber-50"
+        className="studio-card bg-white px-5 py-2 text-xs font-black uppercase tracking-widest text-amber-700 hover:bg-amber-50 dark:bg-slate-900 dark:text-amber-300 dark:hover:bg-slate-800"
       >
         View Solution
         <ArrowRight className="ml-2 inline h-3.5 w-3.5" />

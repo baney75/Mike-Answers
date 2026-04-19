@@ -83,7 +83,7 @@ export function HistorySidebar({ items, onSelect, onClose }: HistorySidebarProps
               <button
                 type="button"
                 key={item.id}
-                className="w-full rounded-[1.2rem] border border-(--aqs-ink)/10 bg-white p-4 text-left transition hover:-translate-y-0.5 hover:bg-slate-50 dark:border-white/10 dark:bg-gray-800 dark:hover:bg-gray-800"
+                className="w-full rounded-[1.2rem] border border-(--aqs-ink)/10 bg-white p-4 text-left transition hover:-translate-y-0.5 hover:bg-slate-50 dark:border-white/10 dark:bg-gray-800 dark:hover:bg-gray-700"
                 onClick={() => onSelect(item)}
               >
                 <div className="flex justify-between items-center mb-2">

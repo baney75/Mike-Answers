@@ -63,7 +63,7 @@ export function SolutionDisplay({ solution, hideAnswerByDefault = false }: Solut
             <button
               type="button"
               onClick={() => setAnswerVisible((value) => !value)}
-              className="neo-border-thin inline-flex shrink-0 items-center justify-center gap-3 rounded-[1.1rem] bg-white px-6 py-3 text-sm font-black text-(--aqs-ink) transition hover:bg-slate-50 dark:bg-slate-900 dark:text-white"
+              className="neo-border-thin inline-flex shrink-0 items-center justify-center gap-3 rounded-[1.1rem] bg-white px-6 py-3 text-sm font-black text-(--aqs-ink) transition hover:bg-slate-50 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800"
             >
               {answerVisible ? <EyeOff className="h-4.5 w-4.5 text-(--aqs-accent)" /> : <Eye className="h-4.5 w-4.5 text-(--aqs-accent)" />}
               {answerVisible ? "Hide Answer" : "Reveal Answer"}

@@ -22,7 +22,7 @@ export function ErrorState({ message, onRetry, onClear }: ErrorStateProps) {
         <button
           type="button"
           onClick={onRetry}
-          className="flex items-center gap-2 rounded-full border border-(--aqs-ink)/10 bg-white px-5 py-2.5 text-sm font-black text-(--aqs-ink) transition hover:bg-slate-50 dark:border-white/10 dark:bg-slate-900 dark:text-white"
+          className="flex items-center gap-2 rounded-full border border-(--aqs-ink)/10 bg-white px-5 py-2.5 text-sm font-black text-(--aqs-ink) transition hover:bg-slate-50 dark:border-white/10 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800"
         >
           <RefreshCw className="h-4 w-4 text-(--aqs-accent)" />
           Retry
@@ -30,7 +30,7 @@ export function ErrorState({ message, onRetry, onClear }: ErrorStateProps) {
         <button
           type="button"
           onClick={onClear}
-          className="flex items-center gap-2 rounded-full border border-(--aqs-ink)/10 bg-(--aqs-paper-strong) px-5 py-2.5 text-sm font-black text-(--aqs-ink) transition hover:bg-white dark:border-white/10 dark:bg-slate-800 dark:text-white"
+          className="flex items-center gap-2 rounded-full border border-(--aqs-ink)/10 bg-(--aqs-paper-strong) px-5 py-2.5 text-sm font-black text-(--aqs-ink) transition hover:bg-white dark:border-white/10 dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700"
         >
           <X className="h-4 w-4 text-slate-500" />
           Start Over

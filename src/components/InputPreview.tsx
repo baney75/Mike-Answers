@@ -107,7 +107,7 @@ export function InputPreview({
             <button
               type="button"
               onClick={() => onSolve("deep")}
-              className="neo-border-thin neo-shadow-sm flex flex-1 items-center justify-center gap-3 rounded-2xl bg-white px-6 py-4 text-base font-black text-(--aqs-ink) transition-all hover:bg-slate-50 active:translate-y-px active:shadow-none dark:bg-slate-900 dark:text-white dark:hover:bg-slate-900 sm:max-w-[280px] md:px-8 md:py-5 md:text-lg"
+              className="neo-border-thin neo-shadow-sm flex flex-1 items-center justify-center gap-3 rounded-2xl bg-white px-6 py-4 text-base font-black text-(--aqs-ink) transition-all hover:bg-slate-50 active:translate-y-px active:shadow-none dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800 sm:max-w-[280px] md:px-8 md:py-5 md:text-lg"
             >
               <BrainCircuit className="h-6 w-6 text-(--aqs-accent)" />
               Mike Deep
