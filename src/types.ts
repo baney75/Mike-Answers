@@ -20,7 +20,6 @@ export interface ProviderModelProfile {
 
 export interface ProviderOptions {
   freeOnly?: boolean;
-  useSecureBackendForAdvanced?: boolean;
   customLabel?: string;
 }
 
@@ -39,7 +38,6 @@ export interface ProviderCapabilities {
   supportsGrounding: boolean;
   supportsImageInputInBrowser: boolean;
   supportsAudioTranscription: boolean;
-  supportsSecureAdvanced: boolean;
   supportsCustomBaseUrl: boolean;
   supportsModelCatalog: boolean;
 }
@@ -76,6 +74,7 @@ export interface HistoryItem {
   id: string;
   timestamp: number;
   solution: string;
+  chatHistory?: ChatMessage[];
   type?: 'solve' | 'grade';
   hideAnswerByDefault?: boolean;
   requestText?: string;
@@ -164,63 +163,18 @@ export interface RuntimeAISettings extends UserPreferencesSnapshot {
   providers: Record<ProviderId, ProviderRuntimeConfig>;
 }
 
-export interface AuthWorkspaceState {
-  enabled: boolean;
-  signedIn: boolean;
-  displayName?: string;
-  email?: string;
-  avatarUrl?: string;
-  syncReady?: boolean;
-}
-
 export interface HistoryController {
   items: HistoryItem[];
   push: (item: HistoryItem) => void | Promise<void>;
+  replace?: (item: HistoryItem) => void | Promise<void>;
+  replaceAll?: (items: HistoryItem[]) => void | Promise<void>;
   clear: () => void | Promise<void>;
   label?: string;
 }
 
-export interface SecureProviderKeyStatus {
-  gemini: boolean;
-  openrouter: boolean;
-  minimax: boolean;
-  custom_openai: boolean;
-}
-
-export interface SecureBackendController {
-  enabled: boolean;
-  keyStatus: SecureProviderKeyStatus;
-  storeProviderKey: (provider: ProviderId, apiKey: string) => Promise<void>;
-  removeProviderKey: (provider: ProviderId) => Promise<void>;
-  solveText: (args: {
-    provider: ProviderId;
-    text: string;
-    mode: Exclude<SolveMode, 'research'>;
-    subject: string;
-    detailed: boolean;
-    settings: RuntimeAISettings;
-  }) => Promise<{ text: string; provider: ProviderId; model?: string }>;
-  solveImage: (args: {
-    provider: ProviderId;
-    base64Image: string;
-    mode: Exclude<SolveMode, 'research'>;
-    subject: string;
-    detailed: boolean;
-    settings: RuntimeAISettings;
-  }) => Promise<{ text: string; provider: ProviderId; model?: string }>;
-  chat: (args: {
-    provider: ProviderId;
-    history: { role: string; text: string }[];
-    message: string;
-    originalQuestion?: { text?: string; imageBase64?: string };
-    settings: RuntimeAISettings;
-  }) => Promise<string>;
-  transcribeAudio?: (args: {
-    provider: ProviderId;
-    audioBase64: string;
-    mimeType: string;
-    settings: RuntimeAISettings;
-  }) => Promise<string>;
+export interface PromptRuntimeContext {
+  localDateTime: string;
+  timeZone: string;
 }
 
 export type ToolIntent =

@@ -1,10 +1,10 @@
 # Mike Answers Architecture
 
-Last updated: 2026-03-31
+Last updated: 2026-04-14
 
 ## Overview
 
-**Mike Answers** is a React + Vite SPA for broad-domain answers, tutoring, research, and visual explanation with secure bring-your-own-key onboarding. Users can pick `Gemini`, `OpenRouter`, `MiniMax`, or `Custom OpenAI-compatible`. Guests can stay browser-local, while signed-in deployments can use Clerk + Convex for synced preferences, history, encrypted provider-key storage, and an optional MiniMax-only secure image-understanding bridge.
+**Mike Answers** is a React + Vite SPA for broad-domain answers, tutoring, research, and visual explanation with secure bring-your-own-key onboarding. Users can pick `Gemini`, `OpenRouter`, `MiniMax`, or `Custom OpenAI-compatible`. The preferred deployment path is browser-local on Cloudflare Workers with encrypted local storage and optional peer-to-peer sync.
 
 ---
 
@@ -19,19 +19,37 @@ Last updated: 2026-03-31
 | Runtime | Bun |
 | Styling | Tailwind CSS 4.1 + CSS variables |
 | AI | Gemini (`@google/genai`), OpenRouter, MiniMax, or custom OpenAI-compatible transport |
-| Auth | Clerk |
-| Sync | Convex |
+| Auth | None required |
+| Sync | Encrypted transfer or live peer-to-peer WebRTC |
 | Deploy | Cloudflare Workers static assets + Wrangler |
 | Search | Google Custom Search, YouTube, Openverse, Wikipedia |
 
-### Key Principle: **Browser-first inference, optional secure bridge where the browser cannot honestly comply**
+### Research And Change Discipline
+
+- Local code is the primary source of truth for behavior in this repo.
+- Official docs are the primary source of truth for library APIs and framework behavior.
+- Rendered browser behavior is the source of truth for layout, overflow, focus, and pinned-composer correctness.
+- When these disagree, resolve the discrepancy before coding deeper.
+
+### Human Factors Basis
+
+- The app assumes bounded-rational users, not ideal ones: limited attention, limited working memory, interruptions, and uncertainty.
+- Dense answer and tutoring surfaces therefore need visible hierarchy, strong grouping, and a clear next action.
+- The pinned follow-up composer, local `Escape` ownership, and one-screen layout are not just aesthetic choices; they reduce context loss and interaction cost.
+- Provider setup and capability messaging should prefer recognition over recall, progressive disclosure over immediate complexity, and honesty over marketing-style ambiguity.
+
+### Key Principle: **Browser-first inference with local encrypted storage and optional peer sync**
 
 - Guest inference can happen directly from the browser with user-provided keys.
-- Signed-in deployments can store provider keys encrypted at rest in Convex and use authenticated actions when that path is enabled.
-- MiniMax advanced image understanding is the one deliberate exception to the browser-only rule because MiniMax's OpenAI-compatible browser path does not support direct image input as of March 31, 2026.
-- The onboarding flow defaults to `session-only` storage for guests and recommends the encrypted account vault for signed-in synced users.
-- Clerk + Convex are used for identity, preferences, history, and secure key storage when configured.
+- The default production posture is Cloudflare-hosted and browser-local: provider keys stay in memory or on the user's device.
+- Remembered provider keys are encrypted at rest in the browser using a non-extractable local Web Crypto key stored in IndexedDB.
+- MiniMax stays text/chat-only in this local-first build; users should prefer Gemini or OpenRouter for browser image solving.
+- The onboarding flow defaults to `session-only` storage and offers encrypted on-device persistence explicitly.
 - Cloudflare Workers hosts the built SPA from `dist/`.
+- Production deploys now use an explicit repo-side preflight (`scripts/production-preflight.mjs`) before `wrangler deploy` so auth, account targeting, and obvious env mistakes fail fast.
+- Local-first deployments can transfer workspace state between devices with an encrypted QR or backup-file flow; the transfer bundle includes provider settings, encrypted keys, and recent solved-session chat snapshots.
+- Local-first deployments can also establish a live peer-to-peer sync session over WebRTC data channels. Pairing is done with encrypted QR or pasted signaling payloads, and the live channel only exists while both devices remain open.
+- The PWA layer exposes install prompts, offline-ready notices, update prompts, and periodic service worker update checks.
 
 ---
 
@@ -40,28 +58,37 @@ Last updated: 2026-03-31
 ```
 src/
 ├── main.tsx           # React entry point
-├── App.tsx            # Main app shell + state machine
-├── ConnectedApp.tsx   # Clerk + Convex bridge into App
-├── AuthedApp.tsx      # Clerk-only bridge into App
-├── ClerkAuthControls.tsx
+├── App.tsx            # Main app shell + state machine orchestration
 ├── index.css          # Global styles, CSS variables, Tailwind
 ├── types.ts           # Shared TypeScript types
-├── components/        # UI components (see Component Patterns)
+├── components/        # UI components (including extracted workspaces)
 │   └── setup/         # Provider/settings control surface
 ├── hooks/             # Custom React hooks
 ├── services/          # External API integrations (see Services)
 │   └── providers/     # Provider registry + descriptors
 └── utils/             # Pure utility functions
-
-convex/
-├── auth.config.ts
-├── ai.ts
-├── schema.ts
-├── users.ts
-├── preferences.ts
-├── history.ts
-└── providerKeys.ts
 ```
+
+### App Shell And Workspaces
+
+`App.tsx` still owns the single state machine, keyboard policy, provider orchestration, history persistence, and routed surface switching. View composition is now split into dedicated workspace components so the shell does not carry layout complexity for every screen:
+
+- `HomeWorkspace`: composer-first home surface with one onboarding story, subject control, Daily Desk shortcut, and starter prompts
+- `SolveWorkspace`: solved-study layout that composes `SolutionDisplay`, `ActionBar`, and `ChatPanel`
+- `DeskWorkspaceShell`: shared bounded shell for `NewsView` and the Daily Desk
+
+Home shell ordering now follows a fixed responsive rule:
+
+- desktop: editorial two-column layout with the composer surface dominant and the Daily Desk / prompt rail secondary
+- tablet and mobile: single-column stack where identity, onboarding, subject selection, and the visible top of the question composer appear before any secondary utilities
+
+Heavy secondary surfaces are lazy-loaded from the app shell:
+
+- `SolveWorkspace`
+- `NewsView`
+- `WordOfTheDay`
+- `AiCitationModal`
+- `WorkspaceTransferModal`
 
 ---
 
@@ -71,11 +98,13 @@ convex/
 
 | State | Trigger | Renders |
 |-------|---------|---------|
-| `IDLE` | Initial, after clear | `Dropzone` |
-| `PREVIEWING` | Input received, before submit | `InputPreview` + `Dropzone` |
+| `IDLE` | Initial, after clear | `HomeWorkspace` |
+| `PREVIEWING` | Input received, before submit | review shell + `InputPreview` |
 | `LOADING` | User clicks fast/deep | `LoadingState` |
-| `SOLVED` | AI returns answer | `SolutionDisplay` + `ChatPanel` |
+| `SOLVED` | AI returns answer | `SolveWorkspace` |
 | `ERROR` | API failure | `ErrorState` |
+| `NEWS` | User opens analyst news desk | `DeskWorkspaceShell` + `NewsView` |
+| `WOTD` | User opens Daily Desk | `DeskWorkspaceShell` + `WordOfTheDay` |
 
 **Transitions:**
 ```
@@ -88,14 +117,26 @@ SOLVED → PREVIEWING (edit/retry) or IDLE (clear)
 ERROR → PREVIEWING (edit) or IDLE (clear)
 SOLVED → NEWS (user requests news)
 NEWS → SOLVED (user returns)
-SOLVED → WOTD (user requests word of the day)
+SOLVED → WOTD (user opens the Daily Desk)
 WOTD → SOLVED (user returns)
 ```
 
 **Onboarding gate:**
 - The app now treats provider setup as a first-class onboarding flow.
-- If the selected provider is not ready, the idle screen shows a compact provider chooser and solve actions are blocked until setup is complete.
-- `SetupGuide` is opened from the header settings icon, the idle setup rail, or a blocked solve attempt.
+- If the selected provider is not ready, the home screen shows one compact onboarding banner directly adjacent to the composer.
+- Solve actions stay visible even before setup is complete. A blocked solve attempt opens `SetupGuide`, preserves the current draft, and returns the user to that draft after setup closes.
+- `SetupGuide` can still be opened deliberately from the header settings icon.
+
+**Layout invariant:**
+- The app shell is intentionally locked to a single viewport (`100dvh`) with no global body scrolling.
+- Long answers, chat history, and news content must scroll inside dedicated panels or paginate.
+- The follow-up composer stays pinned and immediately reachable while surrounding content scrolls.
+
+**Daily Desk invariant:**
+- Home now exposes one `Daily Desk` entry instead of separate quick buttons for word, verse, and news.
+- The `WOTD` branch is a unified Daily Desk surface with internal scene navigation for `overview`, `word`, `verse`, and `news`.
+- Verse of the Day stays in-app with citation and copyright notice visible on the verse scene.
+- The Daily Desk news scene is a compact briefing, not the full analyst News desk.
 
 **Follow-up Context Preservation:**
 When the user asks follow-up questions after receiving a solution:
@@ -104,8 +145,8 @@ When the user asks follow-up questions after receiving a solution:
 - On follow-up, both original question and image are sent to `chatWithTutor`
 - System prompt instructs AI to "Always keep the original question in mind when answering follow-ups"
 - If the tutor asks a numbered clarification question, short replies are treated as answers to that clarification instead of restarting the loop
-- `ChatPanel` also seeds purpose-built starter prompts based on the current solution shape (for example video-heavy or homework-safe answers)
-- The follow-up UI is a guided workspace: conversation rail on the left, action rail on the right, large suggestion cards, and a dedicated composer card
+- `ChatPanel` also seeds purpose-built starter prompts based on the current solution shape (for example video-heavy, homework-safe, or clarification-heavy answers)
+- The follow-up UI is a guided workspace: conversation rail on the left, targeted prompt chips above the composer, and a dedicated composer card
 - `Escape` is owned locally by the follow-up workspace: it clears the draft first, then blurs the focused control, and no longer triggers the app-level solved-screen exit while the panel is active
 - This ensures context continuity even in multi-turn tutoring sessions
 
@@ -115,7 +156,7 @@ When the user asks follow-up questions after receiving a solution:
 
 ### Dropzone Component
 
-The `Dropzone` component (`src/components/Dropzone.tsx`) is the primary input interface:
+The `Dropzone` component (`src/components/Dropzone.tsx`) is the question composer panel used inside `HomeWorkspace`:
 
 - **Global keyboard listener**: Captures typed text anywhere on page
 - **Enter**: Submits with `fast` model
@@ -124,6 +165,9 @@ The `Dropzone` component (`src/components/Dropzone.tsx`) is the primary input in
 - **Drag & drop**: Image files
 - **Click**: Opens file picker
 - **Voice input**: Web Speech API or MediaRecorder fallback
+
+Important layout rule:
+- `Dropzone` is now size-intrinsic. `HomeWorkspace` owns overall home-surface layout, while `Dropzone` only owns the internal question-capture UI. It must not reclaim viewport height with `flex-1`, `h-full`, or similar full-height semantics that would bury onboarding or let secondary cards rise above the composer on smaller screens.
 
 ### Onboarding and Settings
 
@@ -153,6 +197,24 @@ Provider storage shape:
 ### Subject Selection
 
 Users can select a subject (Auto-detect, Mathematics, Physics, Chemistry, etc.) that influences AI routing.
+
+### Daily Desk Surface
+
+`src/components/WordOfTheDay.tsx` now acts as the unified Daily Desk presentation surface:
+
+- `overview` scene: a one-screen briefing tying together the daily word, the verse, and the lead verified headline
+- `word` scene: Merriam-Webster word, pronunciation, definition, and usage context
+- `verse` scene: in-app Scripture presentation with source label and copyright notice
+- `news` scene: compact lead-story summary plus a short headline stack from curated feeds
+- right rail: scene brief plus a Daily Desk-specific Ask Mike panel
+
+The Daily Desk intentionally stays bounded:
+
+- its own internal scroll regions handle overflow
+- it does not replace the full `NewsView` analyst desk for deeper current-events work
+- its Ask Mike context is limited to the currently loaded desk content instead of pretending to browse beyond it
+- the shell renders immediately and loads word, verse, and news as independent sections instead of blocking the whole surface behind one all-or-nothing loader
+- word and verse can appear before the news stack is ready, and section-level fallback messages replace the old blank syncing takeover
 
 ### Solve Modes
 
@@ -318,10 +380,12 @@ Run these after meaningful code changes:
 
 Browser verification expectations:
 
-- no console errors that indicate app breakage
-- no accidental horizontal overflow on desktop or mobile
+- no relevant console errors, hydration warnings, failed requests, or missing assets introduced by the change
+- no accidental horizontal overflow or fallback to global body scrolling
 - settings remain usable at mobile widths
 - provider switching works
+- follow-up composer remains pinned while long content scrolls internally
+- `Escape` ownership stays local in follow-up, `NEWS`, and `WOTD`
 - MiniMax limitation messaging stays honest
 
 ### RichResponse Component
@@ -355,6 +419,7 @@ In compact mode, `RichResponse` uses a denser but still readability-first prose 
 - large reply cards pulled from tutor clarification choices when available
 - otherwise seeded with solution-aware starter prompts (for example next-step, study guide, video recap, or video-comparison prompts)
 - retry/edit controls for the last user turn
+- mounted inside `SolveWorkspace`, with local escape ownership preserved on mobile and desktop
 
 ### SolutionDisplay Component
 
@@ -365,6 +430,12 @@ For homework-like prompts:
 - the final answer is hidden behind a reveal button
 - students can toggle the answer open only when they want to check their work
 - the homework-safe flag is persisted with saved solutions/history so the behavior survives reloads and revisits
+
+### Workspace Components
+
+- `HomeWorkspace` is the first-solve surface: editorial identity block, one provider-readiness banner, the subject selector, the composer, and secondary Daily Desk/prompt utilities
+- `SolveWorkspace` is the solved-study surface: answer column, action bar, follow-up rail, and print-only transcript rendering
+- `DeskWorkspaceShell` is a thin bounded wrapper for secondary full-screen desk surfaces so they share one-screen behavior without pushing those layout concerns back into `App.tsx`
 
 ### Print / PDF Output
 

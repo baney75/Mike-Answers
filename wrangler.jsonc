@@ -1,7 +1,18 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "mike-answers",
+  "account_id": "f28b2a55054cbc8d998c5963ed34a0a7",
   "compatibility_date": "2026-03-30",
+  "routes": [
+    {
+      "pattern": "mike-net.top",
+      "custom_domain": true
+    },
+    {
+      "pattern": "www.mike-net.top",
+      "custom_domain": true
+    }
+  ],
   "assets": {
     "directory": "./dist",
     "html_handling": "auto-trailing-slash",

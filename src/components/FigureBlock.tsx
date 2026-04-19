@@ -25,7 +25,7 @@ export function FigureBlock({ json }: FigureBlockProps) {
         <ol className="mt-5 space-y-4">
           {spec.items.map((item, index) => (
             <li key={`${item.label}-${index}`} className="grid gap-3 md:grid-cols-[auto_1fr]">
-              <div className="inline-flex h-10 w-10 items-center justify-center rounded-full border-2 border-gray-900 bg-[var(--aqs-accent-soft)] font-bold text-[var(--aqs-accent-strong)] dark:border-gray-100 dark:bg-[color:rgba(122,31,52,0.18)] dark:text-[var(--aqs-accent-dark)]">
+              <div className="inline-flex h-10 w-10 items-center justify-center rounded-full border-2 border-gray-900 bg-(--aqs-accent-soft) font-bold text-(--aqs-accent-strong) dark:border-gray-100 dark:bg-[color:rgba(122,31,52,0.18)] dark:text-(--aqs-accent-dark)">
                 {index + 1}
               </div>
               <div className="rounded-[1.25rem] border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900">
@@ -40,7 +40,7 @@ export function FigureBlock({ json }: FigureBlockProps) {
       {spec.type === "comparison" ? (
         <div className="mt-5 grid gap-4 md:grid-cols-2">
           <article className="rounded-[1.25rem] border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900">
-            <h5 className="text-sm font-bold uppercase tracking-[0.18em] text-[var(--aqs-accent-strong)] dark:text-[var(--aqs-accent-dark)]">
+            <h5 className="text-sm font-bold uppercase tracking-[0.18em] text-(--aqs-accent-strong) dark:text-(--aqs-accent-dark)">
               {spec.leftTitle ?? "Left"}
             </h5>
             <ul className="mt-3 space-y-2 text-sm leading-6 text-gray-800 dark:text-gray-200">
@@ -48,7 +48,7 @@ export function FigureBlock({ json }: FigureBlockProps) {
             </ul>
           </article>
           <article className="rounded-[1.25rem] border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900">
-            <h5 className="text-sm font-bold uppercase tracking-[0.18em] text-[var(--aqs-accent-strong)] dark:text-[var(--aqs-accent-dark)]">
+            <h5 className="text-sm font-bold uppercase tracking-[0.18em] text-(--aqs-accent-strong) dark:text-(--aqs-accent-dark)">
               {spec.rightTitle ?? "Right"}
             </h5>
             <ul className="mt-3 space-y-2 text-sm leading-6 text-gray-800 dark:text-gray-200">
@@ -62,7 +62,7 @@ export function FigureBlock({ json }: FigureBlockProps) {
         <div className="mt-5 grid gap-3 md:grid-cols-3">
           {spec.steps.map((step, index) => (
             <article key={`${step.title}-${index}`} className="rounded-[1.25rem] border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900">
-              <div className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--aqs-accent-strong)] dark:text-[var(--aqs-accent-dark)]">
+              <div className="text-xs font-bold uppercase tracking-[0.18em] text-(--aqs-accent-strong) dark:text-(--aqs-accent-dark)">
                 Step {index + 1}
               </div>
               <div className="mt-2 font-semibold text-gray-900 dark:text-gray-100">{step.title}</div>
@@ -77,7 +77,7 @@ export function FigureBlock({ json }: FigureBlockProps) {
           {spec.items.map((item) => (
             <div
               key={item.label}
-              className="rounded-full border border-gray-900 bg-[var(--aqs-paper)] px-4 py-2 text-sm font-semibold text-gray-900 dark:border-gray-100 dark:bg-gray-900 dark:text-gray-100"
+              className="rounded-full border border-gray-900 bg-(--aqs-paper) px-4 py-2 text-sm font-semibold text-gray-900 dark:border-gray-100 dark:bg-gray-900 dark:text-gray-100"
             >
               {item.label}
             </div>

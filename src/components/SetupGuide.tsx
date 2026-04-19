@@ -2,12 +2,10 @@ import { useMemo, useState, type ReactNode } from "react";
 import { ArrowRight, BadgeCheck, RefreshCw, UserRound } from "lucide-react";
 
 import type {
-  AuthWorkspaceState,
   OpenRouterModelSummary,
   ProviderId,
   ProviderRuntimeConfig,
   RuntimeAISettings,
-  SecureProviderKeyStatus,
 } from "../types";
 import { CapabilityPanel } from "./setup/CapabilityPanel";
 import { CredentialSection } from "./setup/CredentialSection";
@@ -17,17 +15,13 @@ import { getProviderDescriptor, providerOrder } from "../services/providers/regi
 
 interface SetupGuideProps {
   settings: RuntimeAISettings;
-  authState?: AuthWorkspaceState;
-  accountControls?: ReactNode;
+  transferControls?: ReactNode;
   historyLabel?: string;
   emblemSrc: string;
   openrouterModels: OpenRouterModelSummary[];
   openrouterLoading: boolean;
   openrouterError: string | null;
   onRefreshOpenRouterModels: () => void;
-  secureKeyStatus?: SecureProviderKeyStatus;
-  onStoreSecureKey?: (provider: ProviderId, apiKey: string) => Promise<void>;
-  onDeleteSecureKey?: (provider: ProviderId) => Promise<void>;
   onUpdateSettings: (patch: Partial<RuntimeAISettings>) => void;
   onUpdateProviderSettings: (providerId: ProviderId, patch: Partial<ProviderRuntimeConfig>) => void;
   onResetSettings: () => void;
@@ -52,90 +46,65 @@ function StepDot({
       <div
         className={`flex h-9 w-9 items-center justify-center rounded-full border text-sm font-bold ${
           complete
-            ? "border-[var(--aqs-accent)] bg-[var(--aqs-accent)] text-white"
+            ? "border-(--aqs-accent) bg-(--aqs-accent) text-white"
             : active
-              ? "border-[var(--aqs-accent)] bg-[var(--aqs-accent-soft)] text-[var(--aqs-accent-strong)]"
-              : "border-[var(--aqs-ink)]/12 bg-white text-slate-500 dark:border-white/10 dark:bg-slate-950 dark:text-slate-300"
+              ? "border-(--aqs-accent) bg-(--aqs-accent-soft) text-(--aqs-accent-strong)"
+              : "border-(--aqs-ink)/12 bg-white text-slate-500 dark:border-white/10 dark:bg-slate-950 dark:text-slate-300"
         }`}
       >
         {complete ? <BadgeCheck className="h-4 w-4" /> : index}
       </div>
-      <div className="text-sm font-semibold text-[var(--aqs-ink)] dark:text-white">{title}</div>
+      <div className="text-sm font-semibold text-(--aqs-ink) dark:text-white">{title}</div>
     </div>
   );
 }
 
 export function SetupGuide({
   settings,
-  authState,
-  accountControls,
+  transferControls,
   historyLabel,
   emblemSrc,
   openrouterModels,
   openrouterLoading,
   openrouterError,
   onRefreshOpenRouterModels,
-  secureKeyStatus,
-  onStoreSecureKey,
-  onDeleteSecureKey,
   onUpdateSettings,
   onUpdateProviderSettings,
   onResetSettings,
   onComplete,
 }: SetupGuideProps) {
   const [step, setStep] = useState<Step>(settings.onboardingCompleted ? 3 : 1);
-  const [secureKeyError, setSecureKeyError] = useState<string | null>(null);
 
   const selectedProviderId = settings.selectedProviderId;
   const selectedProvider = getProviderDescriptor(selectedProviderId);
   const selectedConfig = settings.providers[selectedProviderId];
-  const secureProviderKeyPresent = Boolean(secureKeyStatus?.[selectedProviderId]);
-  const localProviderKeyPresent = Boolean(selectedConfig.apiKey?.trim());
-  const providerKeyPresent = secureProviderKeyPresent || localProviderKeyPresent;
-  const signedInSecureWorkspace = Boolean(authState?.signedIn && authState.syncReady && onStoreSecureKey);
+  const providerKeyPresent = Boolean(selectedConfig.apiKey?.trim());
   const canFinish = providerKeyPresent;
   const providers = useMemo(
     () => providerOrder.map((providerId) => getProviderDescriptor(providerId)),
     [],
   );
 
-  async function storeSecureKey() {
-    if (!onStoreSecureKey || !selectedConfig.apiKey?.trim()) {
-      return;
-    }
-
-    setSecureKeyError(null);
-    try {
-      await onStoreSecureKey(selectedProviderId, selectedConfig.apiKey.trim());
-      onUpdateProviderSettings(selectedProviderId, {
-        apiKey: "",
-        rememberKey: false,
-      });
-    } catch (error) {
-      setSecureKeyError(error instanceof Error ? error.message : "Could not save the key securely.");
-    }
-  }
-
   return (
-    <section className="overflow-hidden rounded-[2.3rem] border border-[var(--aqs-ink)]/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.97),rgba(248,241,236,0.94))] shadow-[0_32px_80px_rgba(37,27,31,0.12)] dark:border-white/10 dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.94),rgba(29,18,26,0.88))]">
-      <div className="border-b border-[var(--aqs-ink)]/8 px-6 py-6 dark:border-white/10">
+    <section className="overflow-hidden rounded-[2.3rem] border border-(--aqs-ink)/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.97),rgba(248,241,236,0.94))] shadow-[0_32px_80px_rgba(37,27,31,0.12)] dark:border-white/10 dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.94),rgba(29,18,26,0.88))]">
+      <div className="border-b border-(--aqs-ink)/8 px-5 py-5 dark:border-white/10 md:px-6 md:py-6">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-3xl">
             <div className="flex items-center gap-4">
-              <div className="neo-border-thin h-16 w-16 overflow-hidden rounded-[1.5rem] bg-white dark:bg-slate-900">
+              <div className="neo-border-thin h-14 w-14 overflow-hidden rounded-[1.35rem] bg-white dark:bg-slate-900">
                 <img src={emblemSrc} alt="Mike Answers emblem" className="h-full w-full object-cover" />
               </div>
               <div>
-                <div className="text-[11px] font-bold uppercase tracking-[0.24em] text-[var(--aqs-accent-strong)] dark:text-[var(--aqs-accent-dark)]">
+                <div className="text-[11px] font-bold uppercase tracking-[0.24em] text-(--aqs-accent-strong) dark:text-(--aqs-accent-dark)">
                   Mike settings
                 </div>
-                <h2 className="mt-2 text-[2rem] font-black tracking-tight text-[var(--aqs-ink)] dark:text-white">
-                  Provider control, without the guesswork.
+                <h2 className="mt-2 text-[1.75rem] font-black tracking-tight text-(--aqs-ink) dark:text-white md:text-[2rem]">
+                  Provider control, without the detour.
                 </h2>
               </div>
             </div>
             <p className="mt-4 text-sm leading-7 text-slate-600 dark:text-slate-300">
-              Choose a provider, decide where its key lives, and set only the models that actually matter.
+              Choose a provider, decide where its key lives, and keep only the defaults that matter. Closing this sheet drops you back into the same draft.
             </p>
           </div>
 
@@ -152,15 +121,17 @@ export function SetupGuide({
           {step === 1 ? (
             <>
               <div className="space-y-2">
-                <h3 className="text-xl font-bold text-[var(--aqs-ink)] dark:text-white">Pick the runtime path</h3>
+                <h3 className="text-xl font-bold text-(--aqs-ink) dark:text-white">Pick the runtime path</h3>
                 <p className="text-sm leading-7 text-slate-600 dark:text-slate-300">
                   Presets keep setup honest. Advanced custom routing stays available when you need it.
                 </p>
               </div>
+              <div className="rounded-[1.35rem] border border-(--aqs-accent)/16 bg-(--aqs-accent-soft)/75 px-4 py-4 text-sm leading-6 text-slate-700 dark:border-(--aqs-accent-dark)/20 dark:bg-[color:rgba(122,31,52,0.18)] dark:text-slate-200">
+                <strong className="text-(--aqs-ink) dark:text-white">Recommended for students:</strong> start with Gemini for the cleanest free setup and native screenshot support. Use OpenRouter with <strong>Free only</strong> enabled when you want community free models or Gemini hits limits.
+              </div>
               <ProviderPicker
                 providers={providers}
                 selectedProviderId={selectedProviderId}
-                secureKeyStatus={secureKeyStatus}
                 onSelect={(providerId) => {
                   onUpdateSettings({ selectedProviderId: providerId });
                   setStep(2);
@@ -172,55 +143,33 @@ export function SetupGuide({
           {step === 2 ? (
             <>
               <div className="space-y-2">
-                <h3 className="text-xl font-bold text-[var(--aqs-ink)] dark:text-white">Set credentials</h3>
+                <h3 className="text-xl font-bold text-(--aqs-ink) dark:text-white">Set credentials</h3>
                 <p className="text-sm leading-7 text-slate-600 dark:text-slate-300">
-                  Browser-first stays the default. Signed-in users can also store keys in the encrypted vault.
+                  Browser-first stays the default. Remembered keys stay encrypted on this device.
                 </p>
               </div>
               <CredentialSection
                 provider={selectedProvider}
                 config={selectedConfig}
-                signedInSecureWorkspace={signedInSecureWorkspace}
-                secureKeyPresent={secureProviderKeyPresent}
-                secureKeyError={secureKeyError}
                 onConfigChange={(patch) => onUpdateProviderSettings(selectedProviderId, patch)}
-                onStoreSecureKey={signedInSecureWorkspace ? onStoreSecureKey : undefined}
-                onDeleteSecureKey={onDeleteSecureKey}
               />
               <div className="flex flex-wrap gap-3">
                 <button
                   type="button"
                   onClick={() => setStep(1)}
-                  className="rounded-full border border-[var(--aqs-ink)]/10 bg-white px-4 py-2 text-sm font-semibold text-[var(--aqs-ink)] dark:border-white/10 dark:bg-slate-950 dark:text-white"
+                  className="rounded-full border border-(--aqs-ink)/10 bg-white px-4 py-2 text-sm font-semibold text-(--aqs-ink) dark:border-white/10 dark:bg-slate-950 dark:text-white"
                 >
                   Back
                 </button>
-                {signedInSecureWorkspace ? (
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      if (selectedConfig.apiKey?.trim()) {
-                        await storeSecureKey();
-                      }
-                      setStep(3);
-                    }}
-                    disabled={!providerKeyPresent}
-                    className="inline-flex items-center gap-2 rounded-full border border-[var(--aqs-accent)] bg-[var(--aqs-accent)] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[var(--aqs-accent-strong)] disabled:cursor-not-allowed disabled:opacity-45"
-                  >
-                    Continue
-                    <ArrowRight className="h-4 w-4" />
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setStep(3)}
-                    disabled={!providerKeyPresent}
-                    className="inline-flex items-center gap-2 rounded-full border border-[var(--aqs-accent)] bg-[var(--aqs-accent)] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[var(--aqs-accent-strong)] disabled:cursor-not-allowed disabled:opacity-45"
-                  >
-                    Continue
-                    <ArrowRight className="h-4 w-4" />
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => setStep(3)}
+                  disabled={!providerKeyPresent}
+                  className="inline-flex items-center gap-2 rounded-full border border-(--aqs-accent) bg-(--aqs-accent) px-5 py-2 text-sm font-semibold text-white transition hover:bg-(--aqs-accent-strong) disabled:cursor-not-allowed disabled:opacity-45"
+                >
+                  Continue
+                  <ArrowRight className="h-4 w-4" />
+                </button>
               </div>
             </>
           ) : null}
@@ -228,19 +177,19 @@ export function SetupGuide({
           {step === 3 ? (
             <>
               <div className="space-y-2">
-                <h3 className="text-xl font-bold text-[var(--aqs-ink)] dark:text-white">Tune the defaults</h3>
+                <h3 className="text-xl font-bold text-(--aqs-ink) dark:text-white">Tune the defaults</h3>
                 <p className="text-sm leading-7 text-slate-600 dark:text-slate-300">
                   Fast and deep are the core knobs. Extra slots appear only when the provider actually supports them.
                 </p>
               </div>
 
               {selectedProviderId === "openrouter" ? (
-                <div className="space-y-5 rounded-[1.5rem] border border-[var(--aqs-ink)]/10 bg-white/84 p-5 dark:border-white/10 dark:bg-slate-950/55">
+                <div className="space-y-5 rounded-[1.5rem] border border-(--aqs-ink)/10 bg-white/84 p-5 dark:border-white/10 dark:bg-slate-950/55">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                      <div className="text-sm font-semibold text-[var(--aqs-ink)] dark:text-white">Model catalog</div>
+                      <div className="text-sm font-semibold text-(--aqs-ink) dark:text-white">Model catalog</div>
                       <div className="text-sm leading-6 text-slate-600 dark:text-slate-300">
-                        Use OpenRouter discovery if you want a safer preset list.
+                        Use OpenRouter discovery if you want a safer preset list. With <strong>Free only</strong> on, leaving the model fields on auto-pick lets Mike use OpenRouter's official free router.
                       </div>
                     </div>
                     <button
@@ -255,8 +204,8 @@ export function SetupGuide({
                       }
                       className={`rounded-full px-4 py-2 text-sm font-semibold ${
                         settings.providers.openrouter.options?.freeOnly
-                          ? "bg-[var(--aqs-accent)] text-white"
-                          : "border border-[var(--aqs-ink)]/10 bg-white text-[var(--aqs-ink)] dark:border-white/10 dark:bg-slate-950 dark:text-white"
+                          ? "bg-(--aqs-accent) text-white"
+                          : "border border-(--aqs-ink)/10 bg-white text-(--aqs-ink) dark:border-white/10 dark:bg-slate-950 dark:text-white"
                       }`}
                     >
                       {settings.providers.openrouter.options?.freeOnly ? "Free only: on" : "Free only: off"}
@@ -267,7 +216,7 @@ export function SetupGuide({
                     <button
                       type="button"
                       onClick={onRefreshOpenRouterModels}
-                      className="inline-flex items-center gap-2 rounded-full border border-[var(--aqs-ink)]/10 bg-white px-3 py-2 font-semibold text-[var(--aqs-ink)] dark:border-white/10 dark:bg-slate-950 dark:text-white"
+                      className="inline-flex items-center gap-2 rounded-full border border-(--aqs-ink)/10 bg-white px-3 py-2 font-semibold text-(--aqs-ink) dark:border-white/10 dark:bg-slate-950 dark:text-white"
                     >
                       <RefreshCw className={`h-4 w-4 ${openrouterLoading ? "animate-spin" : ""}`} />
                       Refresh models
@@ -291,7 +240,7 @@ export function SetupGuide({
                   />
                 </div>
               ) : (
-                <div className="space-y-5 rounded-[1.5rem] border border-[var(--aqs-ink)]/10 bg-white/84 p-5 dark:border-white/10 dark:bg-slate-950/55">
+                <div className="space-y-5 rounded-[1.5rem] border border-(--aqs-ink)/10 bg-white/84 p-5 dark:border-white/10 dark:bg-slate-950/55">
                   <ModelProfileEditor
                     provider={selectedProvider}
                     models={selectedConfig.models}
@@ -314,14 +263,14 @@ export function SetupGuide({
                 <button
                   type="button"
                   onClick={() => setStep(2)}
-                  className="rounded-full border border-[var(--aqs-ink)]/10 bg-white px-4 py-2 text-sm font-semibold text-[var(--aqs-ink)] dark:border-white/10 dark:bg-slate-950 dark:text-white"
+                  className="rounded-full border border-(--aqs-ink)/10 bg-white px-4 py-2 text-sm font-semibold text-(--aqs-ink) dark:border-white/10 dark:bg-slate-950 dark:text-white"
                 >
                   Back
                 </button>
                 <button
                   type="button"
                   onClick={onResetSettings}
-                  className="rounded-full border border-[var(--aqs-ink)]/10 bg-white px-4 py-2 text-sm font-semibold text-[var(--aqs-ink)] dark:border-white/10 dark:bg-slate-950 dark:text-white"
+                  className="rounded-full border border-(--aqs-ink)/10 bg-white px-4 py-2 text-sm font-semibold text-(--aqs-ink) dark:border-white/10 dark:bg-slate-950 dark:text-white"
                 >
                   Reset
                 </button>
@@ -329,43 +278,46 @@ export function SetupGuide({
                   type="button"
                   onClick={onComplete}
                   disabled={!canFinish}
-                  className="inline-flex items-center gap-2 rounded-full border border-[var(--aqs-accent)] bg-[var(--aqs-accent)] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[var(--aqs-accent-strong)] disabled:cursor-not-allowed disabled:opacity-45"
+                  className="inline-flex items-center gap-2 rounded-full border border-(--aqs-accent) bg-(--aqs-accent) px-5 py-2 text-sm font-semibold text-white transition hover:bg-(--aqs-accent-strong) disabled:cursor-not-allowed disabled:opacity-45"
                 >
                   Save and close
                   <ArrowRight className="h-4 w-4" />
                 </button>
               </div>
+              <p className="text-xs font-medium leading-6 text-slate-500 dark:text-slate-400">
+                Mike keeps the current question draft in place while this setup sheet is open.
+              </p>
             </>
           ) : null}
         </div>
 
         <aside className="space-y-4">
-          <div className="rounded-[1.7rem] border border-[var(--aqs-ink)]/10 bg-white/82 p-4 dark:border-white/10 dark:bg-slate-950/58">
-            <div className="text-sm font-semibold text-[var(--aqs-ink)] dark:text-white">Selected provider</div>
-            <div className="mt-2 text-lg font-black text-[var(--aqs-accent)]">{selectedProvider.label}</div>
+          <div className="rounded-[1.7rem] border border-(--aqs-ink)/10 bg-white/82 p-4 dark:border-white/10 dark:bg-slate-950/58">
+            <div className="text-sm font-semibold text-(--aqs-ink) dark:text-white">Selected provider</div>
+            <div className="mt-2 text-lg font-black text-(--aqs-accent)">{selectedProvider.label}</div>
             <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
               {selectedProvider.shortDescription}
             </p>
           </div>
 
-          <div className="rounded-[1.7rem] border border-[var(--aqs-ink)]/10 bg-white/82 p-4 dark:border-white/10 dark:bg-slate-950/58">
+          <div className="rounded-[1.7rem] border border-(--aqs-ink)/10 bg-white/82 p-4 dark:border-white/10 dark:bg-slate-950/58">
             <div className="flex items-start gap-3">
-              <UserRound className="mt-0.5 h-5 w-5 text-[var(--aqs-accent)]" />
+              <UserRound className="mt-0.5 h-5 w-5 text-(--aqs-accent)" />
               <div>
-                <div className="text-sm font-semibold text-[var(--aqs-ink)] dark:text-white">
-                  {authState?.signedIn ? authState.displayName ?? "Signed in" : "Guest mode"}
+                <div className="text-sm font-semibold text-(--aqs-ink) dark:text-white">
+                  Guest mode
                 </div>
                 <div className="text-sm leading-6 text-slate-600 dark:text-slate-300">
-                  {authState?.signedIn
-                    ? authState.syncReady
-                      ? `History sync: ${historyLabel ?? "Convex"}`
-                      : "Clerk is live. Convex still needs deployment."
-                    : "Finish setup now and sign in later if you want sync and vault storage."}
+                  Recommended: stay local-only. Keys and history remain on this browser with no account required.
                 </div>
-                <div className="mt-3">{accountControls}</div>
+                <div className="mt-3 rounded-full border border-(--aqs-ink)/10 bg-white/80 px-4 py-2 text-sm font-medium text-slate-600 dark:border-white/10 dark:bg-slate-950/60 dark:text-slate-300">
+                  {historyLabel ?? "Browser local"}
+                </div>
               </div>
             </div>
           </div>
+
+          {transferControls ? <div>{transferControls}</div> : null}
         </aside>
       </div>
     </section>

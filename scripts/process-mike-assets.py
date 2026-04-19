@@ -145,16 +145,8 @@ def contain_on_canvas(image: Image.Image, size: tuple[int, int], padding: float 
 
 
 def create_emblem(source: Image.Image) -> Image.Image:
-    crop = source.crop(
-        (
-            int(source.width * 0.29),
-            int(source.height * 0.24),
-            int(source.width * 0.71),
-            int(source.height * 0.76),
-        )
-    )
-    crop = crop_to_content(crop, 0.03)
-    return contain_on_canvas(crop, (1024, 1024), padding=0.09)
+    # Use the minimalist geometric logo for the emblem
+    return create_micro_icon(1024)
 
 
 def create_app_icon(maskable: bool = False) -> Image.Image:
@@ -169,36 +161,44 @@ def create_app_icon(maskable: bool = False) -> Image.Image:
 
 
 def create_micro_icon(size: int) -> Image.Image:
+    logo_path = SOURCE_DIR / "logo.png"
+    if not logo_path.exists():
+        # Fallback if logo not provided
+        canvas = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(canvas)
+        inset = max(1, size // 16)
+        radius = max(4, size // 4)
+        draw.rounded_rectangle(
+            (inset, inset, size - inset, size - inset),
+            radius=radius,
+            fill=(122, 31, 52, 255),
+            outline=(51, 38, 32, 255),
+            width=max(1, size // 18),
+        )
+        return canvas
+
+    icon = Image.open(logo_path).convert("RGBA")
+    # Identify magenta and key it out
+    pixels = icon.load()
+    for y in range(icon.height):
+        for x in range(icon.width):
+            r, g, b, a = pixels[x, y]
+            if r > 220 and b > 220 and g < 50:
+                pixels[x, y] = (r, g, b, 0)
+    
+    # Resize to padded size inside the square
+    icon = crop_to_content(icon, 0.0)
     canvas = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(canvas)
-    inset = max(1, size // 16)
-    radius = max(4, size // 4)
-    draw.rounded_rectangle(
-        (inset, inset, size - inset, size - inset),
-        radius=radius,
-        fill=(122, 31, 52, 255),
-        outline=(51, 38, 32, 255),
-        width=max(1, size // 18),
-    )
-    stroke = max(2, size // 8)
-    margin = size * 0.24
-    points_left = [
-        (margin, size * 0.72),
-        (margin, size * 0.26),
-        (size * 0.38, size * 0.54),
-        (size * 0.50, size * 0.26),
-        (size * 0.50, size * 0.72),
-    ]
-    points_right = [
-        (size * 0.50, size * 0.72),
-        (size * 0.50, size * 0.26),
-        (size * 0.62, size * 0.54),
-        (size * 0.76, size * 0.26),
-        (size * 0.76, size * 0.72),
-    ]
-    draw.line(points_left, fill=(247, 211, 168, 255), width=stroke, joint="curve")
-    draw.line(points_right, fill=(247, 211, 168, 255), width=stroke, joint="curve")
-    return canvas
+    resized = icon.resize((size, size), Image.Resampling.LANCZOS)
+    
+    # We round the corners to make it an app icon
+    mask = Image.new("L", (size, size), 0)
+    draw = ImageDraw.Draw(mask)
+    draw.rounded_rectangle((0, 0, size, size), radius=max(4, size // 5), fill=255)
+    
+    output = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    output.paste(resized, (0, 0), mask=mask)
+    return output
 
 
 def save_image(image: Image.Image, path: Path) -> None:
@@ -221,7 +221,7 @@ def process_sources() -> dict[str, dict[str, str]]:
     outputs: dict[str, dict[str, str]] = {}
     for source_name, alias in TARGETS.items():
         source = Image.open(SOURCE_DIR / f"{source_name}.png")
-        keyed = remove_corner_star(key_green(source))
+        keyed = key_green(source)
         hero = contain_on_canvas(crop_to_content(keyed, 0.04), (1280, 960), padding=0.08)
         outputs[alias] = export_png_and_webp(HERO_DIR / alias, hero)
     return outputs

@@ -5,6 +5,7 @@ import {
   buildUniversalSystemInstruction,
 } from "./gemini";
 import { isLikelyHomeworkRequest, shouldAskClarifyingQuestions } from "../utils/request";
+import { normalizeProviderBaseUrl } from "../utils/urlSafety";
 
 type OpenAICompatibleMessage =
   | {
@@ -63,8 +64,10 @@ function buildHeaders(options: OpenAICompatibleRequestOptions) {
   };
 
   if (options.providerId === "openrouter") {
-    const referer = typeof window !== "undefined" ? window.location.origin : "https://mike-net.top";
-    headers["HTTP-Referer"] = referer;
+    const referer = typeof window !== "undefined" ? window.location.origin : "";
+    if (referer) {
+      headers["HTTP-Referer"] = referer;
+    }
     headers["X-Title"] = "Mike Answers";
   }
 
@@ -75,7 +78,7 @@ async function postChatCompletion(
   options: OpenAICompatibleRequestOptions,
   body: Record<string, unknown>,
 ) {
-  const response = await fetch(`${options.baseUrl.replace(/\/$/, "")}/chat/completions`, {
+  const response = await fetch(`${normalizeProviderBaseUrl(options.baseUrl)}/chat/completions`, {
     method: "POST",
     headers: buildHeaders(options),
     body: JSON.stringify(body),
@@ -104,6 +107,9 @@ export async function solveTextQuestionWithOpenAICompatible(options: {
   mode: Exclude<SolveMode, "research">;
   subject?: string;
   detailed?: boolean;
+  preferredLocation?: string;
+  localDateTime?: string;
+  timeZone?: string;
 }) {
   const {
     providerId,
@@ -114,6 +120,9 @@ export async function solveTextQuestionWithOpenAICompatible(options: {
     mode,
     subject = "Auto-detect",
     detailed = false,
+    preferredLocation,
+    localDateTime,
+    timeZone,
   } = options;
   const requestPlan = buildRequestPlan(mode, text, detailed);
   const looksLikeHomework = isLikelyHomeworkRequest(text, { subject });
@@ -124,6 +133,14 @@ export async function solveTextQuestionWithOpenAICompatible(options: {
     requestText: text,
     providerSupportsGrounding: false,
     includeGroundingWarning: requestPlan.useGrounding,
+    currentModel: model,
+    providerLabel: providerId === "openrouter" ? "OpenRouter" : providerId === "custom_openai" ? "Custom OpenAI-Compatible" : "MiniMax",
+    mode,
+    preferredLocation,
+    localDateTime,
+    timeZone,
+    routeLabel: "browser-local",
+    hasImageInput: false,
   });
 
   return postChatCompletion(
@@ -151,6 +168,9 @@ export async function solveImageQuestionWithOpenAICompatible(options: {
   mode: Exclude<SolveMode, "research">;
   subject?: string;
   detailed?: boolean;
+  preferredLocation?: string;
+  localDateTime?: string;
+  timeZone?: string;
 }) {
   const {
     providerId,
@@ -161,6 +181,9 @@ export async function solveImageQuestionWithOpenAICompatible(options: {
     mode,
     subject = "Auto-detect",
     detailed = false,
+    preferredLocation,
+    localDateTime,
+    timeZone,
   } = options;
   const systemInstruction = buildUniversalSystemInstruction({
     subject,
@@ -168,6 +191,14 @@ export async function solveImageQuestionWithOpenAICompatible(options: {
     requestText: subject === "Auto-detect" ? "" : `Subject: ${subject}`,
     providerSupportsGrounding: false,
     includeGroundingWarning: false,
+    currentModel: model,
+    providerLabel: providerId === "openrouter" ? "OpenRouter" : providerId === "custom_openai" ? "Custom OpenAI-Compatible" : "MiniMax",
+    mode,
+    preferredLocation,
+    localDateTime,
+    timeZone,
+    routeLabel: "browser-local",
+    hasImageInput: true,
   });
 
   return postChatCompletion(
@@ -205,6 +236,10 @@ export async function chatWithOpenAICompatible(options: {
   history: { role: string; text: string }[];
   message: string;
   originalQuestion?: { text?: string; imageBase64?: string };
+  preferredLocation?: string;
+  subject?: string;
+  localDateTime?: string;
+  timeZone?: string;
 }) {
   const {
     providerId,
@@ -214,6 +249,10 @@ export async function chatWithOpenAICompatible(options: {
     history,
     message,
     originalQuestion,
+    preferredLocation,
+    subject,
+    localDateTime,
+    timeZone,
   } = options;
 
   if (!message.trim()) {
@@ -223,7 +262,16 @@ export async function chatWithOpenAICompatible(options: {
   const messages: OpenAICompatibleMessage[] = [
     {
       role: "system",
-      content: buildTutorSystemInstruction(false),
+      content: buildTutorSystemInstruction(false, {
+        currentModel: model,
+        providerLabel: providerId === "openrouter" ? "OpenRouter" : providerId === "custom_openai" ? "Custom OpenAI-Compatible" : "MiniMax",
+        preferredLocation,
+        localDateTime,
+        timeZone,
+        routeLabel: "browser-local",
+        hasImageInput: Boolean(originalQuestion?.imageBase64),
+        subject,
+      }),
     },
   ];
 

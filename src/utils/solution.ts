@@ -10,8 +10,19 @@ export function stripRenderMarkers(value: string) {
   return normalizeSolutionSpacing(
     value
       .replace(/\[IMAGE_SEARCH:[^\]]*\]/g, "")
+      .replace(/\[IMAGE:[^\]]*\]/g, "")
       .replace(/\[VIDEO_SEARCH:[^\]]*\]/g, "")
+      .replace(/\[VIDEO:[^\]]*\]/g, "")
       .replace(/\[WEB_SEARCH:[^\]]*\]/g, "")
+      .replace(/\[WEB:[^\]]*\]/g, "")
+      .replace(/\[WEATHER:[^\]]*\]/g, "[Weather lookup included]")
+      .replace(/\[MAP:[^\]]*\]/g, "[Map links included]")
+      .replace(/\[ACTION:[^\]]*\]/g, "")
+      .replace(/```chart\s*[\s\S]*?```/g, "[Chart included]")
+      .replace(/```table\s*[\s\S]*?```/g, "[Table included]")
+      .replace(/```figure\s*[\s\S]*?```/g, "[Figure included]")
+      .replace(/```stats\s*[\s\S]*?```/g, "[Stats block included]")
+      .replace(/```demo\s*[\s\S]*?```/g, "[Demo included]")
       .replace(/\[DEFINITION\]([\s\S]*?)\[END_DEFINITION\]/g, "$1"),
   );
 }

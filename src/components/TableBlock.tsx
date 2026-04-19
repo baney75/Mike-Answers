@@ -23,7 +23,7 @@ export function TableBlock({ json }: TableBlockProps) {
 
   return (
     <section className="my-6 overflow-hidden rounded-[1.6rem] border-2 border-gray-900 bg-white dark:border-gray-100 dark:bg-gray-950">
-      <div className="border-b border-gray-200 bg-[var(--aqs-accent-soft)]/50 px-5 py-4 dark:border-gray-800 dark:bg-[color:rgba(122,31,52,0.16)]">
+      <div className="border-b border-gray-200 bg-(--aqs-accent-soft)/50 px-5 py-4 dark:border-gray-800 dark:bg-[color:rgba(122,31,52,0.16)]">
         {spec.title ? <h4 className="text-lg font-bold text-gray-900 dark:text-gray-100">{spec.title}</h4> : null}
         {spec.caption ? <p className="mt-1 text-sm leading-6 text-gray-700 dark:text-gray-300">{spec.caption}</p> : null}
       </div>

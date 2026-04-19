@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import { buildNewsReasoningContext, deriveNewsQuery, type NewsArticle } from "./news";
+import { normalizeExternalUrl } from "../utils/urlSafety";
 
 describe("news helpers", () => {
   test("derives a focused query from generic news wording", () => {
@@ -34,5 +35,11 @@ describe("news helpers", () => {
     expect(context.includes("Direct article: https://san.com/example")).toBe(true);
     expect(context.includes("Primary source: https://www.congress.gov/bill/123")).toBe(true);
     expect(context.includes("User topic: AI regulation")).toBe(true);
+  });
+
+  test("drops non-http news links", () => {
+    expect(normalizeExternalUrl("javascript:alert(1)")).toBe("");
+    expect(normalizeExternalUrl("data:text/html,test")).toBe("");
+    expect(normalizeExternalUrl("https://san.com/story")).toBe("https://san.com/story");
   });
 });

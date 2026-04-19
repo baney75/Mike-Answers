@@ -8,31 +8,31 @@ interface ErrorStateProps {
 
 export function ErrorState({ message, onRetry, onClear }: ErrorStateProps) {
   return (
-    <div className="paper-panel border-[var(--aqs-accent)] bg-red-50/30 p-8 text-center animate-in fade-in slide-in-from-bottom-4 duration-500 no-print dark:bg-red-950/10">
-      <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-red-100 text-[var(--aqs-accent)] dark:bg-red-900/30">
-        <X className="h-8 w-8" />
+    <div className="paper-panel flex h-full min-h-0 flex-col items-center justify-center bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(255,241,244,0.92))] p-6 text-center animate-in fade-in slide-in-from-bottom-4 duration-500 no-print dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.92),rgba(62,15,28,0.36))]">
+      <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-(--aqs-accent-soft) text-(--aqs-accent) dark:bg-red-900/30">
+        <X className="h-6 w-6" />
       </div>
       
-      <h3 className="text-2xl font-black tracking-tight text-[var(--aqs-ink)] dark:text-white">Something went wrong</h3>
-      <p className="mx-auto mt-3 max-w-md text-[16px] font-medium leading-relaxed text-red-800 dark:text-red-300">
+      <h3 className="text-lg font-black tracking-tight text-(--aqs-ink) dark:text-white">Something went wrong</h3>
+      <p className="mx-auto mt-2 max-w-md text-sm font-medium leading-relaxed text-slate-700 dark:text-slate-200">
         {message}
       </p>
 
-      <div className="mt-10 flex flex-col justify-center gap-4 sm:flex-row">
+      <div className="mt-6 flex gap-3">
         <button
           type="button"
           onClick={onRetry}
-          className="neo-border neo-shadow flex items-center justify-center gap-2 rounded-2xl bg-white px-8 py-3 text-base font-black text-[var(--aqs-ink)] transition-all hover:-translate-y-1 active:translate-y-px active:shadow-none dark:bg-slate-900 dark:text-white"
+          className="flex items-center gap-2 rounded-full border border-(--aqs-ink)/10 bg-white px-5 py-2.5 text-sm font-black text-(--aqs-ink) transition hover:bg-slate-50 dark:border-white/10 dark:bg-slate-900 dark:text-white"
         >
-          <RefreshCw className="h-5 w-5 text-[var(--aqs-accent)]" />
-          Retry Request
+          <RefreshCw className="h-4 w-4 text-(--aqs-accent)" />
+          Retry
         </button>
         <button
           type="button"
           onClick={onClear}
-          className="neo-border-thin neo-shadow-sm flex items-center justify-center gap-2 rounded-2xl bg-[var(--aqs-paper-strong)] px-8 py-3 text-base font-black text-[var(--aqs-ink)] transition-all hover:-translate-y-0.5 active:translate-y-px dark:bg-slate-800 dark:text-white"
+          className="flex items-center gap-2 rounded-full border border-(--aqs-ink)/10 bg-(--aqs-paper-strong) px-5 py-2.5 text-sm font-black text-(--aqs-ink) transition hover:bg-white dark:border-white/10 dark:bg-slate-800 dark:text-white"
         >
-          <X className="h-5 w-5 text-slate-500" />
+          <X className="h-4 w-4 text-slate-500" />
           Start Over
         </button>
       </div>

@@ -1,5 +1,6 @@
 import type {
   OpenRouterModelSummary,
+  PromptRuntimeContext,
   ProviderId,
   RuntimeAISettings,
   SolveMode,
@@ -24,6 +25,9 @@ import {
   isFreeOpenRouterModel,
 } from "./openrouter";
 import { getProviderDescriptor, getProviderLabel } from "./providers/registry";
+import { normalizeProviderBaseUrl } from "../utils/urlSafety";
+
+const OPENROUTER_FREE_ROUTER_MODEL = "openrouter/free";
 
 function getSelectedProviderId(settings: RuntimeAISettings): ProviderId {
   return settings.selectedProviderId;
@@ -59,12 +63,20 @@ function getProviderBaseUrl(settings: RuntimeAISettings, providerId = getSelecte
 }
 
 function requireOpenAICompatibleBaseUrl(settings: RuntimeAISettings, providerId: ProviderId) {
-  const baseUrl = getProviderBaseUrl(settings, providerId);
-  if (!baseUrl) {
+  const configured = getProviderBaseUrl(settings, providerId);
+  if (!configured) {
     throw new Error(`Add a base URL for ${getProviderLabel(providerId)} in Setup before using it.`);
   }
 
-  return baseUrl;
+  try {
+    return normalizeProviderBaseUrl(configured);
+  } catch (error) {
+    throw new Error(
+      error instanceof Error
+        ? `${getProviderLabel(providerId)} base URL is invalid: ${error.message}`
+        : `${getProviderLabel(providerId)} base URL is invalid.`,
+    );
+  }
 }
 
 async function getCandidateOpenRouterModels(settings: RuntimeAISettings, force = false) {
@@ -86,10 +98,16 @@ function selectOpenRouterModel(
   mode: Exclude<SolveMode, "research">,
 ) {
   const config = settings.providers.openrouter;
+  const configuredModel = mode === "deep" ? config.models.deepModel : config.models.fastModel;
+
+  if (config.options?.freeOnly && !configuredModel) {
+    return OPENROUTER_FREE_ROUTER_MODEL;
+  }
+
   return chooseRecommendedOpenRouterModel(
     models,
     mode,
-    mode === "deep" ? config.models.deepModel : config.models.fastModel,
+    configuredModel,
   );
 }
 
@@ -123,6 +141,7 @@ export async function solveTextQuestionWithProvider(
   subject: string,
   detailed: boolean,
   settings: RuntimeAISettings,
+  promptContext?: PromptRuntimeContext,
 ) {
   const providerId = getSelectedProviderId(settings);
 
@@ -134,13 +153,16 @@ export async function solveTextQuestionWithProvider(
       subject,
       detailed,
       apiKey,
+      {
+        preferredLocation: settings.preferredLocation,
+        localDateTime: promptContext?.localDateTime,
+        timeZone: promptContext?.timeZone,
+      },
     );
     return {
-      text: response,
+      text: response.text,
       provider: providerId,
-      model: mode === "deep"
-        ? settings.providers.gemini.models.deepModel || "gemini-2.5-pro"
-        : settings.providers.gemini.models.fastModel || "gemini-2.5-flash-lite",
+      model: response.model,
     };
   }
 
@@ -159,6 +181,9 @@ export async function solveTextQuestionWithProvider(
         mode,
         subject,
         detailed,
+        preferredLocation: settings.preferredLocation,
+        localDateTime: promptContext?.localDateTime,
+        timeZone: promptContext?.timeZone,
       }),
       provider: providerId,
       model,
@@ -182,6 +207,9 @@ export async function solveTextQuestionWithProvider(
       mode,
       subject,
       detailed,
+      preferredLocation: settings.preferredLocation,
+      localDateTime: promptContext?.localDateTime,
+      timeZone: promptContext?.timeZone,
     }),
     provider: providerId,
     model,
@@ -194,18 +222,28 @@ export async function solveImageQuestionWithProvider(
   subject: string,
   detailed: boolean,
   settings: RuntimeAISettings,
+  promptContext?: PromptRuntimeContext,
 ) {
   const providerId = getSelectedProviderId(settings);
 
   if (providerId === "gemini") {
     const apiKey = requireProviderApiKey(settings, providerId);
-    const response = await solveGeminiImageQuestion(base64Image, mode, subject, detailed, apiKey);
+    const response = await solveGeminiImageQuestion(
+      base64Image,
+      mode,
+      subject,
+      detailed,
+      apiKey,
+      {
+        preferredLocation: settings.preferredLocation,
+        localDateTime: promptContext?.localDateTime,
+        timeZone: promptContext?.timeZone,
+      },
+    );
     return {
-      text: response,
+      text: response.text,
       provider: providerId,
-      model: mode === "deep"
-        ? settings.providers.gemini.models.deepModel || "gemini-2.5-pro"
-        : settings.providers.gemini.models.fastModel || "gemini-2.5-flash-lite",
+      model: response.model,
     };
   }
 
@@ -215,7 +253,7 @@ export async function solveImageQuestionWithProvider(
     const model = selectOpenRouterModel(settings, models, mode);
     const selectedModel = models.find((candidate) => candidate.id === model);
 
-    if (!selectedModel?.supportsImages) {
+    if (model !== OPENROUTER_FREE_ROUTER_MODEL && !selectedModel?.supportsImages) {
       throw new Error("The selected OpenRouter model is text-only. Choose an image-capable OpenRouter model.");
     }
 
@@ -229,6 +267,9 @@ export async function solveImageQuestionWithProvider(
         mode,
         subject,
         detailed,
+        preferredLocation: settings.preferredLocation,
+        localDateTime: promptContext?.localDateTime,
+        timeZone: promptContext?.timeZone,
       }),
       provider: providerId,
       model,
@@ -247,12 +288,19 @@ export async function chatWithTutorWithProvider(
   message: string,
   originalQuestion: { text?: string; imageBase64?: string } | undefined,
   settings: RuntimeAISettings,
+  subject?: string,
+  promptContext?: PromptRuntimeContext,
 ) {
   const providerId = getSelectedProviderId(settings);
 
   if (providerId === "gemini") {
     const apiKey = requireProviderApiKey(settings, providerId);
-    return chatWithGemini(history, message, originalQuestion, apiKey);
+    return chatWithGemini(history, message, originalQuestion, apiKey, {
+      preferredLocation: settings.preferredLocation,
+      subject,
+      localDateTime: promptContext?.localDateTime,
+      timeZone: promptContext?.timeZone,
+    });
   }
 
   if (providerId === "openrouter") {
@@ -267,6 +315,10 @@ export async function chatWithTutorWithProvider(
       history,
       message,
       originalQuestion,
+      preferredLocation: settings.preferredLocation,
+      subject,
+      localDateTime: promptContext?.localDateTime,
+      timeZone: promptContext?.timeZone,
     });
   }
 
@@ -285,6 +337,10 @@ export async function chatWithTutorWithProvider(
     history,
     message,
     originalQuestion,
+    preferredLocation: settings.preferredLocation,
+    subject,
+    localDateTime: promptContext?.localDateTime,
+    timeZone: promptContext?.timeZone,
   });
 }
 
@@ -308,7 +364,11 @@ export function isRuntimeProviderReady(settings: RuntimeAISettings) {
   }
 
   if (getProviderDescriptor(providerId).kind === "openai_compatible") {
-    return Boolean(getProviderBaseUrl(settings, providerId));
+    try {
+      return Boolean(normalizeProviderBaseUrl(getProviderBaseUrl(settings, providerId)));
+    } catch {
+      return false;
+    }
   }
 
   return true;
@@ -323,8 +383,16 @@ export function getProviderReadinessLabel(settings: RuntimeAISettings) {
     return `Add ${descriptor.label} key`;
   }
 
-  if (descriptor.kind === "openai_compatible" && !getProviderBaseUrl(settings, providerId)) {
-    return `Add ${descriptor.label} base URL`;
+  if (descriptor.kind === "openai_compatible") {
+    const configured = getProviderBaseUrl(settings, providerId);
+    if (!configured) {
+      return `Add ${descriptor.label} base URL`;
+    }
+    try {
+      normalizeProviderBaseUrl(configured);
+    } catch {
+      return `Fix ${descriptor.label} base URL`;
+    }
   }
 
   return `${descriptor.label} ready`;

@@ -4,6 +4,7 @@
  */
 
 import { fetchFeedXml, stripHtml } from "./rss";
+import { normalizeExternalUrl } from "../utils/urlSafety";
 
 const WOTD_FEED_URL = "https://www.merriam-webster.com/wotd/feed/rss2";
 const RSS2JSON_API = "https://api.rss2json.com/v1/api.json";
@@ -106,7 +107,9 @@ export function parseMerriamWotdXml(xml: string): WordOfTheDay {
   }
 
   const word = extractXmlTag(itemXml, "title") || "Word of the Day";
-  const link = extractXmlTag(itemXml, "link") || "https://www.merriam-webster.com/word-of-the-day";
+  const link =
+    normalizeExternalUrl(extractXmlTag(itemXml, "link") || "") ||
+    "https://www.merriam-webster.com/word-of-the-day";
   const pubDate = extractXmlTag(itemXml, "pubDate") || new Date().toISOString();
   const descriptionHtml = extractXmlTag(itemXml, "description") || "";
   const shortDef = extractXmlTag(itemXml, "merriam:shortdef");
@@ -117,7 +120,7 @@ export function parseMerriamWotdXml(xml: string): WordOfTheDay {
   const definition = shortDef || extractDefinitionFromHtml(descriptionHtml, word);
   const example = extractExampleFromHtml(descriptionHtml);
   const didYouKnow = extractDidYouKnowFromHtml(descriptionHtml);
-  const audioUrl = extractXmlAttribute(itemXml, "enclosure", "url");
+  const audioUrl = normalizeExternalUrl(extractXmlAttribute(itemXml, "enclosure", "url") || "") || undefined;
 
   return {
     word,
@@ -164,8 +167,9 @@ function parseFallbackJson(data: Rss2JsonResponse): WordOfTheDay {
     example: extractExampleFromHtml(html),
     didYouKnow: extractDidYouKnowFromHtml(html),
     date: item.pubDate || new Date().toISOString(),
-    audioUrl: item.enclosure?.link,
-    sourceUrl: item.link || "https://www.merriam-webster.com/word-of-the-day",
+    audioUrl: normalizeExternalUrl(item.enclosure?.link || "") || undefined,
+    sourceUrl:
+      normalizeExternalUrl(item.link || "") || "https://www.merriam-webster.com/word-of-the-day",
   };
 }
 

@@ -24,15 +24,40 @@ export default defineConfig({
         enabled: true,
       },
       manifest: {
+        id: "/",
         name: "Mike Answers",
         short_name: "Mike",
         description:
           "Private, bring-your-own-key AI for strong answers, current research, screenshots, voice, and clear learning.",
+        lang: "en-US",
+        dir: "ltr",
         start_url: "/",
         scope: "/",
+        display_override: ["window-controls-overlay", "standalone", "browser"],
         display: "standalone",
         background_color: "#f8f0e7",
         theme_color: "#7a1f34",
+        categories: ["education", "productivity", "utilities"],
+        shortcuts: [
+          {
+            name: "Ask Mike",
+            short_name: "Ask",
+            url: "/",
+            description: "Open the main solve workspace",
+          },
+          {
+            name: "Daily Desk",
+            short_name: "Desk",
+            url: "/?scene=daily-desk",
+            description: "Open the daily desk brief",
+          },
+          {
+            name: "Settings",
+            short_name: "Settings",
+            url: "/?scene=settings",
+            description: "Open provider settings quickly",
+          },
+        ],
         icons: [
           {
             src: "android-chrome-192x192.png",
@@ -53,6 +78,8 @@ export default defineConfig({
         ],
       },
       workbox: {
+        cleanupOutdatedCaches: true,
+        clientsClaim: true,
         navigateFallback: "/",
         globPatterns: ["**/*.{js,css,html,ico,png,svg,webmanifest,woff,woff2}"],
         runtimeCaching: [
@@ -114,8 +141,8 @@ export default defineConfig({
             return 'vendor-gemini';
           }
 
-          if (packageName.startsWith('@clerk/') || packageName === 'convex') {
-            return 'vendor-auth';
+          if (packageName === 'qrcode' || packageName === 'html5-qrcode') {
+            return 'vendor-transfer';
           }
 
           if (packageName === 'lucide-react') {

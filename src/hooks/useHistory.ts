@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import type { HistoryItem } from "../types";
 
 const STORAGE_KEY = "aqs_history";
@@ -10,6 +10,14 @@ const MAX_ITEMS = 20;
  */
 export function useHistory() {
   const [items, setItems] = useState<HistoryItem[]>([]);
+
+  const persistItems = useCallback((next: HistoryItem[]) => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      /* storage may be unavailable or full */
+    }
+  }, []);
 
   useEffect(() => {
     try {
@@ -28,14 +36,42 @@ export function useHistory() {
   const push = useCallback((item: HistoryItem) => {
     setItems((current) => {
       const next = [item, ...current].slice(0, MAX_ITEMS);
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      } catch {
-        /* storage may be unavailable or full */
-      }
+      persistItems(next);
       return next;
     });
-  }, []);
+  }, [persistItems]);
+
+  const replace = useCallback((item: HistoryItem) => {
+    setItems((current) => {
+      const existing = current.find((entry) => entry.id === item.id);
+      if (existing && JSON.stringify(existing) === JSON.stringify(item)) {
+        return current;
+      }
+
+      const next = current.some((entry) => entry.id === item.id)
+        ? current.map((entry) => (entry.id === item.id ? item : entry))
+        : [item, ...current].slice(0, MAX_ITEMS);
+      persistItems(next);
+      return next;
+    });
+  }, [persistItems]);
+
+  const replaceAll = useCallback((nextItems: HistoryItem[]) => {
+    const deduped = nextItems
+      .reduce<HistoryItem[]>((acc, item) => {
+        if (acc.some((entry) => entry.id === item.id)) {
+          return acc;
+        }
+
+        acc.push(item);
+        return acc;
+      }, [])
+      .sort((a, b) => b.timestamp - a.timestamp)
+      .slice(0, MAX_ITEMS);
+
+    setItems(deduped);
+    persistItems(deduped);
+  }, [persistItems]);
 
   const clear = useCallback(() => {
     setItems([]);
@@ -46,5 +82,8 @@ export function useHistory() {
     }
   }, []);
 
-  return { items, push, clear, label: "Browser local" };
+  return useMemo(
+    () => ({ items, push, replace, replaceAll, clear, label: "Browser local" }),
+    [items, push, replace, replaceAll, clear],
+  );
 }

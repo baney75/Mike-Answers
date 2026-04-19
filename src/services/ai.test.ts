@@ -38,6 +38,15 @@ describe("provider readiness", () => {
     expect(isRuntimeProviderReady(settings)).toBe(false);
     expect(getProviderReadinessLabel(settings)).toBe("Add Custom OpenAI-compatible base URL");
   });
+
+  test("rejects invalid custom OpenAI-compatible base URLs", () => {
+    const settings = createSettings("custom_openai");
+    settings.providers.custom_openai.apiKey = "custom-key";
+    settings.providers.custom_openai.baseUrl = "javascript:alert(1)";
+
+    expect(isRuntimeProviderReady(settings)).toBe(false);
+    expect(getProviderReadinessLabel(settings)).toBe("Fix Custom OpenAI-compatible base URL");
+  });
 });
 
 describe("openrouter validation", () => {
@@ -46,13 +55,13 @@ describe("openrouter validation", () => {
     settings.providers.openrouter.options = { freeOnly: true };
 
     expect(validateOpenRouterSelection(settings, "openrouter/free-model", [
-      { id: "openrouter/free-model", name: "Free Model", free: true, supportsImages: false },
-      { id: "openrouter/paid-model", name: "Paid Model", free: false, supportsImages: true },
+      { id: "openrouter/free-model", name: "Free Model", free: true, supportsImages: false, contextLength: 4096, inputModalities: ["text"] },
+      { id: "openrouter/paid-model", name: "Paid Model", free: false, supportsImages: true, contextLength: 4096, inputModalities: ["text"] },
     ])).toBe(true);
 
     expect(validateOpenRouterSelection(settings, "openrouter/paid-model", [
-      { id: "openrouter/free-model", name: "Free Model", free: true, supportsImages: false },
-      { id: "openrouter/paid-model", name: "Paid Model", free: false, supportsImages: true },
+      { id: "openrouter/free-model", name: "Free Model", free: true, supportsImages: false, contextLength: 4096, inputModalities: ["text"] },
+      { id: "openrouter/paid-model", name: "Paid Model", free: false, supportsImages: true, contextLength: 4096, inputModalities: ["text"] },
     ])).toBe(false);
   });
 });

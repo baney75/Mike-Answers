@@ -11,3 +11,7 @@ patch.diff
 *.orig
 .playwright-cli/
 output/
+.ruff_cache/
+_archive_screenshots/
+.wrangler/
+.codex/

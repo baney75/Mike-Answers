@@ -120,7 +120,7 @@ export function DemoBlock({ json }: DemoBlockProps) {
     <section className="my-6 rounded-[1.6rem] border-2 border-gray-900 bg-white p-5 dark:border-gray-100 dark:bg-gray-950">
       {spec.title ? <h4 className="text-lg font-bold text-gray-900 dark:text-gray-100">{spec.title}</h4> : null}
       {spec.caption ? <p className="mt-2 text-sm leading-6 text-gray-700 dark:text-gray-300">{spec.caption}</p> : null}
-      <div className="mt-4 overflow-hidden rounded-[1.25rem] border border-gray-200 bg-[var(--aqs-paper)] dark:border-gray-800">
+      <div className="mt-4 overflow-hidden rounded-[1.25rem] border border-gray-200 bg-(--aqs-paper) dark:border-gray-800">
         <canvas ref={canvasRef} width={720} height={320} className="h-auto w-full" />
       </div>
       {spec.note ? <p className="mt-3 text-sm leading-6 text-gray-600 dark:text-gray-400">{spec.note}</p> : null}

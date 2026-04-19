@@ -10,8 +10,8 @@ import {
 describe("provider registry", () => {
   test("keeps the supported provider order stable", () => {
     expect(providerOrder).toEqual([
-      "openrouter",
       "gemini",
+      "openrouter",
       "minimax",
       "custom_openai",
     ]);
@@ -23,7 +23,6 @@ describe("provider registry", () => {
     expect(defaults.minimax.baseUrl).toBe("https://api.minimax.io/v1");
     expect(defaults.minimax.models.fastModel).toBe("MiniMax-M2.7-highspeed");
     expect(defaults.minimax.models.deepModel).toBe("MiniMax-M2.7");
-    expect(defaults.minimax.options?.useSecureBackendForAdvanced).toBe(false);
   });
 
   test("marks MiniMax browser limitations honestly", () => {
@@ -31,7 +30,6 @@ describe("provider registry", () => {
 
     expect(minimax.capabilities.supportsImageInputInBrowser).toBe(false);
     expect(minimax.capabilities.supportsAudioTranscription).toBe(false);
-    expect(minimax.capabilities.supportsSecureAdvanced).toBe(true);
   });
 
   test("marks the custom provider as manual and base-url configurable", () => {

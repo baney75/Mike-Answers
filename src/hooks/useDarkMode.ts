@@ -1,61 +1,74 @@
 import { useState, useEffect } from "react";
 
-const STORAGE_KEY = "aqs_dark_mode";
+const STORAGE_KEY = "aqs_theme";
+
+export type ThemeMode = "system" | "light" | "dark";
 
 /**
- * Manages the dark-mode toggle.
- * Initialises from the user's OS preference and keeps the `dark` class
- * on <html> in sync so Tailwind's dark variant works.
+ * Manages the dark-mode theme preference (system | light | dark).
+ * Keeps the `dark` class on <html> in sync so Tailwind's dark variant works.
  */
 export function useDarkMode() {
-  const [enabled, setEnabled] = useState(() => {
+  const [theme, setThemeState] = useState<ThemeMode>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved === "true") {
-        return true;
+      if (saved === "light" || saved === "dark" || saved === "system") {
+        return saved as ThemeMode;
       }
-      if (saved === "false") {
-        return false;
-      }
+      
+      // Migrate old boolean
+      const old = localStorage.getItem("aqs_dark_mode");
+      if (old === "true") return "dark";
+      if (old === "false") return "light";
     } catch {
       /* storage may be unavailable */
     }
+    return "system";
+  });
 
+  const [isDark, setIsDark] = useState(() => {
+    if (theme === "dark") return true;
+    if (theme === "light") return false;
     return window.matchMedia("(prefers-color-scheme: dark)").matches;
   });
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
 
-    const syncWithSystem = (event: MediaQueryListEvent) => {
-      try {
-        if (localStorage.getItem(STORAGE_KEY) === null) {
-          setEnabled(event.matches);
-        }
-      } catch {
-        setEnabled(event.matches);
+    const updateIsDark = () => {
+      if (theme === "dark") {
+        setIsDark(true);
+      } else if (theme === "light") {
+        setIsDark(false);
+      } else {
+        setIsDark(mediaQuery.matches);
       }
     };
 
-    mediaQuery.addEventListener("change", syncWithSystem);
-    return () => mediaQuery.removeEventListener("change", syncWithSystem);
-  }, []);
+    updateIsDark();
+
+    const listener = () => {
+      if (theme === "system") {
+        setIsDark(mediaQuery.matches);
+      }
+    };
+
+    mediaQuery.addEventListener("change", listener);
+    return () => mediaQuery.removeEventListener("change", listener);
+  }, [theme]);
 
   useEffect(() => {
-    document.documentElement.classList.toggle("dark", enabled);
-  }, [enabled]);
+    document.documentElement.classList.toggle("dark", isDark);
+  }, [isDark]);
 
-  const toggle = () => {
-    setEnabled((current) => {
-      const next = !current;
-      try {
-        localStorage.setItem(STORAGE_KEY, String(next));
-      } catch {
-        /* storage may be unavailable */
-      }
-      return next;
-    });
+  const setTheme = (newTheme: ThemeMode) => {
+    setThemeState(newTheme);
+    try {
+      localStorage.setItem(STORAGE_KEY, newTheme);
+    } catch {
+      /* storage may be unavailable */
+    }
   };
 
-  return [enabled, toggle] as const;
+  return { theme, setTheme, isDark };
 }

@@ -49,26 +49,45 @@ function isUsLocation(location: WeatherLocation) {
   return location.country?.toLowerCase().includes("united states") ?? false;
 }
 
+function buildGeocodeCandidates(query: string) {
+  const normalized = query.replace(/\s+/g, " ").trim();
+  const commaParts = normalized
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  return [...new Set([
+    normalized,
+    commaParts.join(" "),
+    commaParts[0] ?? "",
+    commaParts.length >= 2 ? `${commaParts[0]} ${commaParts[1]}` : "",
+  ].filter(Boolean))];
+}
+
 export async function geocodeLocation(query: string): Promise<WeatherLocation | null> {
-  const params = new URLSearchParams({ name: query.trim(), count: "1", language: "en", format: "json" });
-  const response = await fetch(`https://geocoding-api.open-meteo.com/v1/search?${params.toString()}`);
-  if (!response.ok) {
-    throw new Error(`Geocoding failed (${response.status}).`);
+  for (const candidate of buildGeocodeCandidates(query)) {
+    const params = new URLSearchParams({ name: candidate, count: "1", language: "en", format: "json" });
+    const response = await fetch(`https://geocoding-api.open-meteo.com/v1/search?${params.toString()}`);
+    if (!response.ok) {
+      throw new Error(`Geocoding failed (${response.status}).`);
+    }
+
+    const payload = (await response.json()) as OpenMeteoGeocodingResponse;
+    const match = payload.results?.[0];
+    if (!match) {
+      continue;
+    }
+
+    return {
+      name: match.name,
+      latitude: match.latitude,
+      longitude: match.longitude,
+      country: match.country,
+      admin1: match.admin1,
+    };
   }
 
-  const payload = (await response.json()) as OpenMeteoGeocodingResponse;
-  const match = payload.results?.[0];
-  if (!match) {
-    return null;
-  }
-
-  return {
-    name: match.name,
-    latitude: match.latitude,
-    longitude: match.longitude,
-    country: match.country,
-    admin1: match.admin1,
-  };
+  return null;
 }
 
 export async function getWeatherSnapshot(query: string): Promise<WeatherSnapshot | null> {

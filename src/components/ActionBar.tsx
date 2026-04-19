@@ -1,7 +1,5 @@
-import { useState } from "react";
 import {
-  Check,
-  Copy,
+  BookText,
   PencilLine,
   Printer,
   RefreshCw,
@@ -9,17 +7,14 @@ import {
   X,
 } from "lucide-react";
 import type { SolveMode } from "../types";
-import { getCopyableSolution } from "../utils/solution";
-
-const COPY_FEEDBACK_MS = 2000;
 
 const BTN =
-  "studio-card flex items-center justify-center gap-2 px-5 py-3 text-sm font-black text-[var(--aqs-ink)] transition-all dark:text-white";
+  "studio-card flex items-center justify-center gap-2 whitespace-nowrap px-4 py-2.5 text-xs font-black text-(--aqs-ink) outline-none transition-all focus-visible:ring-4 focus-visible:ring-[rgba(139,30,63,0.12)] dark:text-white md:px-5 md:py-3 md:text-sm";
 
 interface ActionBarProps {
-  solution: string;
   lastMode: Exclude<SolveMode, "research">;
   canRetryEdit: boolean;
+  onCiteAi: () => void;
   onSolveAgain: (mode: Exclude<SolveMode, "research">, detailed?: boolean) => void;
   onRetry: () => void;
   onEditRequest: () => void;
@@ -27,63 +22,64 @@ interface ActionBarProps {
 }
 
 export function ActionBar({
-  solution,
   lastMode,
   canRetryEdit,
+  onCiteAi,
   onSolveAgain,
   onRetry,
   onEditRequest,
   onClear,
 }: ActionBarProps) {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(getCopyableSolution(solution));
-    setCopied(true);
-    setTimeout(() => setCopied(false), COPY_FEEDBACK_MS);
-  };
-
   return (
-    <div className="no-print studio-panel flex flex-col items-center justify-between gap-6 bg-white/60 p-6 backdrop-blur-sm dark:bg-slate-900/40 md:flex-row lg:px-10">
-      <div className="flex flex-wrap items-center gap-4">
-        <button type="button" onClick={handleCopy} className={BTN}>
-          {copied ? (
-            <Check className="h-4 w-4 text-emerald-500" />
-          ) : (
-            <Copy className="h-4 w-4 text-[var(--aqs-accent)]" />
-          )}
-          {copied ? "Copied" : "Markdown Copy"}
-        </button>
+    <div className="no-print studio-panel flex shrink-0 flex-col gap-3 bg-white/72 p-4 backdrop-blur-sm dark:bg-slate-900/48 md:px-5 md:py-4">
+      <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <button
+            type="button"
+            onClick={onClear}
+            className="neo-border flex items-center justify-center gap-3 rounded-[1.15rem] bg-(--aqs-accent) px-6 py-3 text-sm font-black text-white outline-none transition-all hover:bg-(--aqs-accent-strong) focus-visible:ring-4 focus-visible:ring-[rgba(139,30,63,0.12)] active:translate-y-px"
+          >
+            <X className="h-4 w-4" />
+            New Solve
+          </button>
 
-        <button type="button" onClick={() => window.print()} className={BTN}>
-          <Printer className="h-4 w-4 text-[var(--aqs-accent)]" />
-          PDF Report
-        </button>
-      </div>
+          <div className="scroll-studio flex items-center gap-2 overflow-x-auto pb-1">
+            <button type="button" onClick={() => onSolveAgain(lastMode, true)} className={BTN}>
+              <RefreshCw className="h-4 w-4 text-(--aqs-accent)" />
+              Deepen Answer
+            </button>
+            <button type="button" onClick={onEditRequest} disabled={!canRetryEdit} className={`${BTN} disabled:opacity-40`}>
+              <PencilLine className="h-4 w-4 text-(--aqs-accent)" />
+              Edit Request
+            </button>
+            <button type="button" onClick={onRetry} disabled={!canRetryEdit} className={`${BTN} disabled:opacity-40`}>
+              <RotateCcw className="h-4 w-4 text-(--aqs-accent)" />
+              Restart
+            </button>
+          </div>
+        </div>
 
-      <div className="flex flex-wrap items-center gap-4">
-        <button type="button" onClick={onRetry} disabled={!canRetryEdit} className={`${BTN} disabled:opacity-40`}>
-          <RotateCcw className="h-4 w-4 text-[var(--aqs-accent)]" />
-          Restart
-        </button>
-        <button type="button" onClick={onEditRequest} disabled={!canRetryEdit} className={`${BTN} disabled:opacity-40`}>
-          <PencilLine className="h-4 w-4 text-[var(--aqs-accent)]" />
-          Edit Request
-        </button>
-        <button type="button" onClick={() => onSolveAgain(lastMode, true)} className={BTN}>
-          <RefreshCw className="h-4 w-4 text-[var(--aqs-accent)]" />
-          Deepen Answer
-        </button>
-        <button
-          type="button"
-          onClick={onClear}
-          className="neo-border neo-shadow flex items-center justify-center gap-3 rounded-[1.25rem] bg-[var(--aqs-accent)] px-8 py-3 text-sm font-black text-white transition-all hover:-translate-y-1 active:translate-y-px"
-        >
-          <X className="h-4 w-4" />
-          New Solve
-        </button>
+        <div className="flex items-center gap-2 self-end xl:self-auto">
+          <button type="button" onClick={onCiteAi} className={BTN}>
+            <BookText className="h-4 w-4 text-(--aqs-accent)" />
+            Cite AI
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const activeElement = document.activeElement;
+              if (activeElement instanceof HTMLElement) {
+                activeElement.blur();
+              }
+              window.print();
+            }}
+            className={BTN}
+          >
+            <Printer className="h-4 w-4 text-(--aqs-accent)" />
+            Print
+          </button>
+        </div>
       </div>
     </div>
   );
 }
-

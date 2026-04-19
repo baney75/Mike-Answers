@@ -551,7 +551,7 @@ export async function searchVideos(query: string, maxResults = 10): Promise<Vide
 }
 
 export function getYouTubeEmbedUrl(videoId: string): string {
-  return `https://www.youtube.com/embed/${videoId}`;
+  return `https://www.youtube-nocookie.com/embed/${videoId}`;
 }
 
 export function getYouTubeWatchUrl(videoId: string): string {

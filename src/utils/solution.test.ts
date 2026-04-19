@@ -54,8 +54,17 @@ describe("solution utils", () => {
     const value = [
       'Start here.',
       '[IMAGE_SEARCH: "Burj Khalifa skyline"]',
+      '[IMAGE: "Eiffel Tower at dusk"]',
       '[VIDEO_SEARCH: "Pat Benatar Love Is a Battlefield official video"]',
+      '[VIDEO: "quadratic formula worked example"]',
       '[WEB_SEARCH: "CDC influenza guidance"]',
+      '[WEB: "Khan Academy derivatives"]',
+      '[WEATHER: "New York, NY"]',
+      '[MAP: "Boston Common"]',
+      '[ACTION: show_news]',
+      '```chart\n{"type":"line","data":[{"x":0,"y":1}]}\n```',
+      '```table\n{"columns":["A"],"rows":[[1]]}\n```',
+      '```figure\n{"type":"process","steps":[{"title":"One"}]}\n```',
       '[DEFINITION]\n**osmosis** /ahz-moh-sis/\n*noun*\n1. Movement of solvent.\n[END_DEFINITION]',
     ].join("\n\n");
 
@@ -64,8 +73,20 @@ describe("solution utils", () => {
     expect(stripped.includes("Start here.")).toBe(true);
     expect(stripped.includes("**osmosis**")).toBe(true);
     expect(stripped.includes("[IMAGE_SEARCH:")).toBe(false);
+    expect(stripped.includes("[IMAGE:")).toBe(false);
     expect(stripped.includes("[VIDEO_SEARCH:")).toBe(false);
+    expect(stripped.includes("[VIDEO:")).toBe(false);
     expect(stripped.includes("[WEB_SEARCH:")).toBe(false);
+    expect(stripped.includes("[WEB:")).toBe(false);
+    expect(stripped.includes("[WEATHER:")).toBe(false);
+    expect(stripped.includes("[MAP:")).toBe(false);
+    expect(stripped.includes("[ACTION:")).toBe(false);
+    expect(stripped.includes("```chart")).toBe(false);
+    expect(stripped.includes("```table")).toBe(false);
+    expect(stripped.includes("```figure")).toBe(false);
+    expect(stripped.includes("[Chart included]")).toBe(true);
+    expect(stripped.includes("[Table included]")).toBe(true);
+    expect(stripped.includes("[Figure included]")).toBe(true);
     expect(stripped.includes("[DEFINITION]")).toBe(false);
   });
 });

@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import { looksLikeFeedResponse } from "./rss";
 import { parseMerriamWotdXml } from "./wotd";
+import { parseVerseResponse } from "./verse";
 
 describe("word of the day parsing", () => {
   test("parses Merriam-Webster XML into the app word model", () => {
@@ -40,5 +41,21 @@ describe("word of the day parsing", () => {
 
     expect(looksLikeFeedResponse(html)).toBe(false);
     expect(looksLikeFeedResponse(xml)).toBe(true);
+  });
+
+  test("sanitizes unsafe verse source URLs", () => {
+    const verse = parseVerseResponse({
+      verse: {
+        details: {
+          text: "Test verse text",
+          reference: "John 3:16",
+          version: "NIV",
+          verseurl: "javascript:alert(1)",
+        },
+        notice: "Provided by feed",
+      },
+    });
+
+    expect(verse.sourceUrl).toBe("https://ourmanna.com/");
   });
 });

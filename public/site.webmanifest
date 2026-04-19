@@ -1,11 +1,22 @@
 {
+  "id": "/",
   "name": "Mike Answers",
   "short_name": "Mike",
   "description": "Private, bring-your-own-key AI for strong answers, current research, and clear learning.",
+  "lang": "en-US",
+  "dir": "ltr",
   "start_url": "/",
+  "scope": "/",
+  "display_override": ["window-controls-overlay", "standalone", "browser"],
   "display": "standalone",
   "background_color": "#f8f0e7",
   "theme_color": "#7a1f34",
+  "categories": ["education", "productivity", "utilities"],
+  "shortcuts": [
+    { "name": "Ask Mike", "short_name": "Ask", "url": "/", "description": "Open the main solve workspace" },
+    { "name": "Daily Desk", "short_name": "Desk", "url": "/?scene=daily-desk", "description": "Open the daily desk brief" },
+    { "name": "Settings", "short_name": "Settings", "url": "/?scene=settings", "description": "Open provider settings quickly" }
+  ],
   "icons": [
     { "src": "/favicon-16x16.png", "sizes": "16x16", "type": "image/png" },
     { "src": "/favicon-32x32.png", "sizes": "32x32", "type": "image/png" },

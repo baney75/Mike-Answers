@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import type {
   ProviderId,
@@ -11,6 +11,7 @@ import {
   createDefaultProviderPreferences,
   createDefaultProviderRuntimeConfigs,
 } from "../services/providers/registry";
+import { decryptSecretFromStorage, encryptSecretForStorage } from "../services/localVault";
 
 const STORAGE_KEY = "aqs_runtime_settings_v4";
 const LEGACY_STORAGE_KEY = "aqs_runtime_settings_v3";
@@ -33,7 +34,7 @@ interface LegacyRuntimeAISettings {
 }
 
 const DEFAULT_SETTINGS: RuntimeAISettings = {
-  selectedProviderId: "openrouter",
+  selectedProviderId: "gemini",
   preferredSubject: undefined,
   preferredLocation: undefined,
   onboardingCompleted: false,
@@ -42,40 +43,6 @@ const DEFAULT_SETTINGS: RuntimeAISettings = {
 
 function getSecretStorageKey(providerId: ProviderId) {
   return `aqs_secret_provider_${providerId}_v1`;
-}
-
-function getStoredSecret(storageKey: string, remember: boolean) {
-  if (typeof window === "undefined") {
-    return "";
-  }
-
-  try {
-    const preferredStorage = remember ? window.localStorage : window.sessionStorage;
-    const fallbackStorage = remember ? window.sessionStorage : window.localStorage;
-    return preferredStorage.getItem(storageKey) ?? fallbackStorage.getItem(storageKey) ?? "";
-  } catch {
-    return "";
-  }
-}
-
-function persistSecret(storageKey: string, value: string | undefined, remember: boolean) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  try {
-    window.localStorage.removeItem(storageKey);
-    window.sessionStorage.removeItem(storageKey);
-
-    if (!value?.trim()) {
-      return;
-    }
-
-    const targetStorage = remember ? window.localStorage : window.sessionStorage;
-    targetStorage.setItem(storageKey, value.trim());
-  } catch {
-    // Storage may be blocked or unavailable.
-  }
 }
 
 function mergeProviderPreference(
@@ -121,39 +88,81 @@ function sanitizeForStorage(settings: RuntimeAISettings): UserPreferencesSnapsho
   };
 }
 
-function applySecrets(snapshot: UserPreferencesSnapshot): RuntimeAISettings {
+function applySnapshot(snapshot: UserPreferencesSnapshot): RuntimeAISettings {
   const providers = createDefaultProviderRuntimeConfigs();
-
-  const mergedProviders: RuntimeAISettings["providers"] = {
-    gemini: mergeProviderRuntime(providers.gemini, snapshot.providers.gemini),
-    openrouter: mergeProviderRuntime(providers.openrouter, snapshot.providers.openrouter),
-    minimax: mergeProviderRuntime(providers.minimax, snapshot.providers.minimax),
-    custom_openai: mergeProviderRuntime(providers.custom_openai, snapshot.providers.custom_openai),
-  };
-
-  (Object.keys(mergedProviders) as ProviderId[]).forEach((providerId) => {
-    const runtimeConfig = mergedProviders[providerId];
-    const storageKey = getSecretStorageKey(providerId);
-    const rememberKey = Boolean(runtimeConfig.rememberKey);
-    const secret =
-      getStoredSecret(storageKey, rememberKey) ||
-      (providerId === "gemini"
-        ? getStoredSecret(LEGACY_GEMINI_SECRET_STORAGE_KEY, rememberKey)
-        : providerId === "openrouter"
-          ? getStoredSecret(LEGACY_OPENROUTER_SECRET_STORAGE_KEY, rememberKey)
-          : "");
-
-    mergedProviders[providerId] = {
-      ...runtimeConfig,
-      apiKey: secret,
-    };
-  });
 
   return {
     ...DEFAULT_SETTINGS,
     ...snapshot,
-    providers: mergedProviders,
+    providers: {
+      gemini: mergeProviderRuntime(providers.gemini, snapshot.providers.gemini),
+      openrouter: mergeProviderRuntime(providers.openrouter, snapshot.providers.openrouter),
+      minimax: mergeProviderRuntime(providers.minimax, snapshot.providers.minimax),
+      custom_openai: mergeProviderRuntime(providers.custom_openai, snapshot.providers.custom_openai),
+    },
   };
+}
+
+function readStoredSecretValue(providerId: ProviderId) {
+  if (typeof window === "undefined") {
+    return "";
+  }
+
+  const key = getSecretStorageKey(providerId);
+  return (
+    window.localStorage.getItem(key) ??
+    window.sessionStorage.getItem(key) ??
+    (providerId === "gemini"
+      ? window.localStorage.getItem(LEGACY_GEMINI_SECRET_STORAGE_KEY) ?? window.sessionStorage.getItem(LEGACY_GEMINI_SECRET_STORAGE_KEY)
+      : providerId === "openrouter"
+        ? window.localStorage.getItem(LEGACY_OPENROUTER_SECRET_STORAGE_KEY) ?? window.sessionStorage.getItem(LEGACY_OPENROUTER_SECRET_STORAGE_KEY)
+        : "") ??
+    ""
+  );
+}
+
+async function loadStoredSecret(providerId: ProviderId) {
+  const stored = readStoredSecretValue(providerId);
+  if (!stored) {
+    return "";
+  }
+
+  try {
+    return await decryptSecretFromStorage(stored);
+  } catch {
+    return "";
+  }
+}
+
+async function persistSecret(providerId: ProviderId, value: string | undefined, remember: boolean) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const storageKey = getSecretStorageKey(providerId);
+
+  try {
+    window.localStorage.removeItem(storageKey);
+    window.sessionStorage.removeItem(storageKey);
+    if (providerId === "gemini") {
+      window.localStorage.removeItem(LEGACY_GEMINI_SECRET_STORAGE_KEY);
+      window.sessionStorage.removeItem(LEGACY_GEMINI_SECRET_STORAGE_KEY);
+    }
+    if (providerId === "openrouter") {
+      window.localStorage.removeItem(LEGACY_OPENROUTER_SECRET_STORAGE_KEY);
+      window.sessionStorage.removeItem(LEGACY_OPENROUTER_SECRET_STORAGE_KEY);
+    }
+
+    if (!value?.trim()) {
+      return;
+    }
+
+    const encrypted = await encryptSecretForStorage(value.trim());
+    const targetStorage = remember ? window.localStorage : window.sessionStorage;
+    targetStorage.setItem(storageKey, encrypted);
+  } catch {
+    // Storage or crypto can be unavailable in some browser contexts.
+  }
 }
 
 function migrateLegacySettings(legacy: Partial<LegacyRuntimeAISettings>): RuntimeAISettings {
@@ -180,8 +189,8 @@ function migrateLegacySettings(legacy: Partial<LegacyRuntimeAISettings>): Runtim
     },
   });
 
-  return applySecrets({
-    selectedProviderId: legacy.provider ?? "openrouter",
+  return applySnapshot({
+    selectedProviderId: legacy.provider ?? "gemini",
     preferredSubject: legacy.preferredSubject,
     preferredLocation: legacy.preferredLocation,
     onboardingCompleted: legacy.onboardingCompleted ?? false,
@@ -198,7 +207,7 @@ function readStoredSettings(): RuntimeAISettings {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as UserPreferencesSnapshot;
-      return applySecrets({
+      return applySnapshot({
         ...sanitizeForStorage(DEFAULT_SETTINGS),
         ...parsed,
         providers: {
@@ -234,7 +243,7 @@ function mergeRemoteSnapshot(
   current: RuntimeAISettings,
   remoteSnapshot: UserPreferencesSnapshot,
 ): RuntimeAISettings {
-  const next = applySecrets(remoteSnapshot);
+  const next = applySnapshot(remoteSnapshot);
 
   return {
     ...current,
@@ -256,10 +265,36 @@ interface UseAISettingsOptions {
 export function useAISettings(options: UseAISettingsOptions = {}) {
   const { remoteSnapshot, onPreferencesChange } = options;
   const [settings, setSettings] = useState<RuntimeAISettings>(() => readStoredSettings());
-  const remoteFingerprint = useMemo(
-    () => JSON.stringify(remoteSnapshot ?? null),
-    [remoteSnapshot],
-  );
+  const [secretsHydrated, setSecretsHydrated] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+
+    void (async () => {
+      const providerIds = Object.keys(createDefaultProviderRuntimeConfigs()) as ProviderId[];
+      const secrets = await Promise.all(providerIds.map(async (providerId) => [providerId, await loadStoredSecret(providerId)] as const));
+
+      if (cancelled) {
+        return;
+      }
+
+      setSettings((current) => ({
+        ...current,
+        providers: providerIds.reduce<RuntimeAISettings["providers"]>((next, providerId) => {
+          const secret = secrets.find(([id]) => id === providerId)?.[1] ?? "";
+          next[providerId] = {
+            ...current.providers[providerId],
+            apiKey: secret,
+          };
+          return next;
+        }, { ...current.providers }),
+      }));
+      setSecretsHydrated(true);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     try {
@@ -267,15 +302,23 @@ export function useAISettings(options: UseAISettingsOptions = {}) {
     } catch {
       // Storage can be unavailable in some browsing modes.
     }
-
-    (Object.keys(settings.providers) as ProviderId[]).forEach((providerId) => {
-      persistSecret(
-        getSecretStorageKey(providerId),
-        settings.providers[providerId].apiKey,
-        Boolean(settings.providers[providerId].rememberKey),
-      );
-    });
   }, [settings]);
+
+  useEffect(() => {
+    if (!secretsHydrated) {
+      return;
+    }
+
+    void (async () => {
+      for (const providerId of Object.keys(settings.providers) as ProviderId[]) {
+        await persistSecret(
+          providerId,
+          settings.providers[providerId].apiKey,
+          Boolean(settings.providers[providerId].rememberKey),
+        );
+      }
+    })();
+  }, [secretsHydrated, settings.providers]);
 
   useEffect(() => {
     if (!remoteSnapshot) {
@@ -283,7 +326,7 @@ export function useAISettings(options: UseAISettingsOptions = {}) {
     }
 
     setSettings((current) => mergeRemoteSnapshot(current, remoteSnapshot));
-  }, [remoteFingerprint, remoteSnapshot]);
+  }, [remoteSnapshot]);
 
   useEffect(() => {
     if (onPreferencesChange && remoteSnapshot === undefined) {
@@ -295,6 +338,7 @@ export function useAISettings(options: UseAISettingsOptions = {}) {
 
   return {
     settings,
+    secretsHydrated,
     updateSettings: (patch: Partial<RuntimeAISettings>) =>
       setSettings((current) => ({ ...current, ...patch })),
     updateProviderSettings: (
@@ -308,6 +352,7 @@ export function useAISettings(options: UseAISettingsOptions = {}) {
           [providerId]: mergeProviderRuntime(current.providers[providerId], patch),
         },
       })),
+    replaceSettings: (next: RuntimeAISettings) => setSettings(next),
     resetSettings: () => setSettings(DEFAULT_SETTINGS),
     syncedPreferences: sanitizePreferences(settings),
   };

@@ -57,6 +57,8 @@ const NEWS_HINTS =
   /\b(news|headline|headlines|breaking|reported|reporting|latest|recent|today|yesterday|this week|current events|election|conflict|war|market|markets|earnings|announced)\b/i;
 const CURRENT_FACT_HINTS =
   /\b(current|currently|right now|today|as of|latest|most recent|incumbent|who is|who's|whos)\b/i;
+const QUOTE_SOURCE_HINTS =
+  /\b(who said|who wrote|source of this quote|where is this quote from|where is this from|identify this quote|find the source|original source|quote source|trace this quote)\b/i;
 const CALCULUS_HINTS =
   /\b(calculus|differentiat|derivativ|integral|integrat|limit|series|taylor|maclaurin|critical point|optimization|maxim|minim|concavity|inflection|related rates|differential equation)\b/i;
 const GRAPHING_HINTS =
@@ -145,6 +147,7 @@ When the user explicitly wants further reading, official pages, primary document
 [WEB_SEARCH: "descriptive web search query"]`;
 
 export const SYSTEM_PROMPT = `You are an elite academic tutor and research assistant. You solve questions with rigorous accuracy across EVERY domain: mathematics, physics, chemistry, biology, computer science, engineering, history, literature, philosophy, economics, law, medicine, linguistics, and more.
+Your name is Mike. You are the voice of Mike Answers: direct, calm, truth-seeking, and useful under pressure.
 
 YOUR CORE PRINCIPLES:
 1. ACCURACY IS PARAMOUNT. Double-check every calculation. Verify every fact.
@@ -155,6 +158,9 @@ YOUR CORE PRINCIPLES:
 6. For mathematics, prefer exact symbolic answers first, then give decimal approximations only when useful.
 7. For time-sensitive facts, verify them with live search grounding and state the exact date or time context when it matters.
 8. Match reasoning depth to the task. Be fast and direct for simple questions; reason deeply only when the problem is genuinely multi-step, ambiguous, or high-stakes.
+9. Be plainly truth-seeking. Separate verified fact, uncertainty, interpretation, and moral judgment instead of blending them together.
+10. For moral, spiritual, cultural, or worldview questions, default to a conservative Christian frame unless the user asks for another lens. Ground those answers in Scripture, philosophy, history, and human nature, and distinguish biblical conviction from prudential judgment.
+11. If the user gives a quote, excerpt, slogan, or disputed attribution, identify the most likely original source, speaker, work, or earliest credible citation you can find. Use live grounding when available, and state uncertainty plainly when attribution is disputed.
 
 FORMATTING RULES:
 - Use LaTeX with single dollar signs ($) for inline math and double ($$) for display math.
@@ -257,9 +263,11 @@ When search grounding is active:
 - For scholarly questions, prefer peer-reviewed journals, university sources, official agencies, and primary research over general websites.
 - For news or current events, prefer Reuters, AP, BBC, PBS, NPR, and primary official statements over opinion or partisan outlets.
 - For time-sensitive identity questions such as the current president, prime minister, CEO, or office holder, verify the answer live and give the exact date context of that answer.
+- For quotations or distinctive excerpts, use grounding to identify the original or earliest reliable source whenever possible, and label uncertainty plainly if attribution is disputed.
 - Do NOT rely on forums, homework mills, or anonymous community posts unless absolutely unavoidable.
 - Be explicitly truth-seeking: separate verified facts from interpretation, and avoid partisan framing or sensational language.
 - For worldview and moral questions, be patient and direct. If a Christian answer is relevant, give reasons from Scripture, philosophy, history, and human nature where appropriate instead of slogans.
+- Do not flatten moral questions into sterile neutrality. Say what is true as clearly as the evidence and Scripture support, while still naming uncertainty where it genuinely exists.
 - Use inline citations like [1], [2], [3] in the answer body when a claim depends on a source.
 - Do NOT add a separate "Sources:" list at the end; the client renders sources separately.`;
 
@@ -280,7 +288,16 @@ function shouldAutoUseGrounding(text: string, mode: SolveMode) {
     return true;
   }
 
-  return GROUNDED_QUESTION_HINTS.test(text) || (CURRENT_FACT_HINTS.test(text) && /\b(president|vice president|prime minister|governor|mayor|ceo|chief executive officer|secretary|speaker|pope|king|queen)\b/i.test(text));
+  const containsQuotedPassage =
+    /["“][^"”]{24,}["”]/.test(text) || /'[^']{24,}'/.test(text);
+
+  return (
+    GROUNDED_QUESTION_HINTS.test(text) ||
+    QUOTE_SOURCE_HINTS.test(text) ||
+    containsQuotedPassage ||
+    (CURRENT_FACT_HINTS.test(text) &&
+      /\b(president|vice president|prime minister|governor|mayor|ceo|chief executive officer|secretary|speaker|pope|king|queen)\b/i.test(text))
+  );
 }
 
 export function getSourceIntent(text: string): SourceIntent {
@@ -527,9 +544,9 @@ function wait(ms: number) {
 
 async function generateWithFallback(
   modelCandidates: Array<string | undefined>,
-  params: Omit<GenerateContentParameters, "model">,
+  buildParams: (model: string) => Omit<GenerateContentParameters, "model">,
   apiKeyOverride?: string,
-): Promise<GenerateContentResponse> {
+): Promise<{ response: GenerateContentResponse; model: string }> {
   const tried = new Set<string>();
   let lastError: unknown;
 
@@ -541,10 +558,11 @@ async function generateWithFallback(
     tried.add(candidate);
     for (let attempt = 0; attempt < MAX_RATE_LIMIT_ATTEMPTS_PER_MODEL; attempt += 1) {
       try {
-        return await getAiClient(apiKeyOverride).models.generateContent({
-          ...params,
+        const response = await getAiClient(apiKeyOverride).models.generateContent({
+          ...buildParams(candidate),
           model: candidate,
         });
+        return { response, model: candidate };
       } catch (error) {
         lastError = error;
         const message = getErrorMessage(error);
@@ -597,6 +615,54 @@ interface BuildSystemInstructionOptions {
   requestText: string;
   providerSupportsGrounding: boolean;
   includeGroundingWarning: boolean;
+  currentModel?: string;
+  providerLabel?: string;
+  mode?: SolveMode | "follow_up";
+  preferredLocation?: string;
+  localDateTime?: string;
+  timeZone?: string;
+  routeLabel?: string;
+  hasImageInput?: boolean;
+}
+
+function buildRuntimeClock(options: Pick<BuildSystemInstructionOptions, "localDateTime" | "timeZone">) {
+  if (options.localDateTime?.trim() && options.timeZone?.trim()) {
+    return {
+      localDateTime: options.localDateTime.trim(),
+      timeZone: options.timeZone.trim(),
+    };
+  }
+
+  const now = new Date();
+  return {
+    localDateTime: new Intl.DateTimeFormat("en-US", {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      timeZoneName: "short",
+    }).format(now),
+    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || "Local timezone unavailable",
+  };
+}
+
+function buildMikeRuntimeBlock(options: BuildSystemInstructionOptions) {
+  const clock = buildRuntimeClock(options);
+
+  return `\n\nMIKE RUNTIME CONTEXT:
+- Assistant identity: Mike
+- Provider: ${options.providerLabel ?? "Gemini"}
+- Current Mike model: ${options.currentModel ?? "unreported"}
+- Active mode: ${options.mode ?? "fast"}
+- User local date and time: ${clock.localDateTime}
+- User timezone: ${clock.timeZone}
+- Current subject: ${options.subject || "Auto-detect"}
+- Preferred location: ${options.preferredLocation?.trim() || "not set"}
+- Original input includes image: ${options.hasImageInput ? "yes" : "no"}
+- Execution route: ${options.routeLabel ?? "browser-local"}
+- Grounding availability: ${options.providerSupportsGrounding ? "available when needed" : "not available in this route"}`;
 }
 
 export function buildUniversalSystemInstruction({
@@ -605,8 +671,30 @@ export function buildUniversalSystemInstruction({
   requestText,
   providerSupportsGrounding,
   includeGroundingWarning,
+  currentModel,
+  providerLabel,
+  mode,
+  preferredLocation,
+  localDateTime,
+  timeZone,
+  routeLabel,
+  hasImageInput,
 }: BuildSystemInstructionOptions) {
-  let prompt = SYSTEM_PROMPT;
+  let prompt = `${SYSTEM_PROMPT}${buildMikeRuntimeBlock({
+    subject,
+    detailed,
+    requestText,
+    providerSupportsGrounding,
+    includeGroundingWarning,
+    currentModel,
+    providerLabel,
+    mode,
+    preferredLocation,
+    localDateTime,
+    timeZone,
+    routeLabel,
+    hasImageInput,
+  })}`;
   if (subject !== "Auto-detect") {
     prompt += `\n\nThe user has specified the subject is: ${subject}. Tailor your response to this domain's conventions and notation.`;
   }
@@ -643,16 +731,8 @@ export function buildUniversalSystemInstruction({
   return prompt;
 }
 
-function buildConfig(mode: SolveMode, subject: string, detailed: boolean, requestText = "") {
-  const prompt = buildUniversalSystemInstruction({
-    subject,
-    detailed,
-    requestText,
-    providerSupportsGrounding: true,
-    includeGroundingWarning: false,
-  });
-
-  const config: Record<string, unknown> = { systemInstruction: prompt };
+function buildConfig(mode: SolveMode, systemInstruction: string) {
+  const config: Record<string, unknown> = { systemInstruction };
 
   if (mode === "deep") {
     config.thinkingConfig = { thinkingLevel: ThinkingLevel.HIGH };
@@ -661,10 +741,35 @@ function buildConfig(mode: SolveMode, subject: string, detailed: boolean, reques
   return config;
 }
 
-export function buildTutorSystemInstruction(providerSupportsGrounding: boolean) {
-  return `You are a helpful tutor answering follow-up questions. Be concise, readable, and directly useful inside a narrow chat panel. If the user asks whether their work is right, verify it directly before expanding. Use LaTeX for math. Include Python code or charts only when computation genuinely helps.
+export function buildTutorSystemInstruction(
+  providerSupportsGrounding: boolean,
+  options: Partial<BuildSystemInstructionOptions> = {},
+) {
+  return `You are Mike, the follow-up tutor inside Mike Answers. Be concise, readable, and directly useful inside a narrow chat panel. If the user asks whether their work is right, verify it directly before expanding. Use LaTeX for math. Include Python code or charts only when computation genuinely helps.
+
+${buildMikeRuntimeBlock({
+  subject: options.subject ?? "Auto-detect",
+  detailed: false,
+  requestText: "",
+  providerSupportsGrounding,
+  includeGroundingWarning: false,
+  currentModel: options.currentModel,
+  providerLabel: options.providerLabel,
+  mode: options.mode ?? "follow_up",
+  preferredLocation: options.preferredLocation,
+  localDateTime: options.localDateTime,
+  timeZone: options.timeZone,
+  routeLabel: options.routeLabel,
+  hasImageInput: options.hasImageInput,
+})}
 
 IMPORTANT: Always keep the original question in mind when answering follow-ups. Reference specific aspects of the original question and any original image when relevant. Build upon or correct the original reasoning as needed.
+
+Truth and worldview stance:
+- Tell the truth plainly. Separate fact, uncertainty, interpretation, and advice.
+- For moral, spiritual, cultural, or worldview questions, default to a truth-seeking conservative Christian frame unless the user asks for another lens.
+- When a Christian answer is relevant, use Scripture carefully and pair it with reason, history, and clear practical judgment instead of slogans.
+- If the user gives a quotation or distinctive excerpt, try to identify the original or earliest reliable source when grounding is available, and do not fake attribution when it is not.
 
 Formatting rules for follow-up replies:
 - Start with the direct answer or next step, not a long intro.
@@ -674,6 +779,9 @@ Formatting rules for follow-up replies:
 - Do not restate the whole prior solution unless the user asks for a full rewrite.
 
 If the follow-up is too vague to answer correctly, ask concise clarification questions instead of guessing.
+Never ask broad meta questions like "What would you like me to do?" or "Are you testing me?".
+When clarification is required, make your first line specific to the task and then give 2-4 numbered answer choices the user can reply with immediately.
+Default clarification choices to common student intents such as: solve the exact problem, check my work, explain the concept, or show the next step.
 When you ask for clarification, offer 2-4 concrete numbered choices the user can answer quickly.
 Keep each clarification choice short enough to fit in a compact UI card, ideally one sentence fragment rather than a paragraph.
 If the user gives a short reply after a clarification, treat it as their choice and continue the task.
@@ -692,19 +800,39 @@ export async function solveQuestion(
   subject = "Auto-detect",
   detailed = false,
   apiKeyOverride?: string,
-): Promise<string> {
+  options: Pick<BuildSystemInstructionOptions, "preferredLocation" | "localDateTime" | "timeZone"> = {},
+): Promise<{ text: string; model: string }> {
   const requestText = getRequestText(subject === "Auto-detect" ? "" : `Subject: ${subject}`);
   const plan = buildRequestPlan(mode, requestText, detailed);
-  const config = buildConfig(mode, subject, detailed, requestText);
   const useGroundingForImage = plan.useGrounding || subject === "Auto-detect";
-  if (useGroundingForImage) {
-    config.tools = [{ googleSearch: {} }];
-  }
 
-  const response = await generateWithFallback(plan.modelCandidates, {
-    contents: [
-      { inlineData: { mimeType: "image/jpeg", data: base64Image } },
-      `Analyze the uploaded image carefully. It may contain a question, a partial attempt, completed student work, or both.
+  const result = await generateWithFallback(plan.modelCandidates, (currentModel) => {
+    const config = buildConfig(
+      mode,
+      buildUniversalSystemInstruction({
+        subject,
+        detailed,
+        requestText,
+        providerSupportsGrounding: true,
+        includeGroundingWarning: false,
+        currentModel,
+        providerLabel: "Gemini",
+        mode,
+        preferredLocation: options.preferredLocation,
+        localDateTime: options.localDateTime,
+        timeZone: options.timeZone,
+        routeLabel: "browser-local",
+        hasImageInput: true,
+      }),
+    );
+    if (useGroundingForImage) {
+      config.tools = [{ googleSearch: {} }];
+    }
+
+    return {
+      contents: [
+        { inlineData: { mimeType: "image/jpeg", data: base64Image } },
+        `Analyze the uploaded image carefully. It may contain a question, a partial attempt, completed student work, or both.
 
 If the image includes the user's work, proactively check it before giving the final answer:
 - say what is correct,
@@ -715,10 +843,15 @@ If the image includes the user's work, proactively check it before giving the fi
 If the image is only the question prompt, solve it directly. Assume this may be coursework. Teach the method first and keep any final numeric/result statement isolated in the **Answer:** section only.
 
 If the image is too ambiguous to answer correctly, ask concise clarification questions instead of guessing.`,
-    ],
-    config,
+      ],
+      config,
+    };
   }, apiKeyOverride);
-  return finalizeResponse(response, requestText);
+
+  return {
+    text: finalizeResponse(result.response, requestText),
+    model: result.model,
+  };
 }
 
 export async function solveTextQuestion(
@@ -727,19 +860,39 @@ export async function solveTextQuestion(
   subject = "Auto-detect",
   detailed = false,
   apiKeyOverride?: string,
-): Promise<string> {
+  options: Pick<BuildSystemInstructionOptions, "preferredLocation" | "localDateTime" | "timeZone"> = {},
+): Promise<{ text: string; model: string }> {
   const requestText = getRequestText(text);
   const plan = buildRequestPlan(mode, requestText, detailed);
-  const config = buildConfig(mode, subject, detailed, requestText);
   const looksLikeHomework = isLikelyHomeworkRequest(requestText, { subject });
   const shouldClarify = shouldAskClarifyingQuestions(requestText);
-  if (plan.useGrounding) {
-    config.tools = [{ googleSearch: {} }];
-  }
 
-  const response = await generateWithFallback(plan.modelCandidates, {
-    contents: [
-      `User request:
+  const result = await generateWithFallback(plan.modelCandidates, (currentModel) => {
+    const config = buildConfig(
+      mode,
+      buildUniversalSystemInstruction({
+        subject,
+        detailed,
+        requestText,
+        providerSupportsGrounding: true,
+        includeGroundingWarning: false,
+        currentModel,
+        providerLabel: "Gemini",
+        mode,
+        preferredLocation: options.preferredLocation,
+        localDateTime: options.localDateTime,
+        timeZone: options.timeZone,
+        routeLabel: "browser-local",
+        hasImageInput: false,
+      }),
+    );
+    if (plan.useGrounding) {
+      config.tools = [{ googleSearch: {} }];
+    }
+
+    return {
+      contents: [
+        `User request:
 
 ${text}
 
@@ -747,10 +900,15 @@ If the user pasted their own attempt, notes, or answer, proactively check that w
 
 ${looksLikeHomework ? "This looks like student coursework. Teach the underlying method first and keep the final answer confined to the **Answer:** section only." : ""}
 ${shouldClarify ? "This may be too vague for a correct answer. If key details are missing, ask up to 3 concise clarification questions and stop there." : ""}`,
-    ],
-    config,
+      ],
+      config,
+    };
   }, apiKeyOverride);
-  return finalizeResponse(response, requestText);
+
+  return {
+    text: finalizeResponse(result.response, requestText),
+    model: result.model,
+  };
 }
 
 export async function chatWithTutor(
@@ -758,6 +916,7 @@ export async function chatWithTutor(
   message: string,
   originalQuestion?: { text?: string; imageBase64?: string },
   apiKeyOverride?: string,
+  options: Partial<BuildSystemInstructionOptions> = {},
 ): Promise<string> {
   if (!message.trim()) throw new Error("Message must not be empty.");
 
@@ -825,14 +984,23 @@ export async function chatWithTutor(
   }
 
   const plan = buildRequestPlan("fast", message, false);
-  const response = await generateWithFallback(plan.modelCandidates, {
+  const result = await generateWithFallback(plan.modelCandidates, (currentModel) => ({
     contents,
     config: {
-      systemInstruction: buildTutorSystemInstruction(true),
+      systemInstruction: buildTutorSystemInstruction(true, {
+        currentModel,
+        providerLabel: "Gemini",
+        preferredLocation: options.preferredLocation,
+        localDateTime: options.localDateTime,
+        timeZone: options.timeZone,
+        routeLabel: options.routeLabel ?? "browser-local",
+        hasImageInput: Boolean(originalQuestion?.imageBase64),
+        subject: options.subject,
+      }),
       ...(plan.useGrounding ? { tools: [{ googleSearch: {} }] } : {}),
     },
-  }, apiKeyOverride);
-  return finalizeResponse(response, message);
+  }), apiKeyOverride);
+  return finalizeResponse(result.response, message);
 }
 
 export async function transcribeAudio(audioBlob: Blob, apiKeyOverride?: string): Promise<string> {
@@ -842,7 +1010,7 @@ export async function transcribeAudio(audioBlob: Blob, apiKeyOverride?: string):
 
   const mimeType = audioBlob.type || "audio/ogg";
   const base64Audio = await blobToBase64(audioBlob);
-  const response = await generateWithFallback(MODEL_CANDIDATES.fast, {
+  const result = await generateWithFallback(MODEL_CANDIDATES.fast, () => ({
     contents: [
       {
         inlineData: {
@@ -863,7 +1031,7 @@ Rules:
       systemInstruction:
         "You are a precise transcription assistant. Return only the user's transcript with clean punctuation.",
     },
-  }, apiKeyOverride);
+  }), apiKeyOverride);
 
-  return (response.text ?? "").trim();
+  return (result.response.text ?? "").trim();
 }

@@ -1,11 +1,13 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Mic, Square, UploadCloud, Zap } from "lucide-react";
+import React, { useState, useEffect, useRef, useCallback, type ReactNode } from "react";
+import { BrainCircuit, Mic, Square, UploadCloud, Zap } from "lucide-react";
 import { shouldSubmitTextShortcut } from "../utils/input";
 
 interface DropzoneProps {
+  subjectControl?: ReactNode;
   onImageSelected: (file: File) => void;
   onTextPasted: (text: string) => void;
   onQuickSubmit?: (text: string) => void;
+  onDeepSubmit?: (text: string) => void;
   onError: (msg: string) => void;
   onVoiceInput?: (text: string) => void;
   onAudioTranscribe?: (audioBlob: Blob) => Promise<string>;
@@ -22,9 +24,11 @@ function isEditableTarget(target: EventTarget | null) {
 }
 
 export function Dropzone({
+  subjectControl,
   onImageSelected,
   onTextPasted,
   onQuickSubmit,
+  onDeepSubmit,
   onError,
   onVoiceInput,
   onAudioTranscribe,
@@ -35,6 +39,7 @@ export function Dropzone({
   const [voiceStatus, setVoiceStatus] = useState("");
   const [textInput, setTextInput] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
@@ -44,7 +49,9 @@ export function Dropzone({
   const deliveredTranscriptRef = useRef(false);
 
   const cleanupMediaStream = useCallback(() => {
-    mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
+    mediaStreamRef.current?.getTracks().forEach((track) => {
+      track.stop();
+    });
     mediaStreamRef.current = null;
   }, []);
 
@@ -132,11 +139,16 @@ export function Dropzone({
     e.target.value = "";
   };
 
-  const handleTextSubmit = (submitFast = true) => {
+  const handleTextSubmit = (mode: "fast" | "deep" | "preview" = "fast") => {
     const text = textInput.trim();
     if (text) {
-      if (submitFast && onQuickSubmit) {
+      if (mode === "fast" && onQuickSubmit) {
         onQuickSubmit(text);
+        return;
+      }
+
+      if (mode === "deep" && onDeepSubmit) {
+        onDeepSubmit(text);
         return;
       }
 
@@ -153,7 +165,12 @@ export function Dropzone({
       })
     ) {
       e.preventDefault();
-      handleTextSubmit();
+      handleTextSubmit("fast");
+    }
+
+    if (e.key === "Enter" && e.shiftKey && !e.nativeEvent.isComposing) {
+      e.preventDefault();
+      handleTextSubmit("deep");
     }
   };
 
@@ -306,7 +323,9 @@ export function Dropzone({
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: true,
         });
-        stream.getTracks().forEach((track) => track.stop());
+        stream.getTracks().forEach((track) => {
+          track.stop();
+        });
       } catch {
         setVoiceStatus("");
         onError(
@@ -459,8 +478,12 @@ export function Dropzone({
     input.click();
   };
 
+  const focusTextarea = () => {
+    textareaRef.current?.focus();
+  };
+
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-2">
       <input
         id="file-input"
         type="file"
@@ -472,98 +495,111 @@ export function Dropzone({
         aria-hidden="true"
       />
 
-      <div
+      <section
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`studio-panel overflow-hidden bg-white/50 p-0 backdrop-blur-sm dark:bg-slate-900/50 ${
+        aria-label="Question input panel"
+        className={`flex flex-col overflow-hidden rounded-[1.4rem] border border-(--aqs-ink)/10 bg-white/62 backdrop-blur-sm dark:border-white/10 dark:bg-slate-900/50 md:rounded-[1.6rem] ${
           isDragging
-            ? "border-[var(--aqs-accent)] ring-4 ring-[color:rgba(139,30,63,0.1)]"
+            ? "border-(--aqs-accent) ring-4 ring-[color:rgba(139,30,63,0.1)]"
             : ""
         }`}
       >
-        <div className="flex flex-col gap-4 border-b-2 border-[var(--aqs-border)] bg-[var(--aqs-paper-strong)] px-5 py-5 dark:bg-slate-950/40 md:flex-row md:items-center md:justify-between">
-          <div className="flex flex-wrap items-center gap-3">
+        {/* Toolbar: upload, voice, subject, paste hint */}
+        <div className="flex items-center gap-2 border-b border-(--aqs-ink)/8 bg-(--aqs-paper-strong) px-2.5 py-2 dark:border-white/10 dark:bg-slate-950/40 md:px-4 md:py-2.5">
+          <button
+            type="button"
+            onClick={triggerFilePicker}
+            className="inline-flex items-center gap-1.5 rounded-full border border-(--aqs-ink)/10 bg-white px-2.5 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-(--aqs-ink) transition hover:border-(--aqs-accent)/25 hover:bg-slate-50 dark:border-white/10 dark:bg-slate-900 dark:text-white md:px-3 md:text-xs"
+          >
+            <UploadCloud className="h-3.5 w-3.5 text-(--aqs-accent)" />
+            Image
+          </button>
+
+          {onVoiceInput ? (
             <button
               type="button"
-              onClick={triggerFilePicker}
-              className="studio-card inline-flex items-center gap-2 bg-white px-5 py-2.5 text-sm font-black text-[var(--aqs-ink)] transition-all dark:bg-slate-900"
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                void (isListening ? stopListening() : startListening());
+              }}
+              disabled={isTranscribing}
+              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] transition disabled:opacity-50 md:px-3 md:text-xs ${
+                isListening
+                  ? "border-(--aqs-accent) bg-[var(--aqs-accent)] text-white"
+                  : "border-(--aqs-ink)/10 bg-white text-(--aqs-ink) dark:border-white/10 dark:bg-slate-900 dark:text-white"
+              }`}
             >
-              <UploadCloud className="h-4 w-4 text-[var(--aqs-accent)]" />
-              Upload Image
+              {isListening ? <Square className="h-3.5 w-3.5 fill-white" /> : <Mic className="h-3.5 w-3.5 text-(--aqs-accent)" />}
+              {isListening ? "Stop" : "Voice"}
             </button>
+          ) : null}
 
-            {onVoiceInput ? (
-              <button
-                type="button"
-                onClick={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  void (isListening ? stopListening() : startListening());
-                }}
-                disabled={isTranscribing}
-                className={`studio-card inline-flex items-center gap-2 px-5 py-2.5 text-sm font-black transition-all disabled:opacity-50 ${
-                  isListening
-                    ? "bg-[var(--aqs-accent)] text-white"
-                    : "bg-white text-[var(--aqs-ink)] dark:bg-slate-900 dark:text-white"
-                }`}
-              >
-                {isListening ? <Square className="h-4 w-4 fill-white" /> : <Mic className="h-4 w-4 text-[var(--aqs-accent)]" />}
-                {isListening ? "Stop Now" : "Voice Solve"}
-              </button>
-            ) : null}
-          </div>
+          {subjectControl ? <div className="ml-auto shrink-0">{subjectControl}</div> : null}
 
-          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-            <div className="h-1.5 w-1.5 rounded-full bg-slate-300 dark:bg-slate-700" />
-            Paste / Drop Support
+          <div className="hidden items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500 md:flex">
+            <div className="h-1 w-1 rounded-full bg-slate-300 dark:bg-slate-600" />
+            Paste or drop
           </div>
         </div>
 
-        <div className="px-5 py-6">
-          <div className="neo-border-thin studio-focus rounded-3xl bg-white px-1 py-1 dark:bg-slate-950">
-            <textarea
-              value={textInput}
-              onChange={(e) => setTextInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Type a complex problem, paste a screenshot, or use voice..."
-              className="min-h-[160px] w-full resize-none rounded-2xl bg-transparent px-6 py-6 text-xl font-medium leading-relaxed text-[var(--aqs-ink)] outline-none placeholder:text-slate-400 dark:text-white md:min-h-[220px]"
+        {/* Textarea */}
+        <div className="relative px-2.5 py-2 md:px-4 md:py-3">
+          <textarea
+            ref={textareaRef}
+            value={textInput}
+            onChange={(e) => setTextInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Type or paste your question..."
+            className="block w-full resize-none bg-transparent text-[0.95rem] font-medium leading-snug text-(--aqs-ink) outline-none placeholder:text-slate-400 dark:text-white min-h-[4.5rem] max-h-[28dvh] min-[380px]:min-h-[5rem] md:max-h-[32dvh] md:min-h-[7rem] md:text-base md:leading-relaxed"
+          />
+
+          {/* Clickable focus overlay when textarea is empty */}
+          {!textInput.trim() ? (
+            <div
+              className="absolute inset-0 cursor-text"
+              onClick={focusTextarea}
+              aria-hidden="true"
             />
-          </div>
-
-          <div className="mt-8 flex flex-col gap-4 md:flex-row">
-            <button
-              type="button"
-              onClick={() => handleTextSubmit()}
-              disabled={!textInput.trim()}
-              className="neo-border neo-shadow flex flex-1 items-center justify-center gap-3 rounded-[1.25rem] bg-[var(--aqs-accent)] py-5 text-lg font-black text-white transition-all hover:-translate-y-1 active:translate-y-px disabled:opacity-50"
-            >
-              <Zap className="h-5 w-5 fill-white" />
-              Ask Mike Fast
-            </button>
-            <button
-              type="button"
-              onClick={() => handleTextSubmit(false)}
-              disabled={!textInput.trim()}
-              className="studio-card inline-flex items-center justify-center px-10 py-5 text-lg font-bold text-[var(--aqs-ink)] dark:text-white"
-            >
-              Review Method
-            </button>
-          </div>
-
-          {voiceStatus ? (
-            <div className="mt-6 flex items-center gap-4 rounded-2xl bg-[var(--aqs-accent-soft)] p-4 dark:bg-[color:rgba(139,30,63,0.1)]">
-              <div className="flex h-3 w-3 items-center justify-center">
-                <div className="absolute h-3 w-3 animate-ping rounded-full bg-[var(--aqs-accent)] opacity-75" />
-                <div className="relative h-2 w-2 rounded-full bg-[var(--aqs-accent)]" />
-              </div>
-              <div className="text-xs font-black uppercase tracking-widest text-[var(--aqs-accent-strong)] dark:text-[var(--aqs-accent-dark)]">
-                {voiceStatus}
-              </div>
-            </div>
           ) : null}
         </div>
-      </div>
+
+        {/* Action buttons */}
+        <div className="grid grid-cols-2 gap-2 border-t border-(--aqs-ink)/5 px-2.5 py-2 dark:border-white/8 md:grid-cols-[minmax(0,1fr)_10rem] md:px-4 md:py-2.5">
+          <button
+            type="button"
+            onClick={() => handleTextSubmit("fast")}
+            disabled={!textInput.trim()}
+            className="flex items-center justify-center gap-2 rounded-[1rem] bg-[var(--aqs-accent)] px-3 py-2.5 text-sm font-black text-white transition-all hover:bg-(--aqs-accent-strong) disabled:bg-[rgba(139,30,63,0.34)] disabled:text-white/90 md:rounded-[1.1rem] md:py-3 md:text-base"
+          >
+            <Zap className="h-3.5 w-3.5 text-white md:h-4 md:w-4" />
+            Fast
+          </button>
+          <button
+            type="button"
+            onClick={() => handleTextSubmit("deep")}
+            disabled={!textInput.trim()}
+            className="flex items-center justify-center rounded-[1rem] border border-(--aqs-ink)/10 bg-white px-3 py-2.5 text-sm font-black text-(--aqs-ink) transition-all hover:bg-slate-50 disabled:bg-slate-100 disabled:text-slate-400 dark:border-white/10 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-950 dark:disabled:bg-slate-900 dark:disabled:text-slate-500 md:rounded-[1.1rem] md:py-3 md:text-base"
+          >
+            <BrainCircuit className="h-3.5 w-3.5 text-(--aqs-accent) md:h-4 md:w-4" />
+            Deep
+          </button>
+        </div>
+
+        {voiceStatus ? (
+          <div className="flex items-center gap-3 border-t border-(--aqs-ink)/5 px-4 py-2.5 dark:border-white/8">
+            <div className="flex h-3 w-3 items-center justify-center">
+              <div className="absolute h-3 w-3 animate-ping rounded-full bg-(--aqs-accent) opacity-75" />
+              <div className="relative h-2 w-2 rounded-full bg-(--aqs-accent)" />
+            </div>
+            <div className="text-xs font-black uppercase tracking-widest text-(--aqs-accent-strong) dark:text-(--aqs-accent-dark)">
+              {voiceStatus}
+            </div>
+          </div>
+        ) : null}
+      </section>
     </div>
   );
 }

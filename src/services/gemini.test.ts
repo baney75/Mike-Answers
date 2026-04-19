@@ -27,6 +27,12 @@ describe("gemini routing", () => {
     expect(plan.useGrounding).toBe(true);
   });
 
+  test("auto-enables grounding for quoted-source prompts", () => {
+    const plan = buildRequestPlan("fast", 'Who said "The only thing we have to fear is fear itself" and where is it from?', false);
+
+    expect(plan.useGrounding).toBe(true);
+  });
+
   test("strips trailing raw sources sections from model text", () => {
     const cleaned = stripTrailingSourcesSection("Body text\n\nSources:\n1. https://example.edu\n2. https://nih.gov");
 

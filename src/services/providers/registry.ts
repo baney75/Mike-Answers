@@ -10,7 +10,7 @@ export const providerDescriptors: Record<ProviderId, ProviderDescriptor> = {
     id: "gemini",
     kind: "gemini_native",
     label: "Gemini",
-    shortDescription: "Google-native routing with grounding and audio transcription.",
+    shortDescription: "Best free student start: native image solve, grounding, and audio transcription.",
     docsUrl: "https://aistudio.google.com/app/apikey",
     apiKeyPlaceholder: "AIza...",
     defaultModels: {
@@ -23,7 +23,6 @@ export const providerDescriptors: Record<ProviderId, ProviderDescriptor> = {
       supportsGrounding: true,
       supportsImageInputInBrowser: true,
       supportsAudioTranscription: true,
-      supportsSecureAdvanced: false,
       supportsCustomBaseUrl: false,
       supportsModelCatalog: false,
     },
@@ -32,7 +31,7 @@ export const providerDescriptors: Record<ProviderId, ProviderDescriptor> = {
     id: "openrouter",
     kind: "openai_compatible",
     label: "OpenRouter",
-    shortDescription: "Free-first OpenAI-compatible routing with model discovery.",
+    shortDescription: "Free-model backup path with broad model discovery and flexible routing.",
     docsUrl: "https://openrouter.ai/keys",
     apiKeyPlaceholder: "sk-or-v1-...",
     defaultBaseUrl: "https://openrouter.ai/api/v1",
@@ -44,7 +43,6 @@ export const providerDescriptors: Record<ProviderId, ProviderDescriptor> = {
       supportsGrounding: false,
       supportsImageInputInBrowser: true,
       supportsAudioTranscription: false,
-      supportsSecureAdvanced: false,
       supportsCustomBaseUrl: false,
       supportsModelCatalog: true,
     },
@@ -65,7 +63,6 @@ export const providerDescriptors: Record<ProviderId, ProviderDescriptor> = {
       supportsGrounding: false,
       supportsImageInputInBrowser: false,
       supportsAudioTranscription: false,
-      supportsSecureAdvanced: true,
       supportsCustomBaseUrl: false,
       supportsModelCatalog: false,
     },
@@ -86,7 +83,6 @@ export const providerDescriptors: Record<ProviderId, ProviderDescriptor> = {
       supportsGrounding: false,
       supportsImageInputInBrowser: false,
       supportsAudioTranscription: false,
-      supportsSecureAdvanced: false,
       supportsCustomBaseUrl: true,
       supportsModelCatalog: false,
     },
@@ -94,8 +90,8 @@ export const providerDescriptors: Record<ProviderId, ProviderDescriptor> = {
 };
 
 export const providerOrder: ProviderId[] = [
-  "openrouter",
   "gemini",
+  "openrouter",
   "minimax",
   "custom_openai",
 ];
@@ -103,14 +99,10 @@ export const providerOrder: ProviderId[] = [
 function cloneDefaultConfig(providerId: ProviderId): ProviderPreferenceConfig {
   const descriptor = providerDescriptors[providerId];
   return {
-    rememberKey: false,
+    rememberKey: true,
     baseUrl: descriptor.defaultBaseUrl,
     models: { ...descriptor.defaultModels },
-    options: providerId === "openrouter"
-      ? { freeOnly: true }
-      : providerId === "minimax"
-        ? { useSecureBackendForAdvanced: false }
-        : {},
+    options: providerId === "openrouter" ? { freeOnly: true } : {},
   };
 }
 

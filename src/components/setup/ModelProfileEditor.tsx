@@ -22,7 +22,7 @@ function ModelField({
         <select
           value={value ?? ""}
           onChange={(event) => onChange(event.target.value)}
-          className="w-full rounded-2xl border border-[var(--aqs-ink)]/12 bg-white px-4 py-3 text-sm text-[var(--aqs-ink)] outline-none transition focus:border-[var(--aqs-accent)] focus:ring-4 focus:ring-[color:rgba(122,31,52,0.12)] dark:border-white/10 dark:bg-slate-900 dark:text-white"
+          className="w-full rounded-2xl border border-(--aqs-ink)/12 bg-white px-4 py-3 text-sm text-(--aqs-ink) outline-none transition focus:border-(--aqs-accent) focus:ring-4 focus:ring-[color:rgba(122,31,52,0.12)] dark:border-white/10 dark:bg-slate-900 dark:text-white"
         >
           <option value="">Auto-pick recommended model</option>
           {options.map((model) => (
@@ -45,7 +45,7 @@ function ModelField({
         value={value ?? ""}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-2xl border border-[var(--aqs-ink)]/12 bg-white px-4 py-3 text-sm text-[var(--aqs-ink)] outline-none transition focus:border-[var(--aqs-accent)] focus:ring-4 focus:ring-[color:rgba(122,31,52,0.12)] dark:border-white/10 dark:bg-slate-900 dark:text-white"
+        className="w-full rounded-2xl border border-(--aqs-ink)/12 bg-white px-4 py-3 text-sm text-(--aqs-ink) outline-none transition focus:border-(--aqs-accent) focus:ring-4 focus:ring-[color:rgba(122,31,52,0.12)] dark:border-white/10 dark:bg-slate-900 dark:text-white"
       />
     </label>
   );

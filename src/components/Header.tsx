@@ -1,129 +1,150 @@
 import type { ReactNode } from "react";
-import { Download, HandCoins, History, Moon, Settings2, Sun } from "lucide-react";
+import { Download, HandCoins, History, Moon, Settings2, Sun, Monitor } from "lucide-react";
+import type { ThemeMode } from "../hooks/useDarkMode";
 
 interface HeaderProps {
-  darkMode: boolean;
-  onToggleDark: () => void;
+  theme: ThemeMode;
+  setTheme: (theme: ThemeMode) => void;
   onOpenHistory: () => void;
   onToggleSetup: () => void;
   setupOpen: boolean;
-  accountControls?: ReactNode;
   emblemSrc: string;
   onInstallApp?: () => void;
   canInstallApp?: boolean;
   providerName: string;
   providerStatus: string;
+  historyCount: number;
 }
 
 function IconButton({
   title,
   onClick,
   children,
+  disabled = false,
+  badge,
 }: {
   title: string;
   onClick: () => void;
   children: ReactNode;
+  disabled?: boolean;
+  badge?: number;
 }) {
   return (
-    <button
-      type="button"
-      aria-label={title}
-      title={title}
-      onClick={onClick}
-      className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[var(--aqs-ink)]/10 bg-white/88 text-[var(--aqs-ink)] transition hover:border-[var(--aqs-accent)]/30 hover:bg-white dark:border-white/10 dark:bg-slate-950/72 dark:text-white"
-    >
-      {children}
-    </button>
+    <div className="relative">
+      <button
+        type="button"
+        aria-label={title}
+        title={title}
+        onClick={onClick}
+        disabled={disabled}
+        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-(--aqs-ink)/10 bg-white/88 text-(--aqs-ink) outline-none transition hover:border-(--aqs-accent)/30 hover:bg-white focus-visible:ring-4 focus-visible:ring-[rgba(139,30,63,0.12)] disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10 dark:bg-slate-950/72 dark:text-white md:h-10 md:w-10"
+      >
+        {children}
+      </button>
+      {badge && badge > 0 ? (
+        <span className="absolute -right-1.5 -top-1.5 inline-flex min-h-[1.2rem] min-w-[1.2rem] items-center justify-center rounded-full bg-(--aqs-accent) px-1.5 text-[9px] font-black text-white shadow-sm">
+          {badge}
+        </span>
+      ) : null}
+    </div>
   );
 }
 
 export function Header({
-  darkMode,
-  onToggleDark,
+  theme,
+  setTheme,
   onOpenHistory,
   onToggleSetup,
   setupOpen,
-  accountControls,
   emblemSrc,
   onInstallApp,
   canInstallApp,
   providerName,
   providerStatus,
+  historyCount,
 }: HeaderProps) {
   const providerNeedsSetup = providerStatus === "key needed" || providerStatus.startsWith("Add ");
+  const compactProviderStatus = providerNeedsSetup
+    ? "Setup"
+    : providerStatus === "ready"
+      ? "Ready"
+      : providerStatus;
+  const themeIcon =
+    theme === "light" ? (
+      <Sun className="h-4.5 w-4.5 text-(--aqs-gold)" />
+    ) : theme === "system" ? (
+      <Monitor className="h-4.5 w-4.5 text-(--aqs-accent)" />
+    ) : (
+      <Moon className="h-4.5 w-4.5 text-(--aqs-accent)" />
+    );
 
   return (
-    <header className="no-print studio-panel mb-10 overflow-hidden bg-white/80 px-5 py-6 backdrop-blur-xl dark:bg-slate-950/80 md:px-8">
-      <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
-        <div className="min-w-0 flex items-center gap-6">
-          <div className="neo-border neo-shadow-sm group relative h-20 w-20 shrink-0 overflow-hidden rounded-[1.8rem] bg-white transition-all hover:rotate-3 dark:bg-slate-900">
-            <div className="absolute inset-0 bg-gradient-to-tr from-[var(--aqs-accent)]/10 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
+    <header className="no-print studio-panel mb-3 overflow-visible bg-white/88 px-2.5 py-2 backdrop-blur-xl dark:bg-slate-950/84 md:mb-4 md:px-4 md:py-3">
+      <div className="flex items-center justify-between gap-2.5 md:gap-3">
+        <div className="min-w-0 flex items-center gap-2.5 md:gap-3">
+          <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-[1rem] bg-linear-to-br from-(--aqs-accent)/8 to-(--aqs-gold)/12 ring-1 ring-(--aqs-accent)/10 md:h-12 md:w-12 md:rounded-[1.1rem]">
             <img
               src={emblemSrc}
               alt="Mike Answers emblem"
-              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+              className="h-[108%] w-[108%] object-contain object-center"
             />
           </div>
           <div className="min-w-0">
-            <div className="flex items-center gap-3">
-              <div className="h-[2px] w-8 rounded-full bg-[var(--aqs-accent)]" />
-              <div className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--aqs-accent-strong)] dark:text-[var(--aqs-accent-dark)]">
-                The Mike Answers Studio
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="text-[9px] font-black uppercase tracking-[0.28em] text-(--aqs-accent-strong) dark:text-(--aqs-gold)">
+                Mike Answers
+              </div>
+              <div className="hidden h-[1px] w-5 bg-(--aqs-accent)/25 sm:block" />
+              <div className="hidden text-[10px] font-semibold text-slate-500 dark:text-slate-400 sm:block">
+                Browser-first study desk
               </div>
             </div>
-            <h1 className="mt-2 text-[1.8rem] font-black leading-tight tracking-tight text-[var(--aqs-ink)] dark:text-white sm:text-[2.2rem]">
-              Serious answers. <span className="text-[var(--aqs-accent)]">Direct evidence.</span>
-            </h1>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <div className="patch flex items-center gap-2">
-                <div className={`h-1.5 w-1.5 rounded-full ${providerNeedsSetup ? "bg-red-500 animate-pulse" : "bg-emerald-500"}`} />
-                {providerName} <span className="opacity-30">|</span> {providerStatus}
-              </div>
-              <div className="neo-border-thin hidden rounded-full bg-white/50 px-3 py-1 text-[9px] font-black uppercase tracking-widest text-slate-500 dark:bg-slate-900/50 sm:block">
-                Secure On-Device Logic
+            <div className="mt-1 flex flex-wrap gap-2">
+              <div className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-(--aqs-ink)/10 bg-white/92 px-2.5 py-1.5 text-[8px] font-black uppercase tracking-[0.14em] text-(--aqs-ink) dark:border-white/10 dark:bg-slate-950 dark:text-white sm:gap-2 sm:text-[9px] md:px-3 md:text-[10px]">
+                <div className={`h-1.5 w-1.5 rounded-full ${providerNeedsSetup ? "bg-rose-500" : "bg-emerald-500"}`} />
+                <span className="truncate">{providerName}</span>
+                <span className="opacity-30">•</span>
+                <span className="truncate sm:hidden">{compactProviderStatus}</span>
+                <span className="hidden truncate sm:inline">{providerStatus}</span>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 lg:justify-end">
-          <div className="mr-2 hidden xl:block">
-            {accountControls}
-          </div>
-          
-          <div className="flex flex-wrap items-center gap-2">
-            {canInstallApp && onInstallApp ? (
-              <button
-                type="button"
-                onClick={onInstallApp}
-                className="neo-border neo-shadow-sm flex h-11 items-center gap-2 rounded-2xl bg-[var(--aqs-accent)] px-5 text-sm font-black text-white transition-all hover:-translate-y-0.5 active:translate-y-px"
-              >
-                <Download className="h-4 w-4" />
-                Install
-              </button>
-            ) : null}
-            <IconButton title={setupOpen ? "Hide settings" : "Open settings"} onClick={onToggleSetup}>
-              <Settings2 className={`h-5 w-5 transition-transform ${setupOpen ? "rotate-90" : ""} text-[var(--aqs-accent)]`} />
+        <div className="flex items-center gap-1 md:gap-2">
+          {canInstallApp && onInstallApp ? (
+            <IconButton title="Install app" onClick={onInstallApp}>
+              <Download className="h-4.5 w-4.5 text-(--aqs-accent)" />
             </IconButton>
-            <IconButton title="Open history" onClick={onOpenHistory}>
-              <History className="h-5 w-5 text-[var(--aqs-accent)]" />
-            </IconButton>
-            <IconButton
-              title={darkMode ? "Enable light mode" : "Enable dark mode"}
-              onClick={onToggleDark}
-            >
-              {darkMode ? <Sun className="h-5 w-5 text-[var(--aqs-gold)]" /> : <Moon className="h-5 w-5 text-[var(--aqs-accent)]" />}
-            </IconButton>
-            <a
-              href="https://buymeacoffee.com/baneydonovan"
-              target="_blank"
-              rel="noreferrer"
-              className="studio-card flex h-11 items-center gap-2 px-5 text-sm font-black text-[var(--aqs-ink)] transition-all hover:-translate-y-0.5 active:translate-y-px dark:text-white"
-            >
-              <HandCoins className="h-5 w-5 text-[var(--aqs-gold)]" />
-              <span className="hidden sm:inline">Support</span>
-            </a>
-          </div>
+          ) : null}
+          <IconButton title={setupOpen ? "Hide settings" : "Open settings"} onClick={onToggleSetup}>
+            <Settings2 className={`h-4.5 w-4.5 transition-transform ${setupOpen ? "rotate-90" : ""} text-(--aqs-accent)`} />
+          </IconButton>
+          <IconButton
+            title={historyCount > 0 ? "Open history" : "History is empty"}
+            onClick={onOpenHistory}
+            disabled={historyCount === 0}
+            badge={historyCount > 0 ? historyCount : undefined}
+          >
+            <History className="h-4.5 w-4.5 text-(--aqs-accent)" />
+          </IconButton>
+          <IconButton
+            title={`Theme: ${theme}`}
+            onClick={() => setTheme(theme === "light" ? "system" : theme === "system" ? "dark" : "light")}
+          >
+            {themeIcon}
+          </IconButton>
+          <a
+            href="https://buymeacoffee.com/baneydonovan"
+            target="_blank"
+            rel="noreferrer"
+            aria-label="Support Mike Answers"
+            title="Support Mike Answers"
+            className="inline-flex h-9 items-center justify-center rounded-full border border-transparent px-2.5 text-slate-500 transition hover:border-(--aqs-accent)/20 hover:bg-white/80 hover:text-(--aqs-accent-strong) dark:text-slate-300 dark:hover:bg-slate-950 md:h-10 md:px-3"
+          >
+            <HandCoins className="h-4.5 w-4.5 text-(--aqs-gold)" />
+            <span className="hidden xl:ml-2 xl:inline text-xs font-semibold">Support</span>
+          </a>
         </div>
       </div>
     </header>
