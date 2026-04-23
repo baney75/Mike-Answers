@@ -1,8 +1,19 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import type { HistoryItem } from "../types";
+import { normalizeHistoryItemOriginalContext } from "../utils/followUpContext";
 
 const STORAGE_KEY = "aqs_history";
 const MAX_ITEMS = 20;
+
+function normalizeHistoryItem(item: HistoryItem): HistoryItem {
+  const originalContext = normalizeHistoryItemOriginalContext(item);
+
+  return {
+    ...item,
+    requestText: originalContext?.text ?? item.requestText,
+    originalContext,
+  };
+}
 
 /**
  * Persists solution history in localStorage.
@@ -26,7 +37,7 @@ export function useHistory() {
 
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
-        setItems(parsed.slice(0, MAX_ITEMS));
+        setItems(parsed.slice(0, MAX_ITEMS).map(normalizeHistoryItem));
       }
     } catch {
       /* corrupted data — start fresh */
@@ -35,7 +46,7 @@ export function useHistory() {
 
   const push = useCallback((item: HistoryItem) => {
     setItems((current) => {
-      const next = [item, ...current].slice(0, MAX_ITEMS);
+      const next = [normalizeHistoryItem(item), ...current].slice(0, MAX_ITEMS);
       persistItems(next);
       return next;
     });
@@ -43,14 +54,15 @@ export function useHistory() {
 
   const replace = useCallback((item: HistoryItem) => {
     setItems((current) => {
-      const existing = current.find((entry) => entry.id === item.id);
-      if (existing && JSON.stringify(existing) === JSON.stringify(item)) {
+      const normalizedItem = normalizeHistoryItem(item);
+      const existing = current.find((entry) => entry.id === normalizedItem.id);
+      if (existing && JSON.stringify(existing) === JSON.stringify(normalizedItem)) {
         return current;
       }
 
-      const next = current.some((entry) => entry.id === item.id)
-        ? current.map((entry) => (entry.id === item.id ? item : entry))
-        : [item, ...current].slice(0, MAX_ITEMS);
+      const next = current.some((entry) => entry.id === normalizedItem.id)
+        ? current.map((entry) => (entry.id === normalizedItem.id ? normalizedItem : entry))
+        : [normalizedItem, ...current].slice(0, MAX_ITEMS);
       persistItems(next);
       return next;
     });
@@ -59,11 +71,12 @@ export function useHistory() {
   const replaceAll = useCallback((nextItems: HistoryItem[]) => {
     const deduped = nextItems
       .reduce<HistoryItem[]>((acc, item) => {
-        if (acc.some((entry) => entry.id === item.id)) {
+        const normalizedItem = normalizeHistoryItem(item);
+        if (acc.some((entry) => entry.id === normalizedItem.id)) {
           return acc;
         }
 
-        acc.push(item);
+        acc.push(normalizedItem);
         return acc;
       }, [])
       .sort((a, b) => b.timestamp - a.timestamp)

@@ -1,4 +1,5 @@
 import type { OpenRouterModelSummary, SolveMode } from "../types";
+import type { FollowUpContextPayload } from "../utils/followUpContext";
 import {
   chatWithOpenAICompatible,
   solveImageQuestionWithOpenAICompatible,
@@ -170,9 +171,9 @@ export async function chatWithOpenRouter(options: {
   model: string;
   history: { role: string; text: string }[];
   message: string;
-  originalQuestion?: { text?: string; imageBase64?: string };
+  followUpContext?: FollowUpContextPayload;
 }) {
-  const { apiKey, model, history, message, originalQuestion } = options;
+  const { apiKey, model, history, message, followUpContext } = options;
   return chatWithOpenAICompatible({
     providerId: "openrouter",
     apiKey,
@@ -180,6 +181,6 @@ export async function chatWithOpenRouter(options: {
     model,
     history,
     message,
-    originalQuestion,
+    followUpContext,
   });
 }

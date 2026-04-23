@@ -140,10 +140,11 @@ WOTD → SOLVED (user returns)
 
 **Follow-up Context Preservation:**
 When the user asks follow-up questions after receiving a solution:
-- Original question text is captured and stored in `originalQuestionRef`
-- Original image (if any) is captured as base64 and stored alongside
-- On follow-up, both original question and image are sent to `chatWithTutor`
-- System prompt instructs AI to "Always keep the original question in mind when answering follow-ups"
+- Original question context is persisted on each history item as `originalContext`, including text and a balanced retained image when the original solve was image-based
+- The solve flow keeps two image encodings for image questions: a full-quality analysis image for the current solve and a smaller persisted image for history, reloads, transfers, and retries
+- Every follow-up turn rebuilds a deterministic context payload that includes the original question, the retained original image, and a compact base-solution summary from the earlier solve
+- Reloaded history items and imported transfer bundles restore that same follow-up context instead of falling back to `requestText` alone
+- Original solve metadata (`provider`, `model`) remains immutable in stored history even if the user changes providers before a later follow-up
 - If the tutor asks a numbered clarification question, short replies are treated as answers to that clarification instead of restarting the loop
 - `ChatPanel` also seeds purpose-built starter prompts based on the current solution shape (for example video-heavy, homework-safe, or clarification-heavy answers)
 - The follow-up UI is a guided workspace: conversation rail on the left, targeted prompt chips above the composer, and a dedicated composer card
@@ -256,7 +257,7 @@ The Daily Desk intentionally stays bounded:
 **Key Methods:**
 - `solveQuestion(base64Image, mode, subject, detailed)` - Image + text question
 - `solveTextQuestion(text, mode, subject, detailed)` - Text-only question
-- `chatWithTutor(history, message, originalQuestion?)` - Follow-up questions with optional original question/image context
+- `chatWithTutor(history, message, followUpContext?)` - Follow-up questions with persisted original-question context and compact base-solution grounding
 - `transcribeAudio(audioBlob)` - Voice to text
 
 **Model Fallback System**: If one model fails (rate limit, quota), it automatically tries the next available model.
@@ -375,7 +376,7 @@ Lightweight RSS/Atom parsing + remote fetch fallback layer for browser-safe feed
 Run these after meaningful code changes:
 
 - `bun lint`
-- `bun test src/utils/image.test.ts src/utils/input.test.ts src/utils/solution.test.ts src/utils/request.test.ts src/services/gemini.test.ts src/services/ai.test.ts src/services/providers/registry.test.ts src/services/news.test.ts src/services/wotd.test.ts`
+- `bun test src/utils/image.test.ts src/utils/input.test.ts src/utils/solution.test.ts src/utils/request.test.ts src/services/gemini.test.ts src/services/ai.test.ts src/services/openaiCompatible.test.ts src/services/providers/registry.test.ts src/services/news.test.ts src/services/wotd.test.ts src/services/workspaceTransfer.test.ts src/utils/followUpContext.test.ts`
 - `bun run build`
 
 Browser verification expectations:

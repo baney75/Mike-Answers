@@ -14,6 +14,7 @@ const BTN =
 interface ActionBarProps {
   lastMode: Exclude<SolveMode, "research">;
   canRetryEdit: boolean;
+  canRetrySolve: boolean;
   onCiteAi: () => void;
   onSolveAgain: (mode: Exclude<SolveMode, "research">, detailed?: boolean) => void;
   onRetry: () => void;
@@ -24,6 +25,7 @@ interface ActionBarProps {
 export function ActionBar({
   lastMode,
   canRetryEdit,
+  canRetrySolve,
   onCiteAi,
   onSolveAgain,
   onRetry,
@@ -52,7 +54,7 @@ export function ActionBar({
               <PencilLine className="h-4 w-4 text-(--aqs-accent)" />
               Edit Request
             </button>
-            <button type="button" onClick={onRetry} disabled={!canRetryEdit} className={`${BTN} disabled:opacity-40`}>
+            <button type="button" onClick={onRetry} disabled={!canRetrySolve} className={`${BTN} disabled:opacity-40`}>
               <RotateCcw className="h-4 w-4 text-(--aqs-accent)" />
               Restart
             </button>

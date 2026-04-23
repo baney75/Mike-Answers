@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import {
   buildRequestPlan,
+  buildGeminiTutorContents,
   extractReliableSources,
   getSourceIntent,
   isRateLimitIssue,
@@ -122,5 +123,45 @@ describe("grounded source extraction", () => {
 
     expect(sources.length).toBe(1);
     expect(sources[0]?.host).toBe("reuters.com");
+  });
+});
+
+describe("follow-up tutor context", () => {
+  test("keeps the original solution context on later follow-up turns", () => {
+    const contents = buildGeminiTutorContents(
+      [
+        { role: "user", text: "Can you re-check step 2?" },
+        { role: "tutor", text: "Step 2 subtracts 4 from each side." },
+      ],
+      "Now show me step 3.",
+      {
+        originalQuestionText: "Solve 2x + 4 = 10",
+        baseSolutionText: "Subtract 4 from both sides and divide by 2.",
+      },
+    );
+
+    expect(contents[0]?.role).toBe("user");
+    expect(JSON.stringify(contents[0]?.parts).includes("Solve 2x + 4 = 10")).toBe(true);
+    expect(JSON.stringify(contents[0]?.parts).includes("Subtract 4 from both sides and divide by 2.")).toBe(true);
+    expect(contents[1]?.role).toBe("model");
+    expect(contents.at(-1)).toEqual({
+      role: "user",
+      parts: [{ text: "Now show me step 3." }],
+    });
+  });
+
+  test("includes the original image in the synthetic Gemini context turn", () => {
+    const contents = buildGeminiTutorContents(
+      [],
+      "What mistake did I make?",
+      {
+        originalImageBase64: "abc123",
+        baseSolutionText: "Expand the brackets before combining like terms.",
+      },
+    );
+
+    expect(contents[0]?.role).toBe("user");
+    expect(contents[0]?.parts[0]?.inlineData?.data).toBe("abc123");
+    expect(JSON.stringify(contents[0]?.parts).includes("Base solution from the earlier solve:")).toBe(true);
   });
 });

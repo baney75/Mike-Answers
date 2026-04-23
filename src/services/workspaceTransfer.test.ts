@@ -62,9 +62,14 @@ describe("workspaceTransfer", () => {
             { role: "tutor", text: "Step 2 isolates x." },
           ],
           requestText: "Solve 2x + 4 = 10",
+          originalContext: {
+            text: "Solve 2x + 4 = 10",
+            imageBase64: "persisted-image-base64",
+          },
           subject: "Mathematics",
           mode: "fast",
           provider: "gemini",
+          model: "gemini-2.5-flash-lite",
         },
       ],
     );
@@ -75,6 +80,9 @@ describe("workspaceTransfer", () => {
     expect(decrypted.settings.providers.gemini.apiKey).toBe("AIza-test");
     expect(decrypted.settings.providers.openrouter.apiKey).toBe("sk-or-test");
     expect(decrypted.history[0]?.chatHistory?.[1]?.text).toBe("Step 2 isolates x.");
+    expect(decrypted.history[0]?.originalContext?.imageBase64).toBe("persisted-image-base64");
+    expect(decrypted.history[0]?.provider).toBe("gemini");
+    expect(decrypted.history[0]?.model).toBe("gemini-2.5-flash-lite");
   });
 
   test("round-trips QR chunk assembly", () => {

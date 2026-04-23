@@ -5,6 +5,7 @@ import type {
   RuntimeAISettings,
   SolveMode,
 } from "../types";
+import type { FollowUpContextPayload } from "../utils/followUpContext";
 import {
   chatWithTutor as chatWithGemini,
   resolveGeminiApiKey,
@@ -286,7 +287,7 @@ export async function solveImageQuestionWithProvider(
 export async function chatWithTutorWithProvider(
   history: { role: string; text: string }[],
   message: string,
-  originalQuestion: { text?: string; imageBase64?: string } | undefined,
+  followUpContext: FollowUpContextPayload | undefined,
   settings: RuntimeAISettings,
   subject?: string,
   promptContext?: PromptRuntimeContext,
@@ -295,7 +296,7 @@ export async function chatWithTutorWithProvider(
 
   if (providerId === "gemini") {
     const apiKey = requireProviderApiKey(settings, providerId);
-    return chatWithGemini(history, message, originalQuestion, apiKey, {
+    return chatWithGemini(history, message, followUpContext, apiKey, {
       preferredLocation: settings.preferredLocation,
       subject,
       localDateTime: promptContext?.localDateTime,
@@ -314,7 +315,7 @@ export async function chatWithTutorWithProvider(
       model,
       history,
       message,
-      originalQuestion,
+      followUpContext,
       preferredLocation: settings.preferredLocation,
       subject,
       localDateTime: promptContext?.localDateTime,
@@ -336,7 +337,7 @@ export async function chatWithTutorWithProvider(
     model,
     history,
     message,
-    originalQuestion,
+    followUpContext,
     preferredLocation: settings.preferredLocation,
     subject,
     localDateTime: promptContext?.localDateTime,

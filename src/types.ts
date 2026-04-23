@@ -69,6 +69,11 @@ export interface ChatMessage {
   text: string;
 }
 
+export interface OriginalQuestionContext {
+  text?: string;
+  imageBase64?: string;
+}
+
 /** A previously-solved question stored in localStorage history. */
 export interface HistoryItem {
   id: string;
@@ -78,6 +83,7 @@ export interface HistoryItem {
   type?: 'solve' | 'grade';
   hideAnswerByDefault?: boolean;
   requestText?: string;
+  originalContext?: OriginalQuestionContext;
   subject?: string;
   mode?: Exclude<SolveMode, 'research'>;
   provider?: ProviderId;

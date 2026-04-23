@@ -9,6 +9,7 @@ import type {
   BackgroundTask,
   SavedState,
   HistoryController,
+  OriginalQuestionContext,
   ProviderId,
 } from "./types";
 import { useDarkMode } from "./hooks/useDarkMode";
@@ -17,8 +18,12 @@ import { useFilePreview } from "./hooks/useFilePreview";
 import { useAISettings } from "./hooks/useAISettings";
 import { useProviderCatalog } from "./hooks/useProviderCatalog";
 import { resizeImage } from "./utils/image";
-import { stripSolutionClientArtifacts } from "./utils/solution";
 import { isLikelyHomeworkRequest } from "./utils/request";
+import {
+  buildFollowUpContextPayload,
+  normalizeHistoryItemOriginalContext,
+  normalizeOriginalQuestionContext,
+} from "./utils/followUpContext";
 import {
   chatWithTutorWithProvider,
   isRuntimeProviderReady,
@@ -77,6 +82,7 @@ interface SolveRequest {
   mode: Exclude<SolveMode, "research">;
   detailed?: boolean;
   nextImageFile?: File | null;
+  nextImageBase64?: string | null;
   nextTextInput?: string | null;
 }
 
@@ -260,7 +266,7 @@ export default function App({ externalHistory }: AppProps) {
   const idleDraftCaptureTimeoutRef = useRef<number | null>(null);
 
   // ── Original question context for follow-up chat ────────────────────
-  const originalQuestionRef = useRef<{ text?: string; imageBase64?: string } | null>(null);
+  const originalQuestionContextRef = useRef<OriginalQuestionContext | null>(null);
 
   // ── Feature toggle state ─────────────────────────────────────────────
   const [newsQuery, setNewsQuery] = useState("");
@@ -367,7 +373,7 @@ export default function App({ externalHistory }: AppProps) {
       window.clearTimeout(idleDraftCaptureTimeoutRef.current);
       idleDraftCaptureTimeoutRef.current = null;
     }
-    originalQuestionRef.current = null;
+    originalQuestionContextRef.current = null;
     setAppState("IDLE");
     setImageFile(null);
     setTextInput(null);
@@ -409,13 +415,15 @@ export default function App({ externalHistory }: AppProps) {
         chatHistory,
         type: "solve",
         hideAnswerByDefault: solutionHideAnswerDefault,
-        requestText: textInput ?? undefined,
+        requestText: originalQuestionContextRef.current?.text ?? textInput ?? undefined,
+        originalContext: originalQuestionContextRef.current ?? undefined,
         subject,
         mode: lastMode,
-        provider: selectedProviderId,
+        provider: lastResolvedProviderId,
+        model: lastResolvedModel,
       };
     },
-    [chatHistory, lastMode, selectedProviderId, solution, solutionHideAnswerDefault, subject, textInput],
+    [chatHistory, lastMode, lastResolvedModel, lastResolvedProviderId, solution, solutionHideAnswerDefault, subject, textInput],
   );
 
   // ── Feature handlers ────────────────────────────────────────────────
@@ -512,9 +520,11 @@ export default function App({ externalHistory }: AppProps) {
       mode,
       detailed = false,
       nextImageFile = imageFile,
+      nextImageBase64 = null,
       nextTextInput = textInput,
     }: SolveRequest) => {
       const trimmedText = nextTextInput?.trim() ?? null;
+      const persistedImageBase64 = nextImageBase64?.trim() || null;
 
       if (!runtimeProviderReady) {
         if (nextImageFile) {
@@ -557,12 +567,22 @@ export default function App({ externalHistory }: AppProps) {
         let result: string;
         let resolvedModel: string | undefined;
         let resolvedProvider = selectedProviderId;
-        let originalImageBase64: string | undefined;
+        let storedOriginalContext: OriginalQuestionContext | undefined;
 
-        if (nextImageFile) {
-          originalImageBase64 = await resizeImage(nextImageFile);
+        if (nextImageFile || persistedImageBase64) {
+          const [solveImageBase64, historyImageBase64] = nextImageFile
+            ? await Promise.all([
+                resizeImage(nextImageFile),
+                resizeImage(nextImageFile, { maxDimension: 960, quality: 0.72 }),
+              ])
+            : [persistedImageBase64, persistedImageBase64];
+
+          if (!solveImageBase64) {
+            throw new Error("No input provided.");
+          }
+
           const response = await solveImageQuestionWithProvider(
-            originalImageBase64,
+            solveImageBase64,
             mode,
             subject,
             detailed,
@@ -572,6 +592,13 @@ export default function App({ externalHistory }: AppProps) {
           result = response.text;
           resolvedModel = response.model;
           resolvedProvider = response.provider;
+          storedOriginalContext = normalizeOriginalQuestionContext(
+            {
+              text: trimmedText ?? undefined,
+              imageBase64: historyImageBase64 ?? undefined,
+            },
+            trimmedText,
+          );
         } else if (trimmedText) {
           if (isVerseOfTheDayRequest(trimmedText)) {
             setDailyDeskView("verse");
@@ -602,14 +629,17 @@ export default function App({ externalHistory }: AppProps) {
           result = response.text;
           resolvedModel = response.model;
           resolvedProvider = response.provider;
+          storedOriginalContext = normalizeOriginalQuestionContext(
+            {
+              text: trimmedText,
+            },
+            trimmedText,
+          );
         } else {
           throw new Error("No input provided.");
         }
 
-        originalQuestionRef.current = {
-          text: trimmedText ?? undefined,
-          imageBase64: originalImageBase64,
-        };
+        originalQuestionContextRef.current = storedOriginalContext ?? null;
 
         if (currentTaskIdRef.current !== taskId) {
           return;
@@ -940,7 +970,10 @@ export default function App({ externalHistory }: AppProps) {
       setIsChatLoading(true);
 
       try {
-        const cleanSolution = stripSolutionClientArtifacts(solution);
+        const followUpContext = buildFollowUpContextPayload({
+          solution,
+          originalContext: originalQuestionContextRef.current,
+        });
         const lastTutorMessage =
           [...historyBeforeCurrentTurn].reverse().find((message) => message.role === "tutor")?.text ?? null;
         const looksLikeClarifyingTurn =
@@ -950,20 +983,13 @@ export default function App({ externalHistory }: AppProps) {
           looksLikeClarifyingTurn && trimmed.length < 120
             ? `You asked a clarifying question in your previous reply. Treat the user's message below as their answer to that clarification and continue with the actual task instead of asking the same question again.\n\nPrevious tutor message:\n${lastTutorMessage}\n\nUser answer:\n${trimmed}`
             : trimmed;
-        const context: ChatMessage[] =
-          historyBeforeCurrentTurn.length === 0
-            ? [
-                { role: "user", text: "Please help me understand this problem." },
-                { role: "tutor", text: `Here is the solution I provided earlier:\n\n${cleanSolution}` },
-              ]
-            : [];
 
         let reply: string;
         try {
           reply = await chatWithTutorWithProvider(
-            [...context, ...historyBeforeCurrentTurn],
+            historyBeforeCurrentTurn,
             effectiveMessage,
-            originalQuestionRef.current ?? undefined,
+            followUpContext,
             settings,
             subject,
             buildPromptContext(),
@@ -971,9 +997,9 @@ export default function App({ externalHistory }: AppProps) {
         } catch (firstError) {
           await new Promise((resolve) => window.setTimeout(resolve, 350));
           reply = await chatWithTutorWithProvider(
-            [...context, ...historyBeforeCurrentTurn],
+            historyBeforeCurrentTurn,
             effectiveMessage,
-            originalQuestionRef.current ?? undefined,
+            followUpContext,
             settings,
             subject,
             buildPromptContext(),
@@ -1022,6 +1048,8 @@ export default function App({ externalHistory }: AppProps) {
   // ── History handler ─────────────────────────────────────────────────
 
   const loadHistoryItem = useCallback((item: HistoryItem) => {
+    const restoredOriginalContext = normalizeHistoryItemOriginalContext(item);
+
     setSolution(item.solution);
     setChatHistory(item.chatHistory ?? []);
     setSolutionHideAnswerDefault(item.hideAnswerByDefault ?? false);
@@ -1032,34 +1060,39 @@ export default function App({ externalHistory }: AppProps) {
     setAppState("SOLVED");
     setShowHistory(false);
     setImageFile(null);
-    setTextInput(item.requestText ?? null);
-    originalQuestionRef.current = {
-      text: item.requestText ?? undefined,
-    };
+    setTextInput(restoredOriginalContext?.text ?? item.requestText ?? null);
+    originalQuestionContextRef.current = restoredOriginalContext ?? null;
     currentHistoryItemIdRef.current = item.id;
   }, []);
 
-  const hasDraftInput = Boolean(imageFile || textInput?.trim());
+  const hasEditableDraftInput = Boolean(imageFile || textInput?.trim());
+  const hasRetryableInput = Boolean(
+    imageFile || textInput?.trim() || originalQuestionContextRef.current?.imageBase64,
+  );
   const updateDraftText = useCallback((value: string) => {
     setTextInput(value);
     setImageFile(null);
     setErrorMsg(null);
   }, []);
   const editCurrentRequest = useCallback(() => {
-    if (!hasDraftInput) {
+    if (!hasEditableDraftInput) {
       return;
     }
 
     setErrorMsg(null);
     setAppState("PREVIEWING");
-  }, [hasDraftInput]);
+  }, [hasEditableDraftInput]);
   const retryCurrentRequest = useCallback(() => {
-    if (!hasDraftInput) {
+    if (!hasRetryableInput) {
       return;
     }
 
-    void runSolve({ mode: lastMode });
-  }, [hasDraftInput, lastMode, runSolve]);
+    void runSolve({
+      mode: lastMode,
+      nextImageBase64: originalQuestionContextRef.current?.imageBase64 ?? null,
+      nextTextInput: textInput,
+    });
+  }, [hasRetryableInput, lastMode, runSolve, textInput]);
   const lastFollowUpQuestion =
     [...chatHistory].reverse().find((message) => message.role === "user")?.text ?? null;
   const handleRetryChat = useCallback(async () => {
@@ -1095,7 +1128,7 @@ export default function App({ externalHistory }: AppProps) {
         providerId: lastResolvedProviderId,
         providerLabel: getProviderLabel(lastResolvedProviderId),
         model: lastResolvedModel,
-        prompt: textInput ?? originalQuestionRef.current?.text,
+        prompt: textInput ?? originalQuestionContextRef.current?.text,
         generatedAt: lastGeneratedAt ?? new Date().toISOString(),
         appName: "Mike Answers",
         appUrl: typeof window !== "undefined" ? window.location.origin : "https://mike-net.top",
@@ -1348,12 +1381,12 @@ export default function App({ externalHistory }: AppProps) {
                 <ErrorState
                   message={errorMsg}
                   onRetry={() => {
-                    if (!hasDraftInput) {
+                    if (!hasRetryableInput) {
                       resetAll();
                       return;
                     }
 
-                    handleSolve(lastMode);
+                    retryCurrentRequest();
                   }}
                   onClear={resetAll}
                 />
@@ -1372,7 +1405,8 @@ export default function App({ externalHistory }: AppProps) {
                   onRetryChat={handleRetryChat}
                   lastFollowUpQuestion={lastFollowUpQuestion}
                   lastMode={lastMode}
-                  canRetryEdit={hasDraftInput}
+                  canRetryEdit={hasEditableDraftInput}
+                  canRetrySolve={hasRetryableInput}
                   onCiteAi={() => setShowCitationModal(true)}
                   onSolveAgain={handleSolve}
                   onRetry={retryCurrentRequest}

@@ -117,6 +117,19 @@ describe('resizeImage', () => {
     expect(drawImageMock).toHaveBeenCalled();
   });
 
+  test('should respect custom resize options for persisted follow-up images', async () => {
+    const { canvasMock, toDataURLMock } = setupMocks({ imgWidth: 2400, imgHeight: 1200 });
+    const file = new File([''], 'test.jpg', { type: 'image/jpeg' });
+
+    const result = await resizeImage(file, { maxDimension: 960, quality: 0.72 });
+
+    expect(result).toBe('mockBase64DataUrl');
+    expect(canvasMock.width).toBe(960);
+    expect(canvasMock.height).toBe(480);
+    expect(toDataURLMock).toHaveBeenCalledWith('image/jpeg', 0.72);
+    expect(global.URL.revokeObjectURL).toHaveBeenCalledWith('blob:http://localhost/mock-blob');
+  });
+
   test('should reject if canvas context is unavailable', async () => {
     setupMocks({ imgWidth: 800, imgHeight: 600, hasContext: false });
     const file = new File([''], 'test.jpg', { type: 'image/jpeg' });

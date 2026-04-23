@@ -11,7 +11,7 @@
     "clean": "rm -rf dist",
     "preflight:prod": "node scripts/production-preflight.mjs",
     "lint": "tsc --noEmit",
-    "test": "bun test src/utils/image.test.ts src/utils/input.test.ts src/utils/solution.test.ts src/utils/request.test.ts src/services/gemini.test.ts src/services/ai.test.ts src/services/providers/registry.test.ts src/services/news.test.ts src/services/wotd.test.ts src/services/workspaceTransfer.test.ts",
+    "test": "bun test src/utils/image.test.ts src/utils/input.test.ts src/utils/solution.test.ts src/utils/request.test.ts src/services/gemini.test.ts src/services/ai.test.ts src/services/openaiCompatible.test.ts src/services/providers/registry.test.ts src/services/news.test.ts src/services/wotd.test.ts src/services/workspaceTransfer.test.ts src/utils/followUpContext.test.ts",
     "deploy": "bun run preflight:prod && bun run build && wrangler deploy",
     "cf:whoami": "wrangler whoami"
   },

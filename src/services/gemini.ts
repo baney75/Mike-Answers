@@ -9,6 +9,10 @@ import {
 import type { SolutionSource, SolveMode } from "../types";
 import { embedSourcesInSolution } from "../utils/solution";
 import { isLikelyHomeworkRequest, shouldAskClarifyingQuestions } from "../utils/request";
+import {
+  buildFollowUpContextText,
+  type FollowUpContextPayload,
+} from "../utils/followUpContext";
 
 export function resolveGeminiApiKey(apiKeyOverride?: string) {
   return apiKeyOverride?.trim() || import.meta.env.GEMINI_API_KEY?.trim() || "";
@@ -794,6 +798,53 @@ ${providerSupportsGrounding ? "" : "You do not have live browsing in this mode. 
 If the user asks for a picture, diagram, video, YouTube result, or a set of links, emit the appropriate marker so the client can render it directly.`;
 }
 
+export function buildGeminiTutorContents(
+  history: { role: string; text: string }[],
+  message: string,
+  followUpContext?: FollowUpContextPayload,
+) {
+  const contents: Array<{
+    role: "user" | "model";
+    parts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }>;
+  }> = [];
+
+  if (followUpContext) {
+    const contextParts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }> = [];
+
+    if (followUpContext.originalImageBase64) {
+      contextParts.push({
+        inlineData: { mimeType: "image/jpeg", data: followUpContext.originalImageBase64 },
+      });
+    }
+
+    const contextText = buildFollowUpContextText(followUpContext);
+    if (contextText) {
+      contextParts.push({ text: contextText });
+    }
+
+    if (contextParts.length > 0) {
+      contents.push({
+        role: "user",
+        parts: contextParts,
+      });
+      contents.push({
+        role: "model",
+        parts: [{ text: "Understood. I will use the original question, image, and earlier solution in this follow-up reply." }],
+      });
+    }
+  }
+
+  for (const item of history) {
+    contents.push({
+      role: item.role === "user" ? "user" : "model",
+      parts: [{ text: item.text }],
+    });
+  }
+
+  contents.push({ role: "user", parts: [{ text: message }] });
+  return contents;
+}
+
 export async function solveQuestion(
   base64Image: string,
   mode: SolveMode,
@@ -914,65 +965,13 @@ ${shouldClarify ? "This may be too vague for a correct answer. If key details ar
 export async function chatWithTutor(
   history: { role: string; text: string }[],
   message: string,
-  originalQuestion?: { text?: string; imageBase64?: string },
+  followUpContext?: FollowUpContextPayload,
   apiKeyOverride?: string,
   options: Partial<BuildSystemInstructionOptions> = {},
 ): Promise<string> {
   if (!message.trim()) throw new Error("Message must not be empty.");
 
-  const contents: Array<{ role: "user" | "model"; parts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }> }> = [];
-  const originalParts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }> = [];
-
-  if (originalQuestion) {
-    if (originalQuestion.imageBase64) {
-      originalParts.push({
-        inlineData: { mimeType: "image/jpeg", data: originalQuestion.imageBase64 },
-      });
-    }
-    if (originalQuestion.text) {
-      originalParts.push({ text: `The user originally asked: ${originalQuestion.text}` });
-    } else if (originalParts.length > 0) {
-      originalParts.push({ text: "The image above shows the user's original question." });
-    }
-  }
-
-  let prefixedHistory = history;
-  if (originalParts.length > 0) {
-    if (history[0]?.role === "user") {
-      const [firstTurn, ...rest] = history;
-
-      contents.push({
-        role: "user",
-        parts: [
-          ...originalParts,
-          { text: firstTurn.text },
-        ],
-      });
-      prefixedHistory = rest;
-    } else {
-      contents.push({
-        role: "user",
-        parts: [
-          ...originalParts,
-          { text: originalQuestion?.text ? `Original question: ${originalQuestion.text}` : "Use the original question context above in your answer." },
-        ],
-      });
-      contents.push({
-        role: "model",
-        parts: [{ text: "Understood. I will use the original question context in the follow-up reply." }],
-      });
-    }
-  }
-
-  for (const h of prefixedHistory) {
-    contents.push({
-      role: h.role === "user" ? "user" : "model",
-      parts: [{ text: h.text }],
-    });
-  }
-
-  // Add current message
-  contents.push({ role: "user", parts: [{ text: message }] });
+  const contents = buildGeminiTutorContents(history, message, followUpContext);
 
   for (let i = 0; i < contents.length; i++) {
     const expected = i % 2 === 0 ? "user" : "model";
@@ -994,7 +993,7 @@ export async function chatWithTutor(
         localDateTime: options.localDateTime,
         timeZone: options.timeZone,
         routeLabel: options.routeLabel ?? "browser-local",
-        hasImageInput: Boolean(originalQuestion?.imageBase64),
+        hasImageInput: Boolean(followUpContext?.originalImageBase64),
         subject: options.subject,
       }),
       ...(plan.useGrounding ? { tools: [{ googleSearch: {} }] } : {}),

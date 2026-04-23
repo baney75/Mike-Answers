@@ -6,6 +6,10 @@ import {
 } from "./gemini";
 import { isLikelyHomeworkRequest, shouldAskClarifyingQuestions } from "../utils/request";
 import { normalizeProviderBaseUrl } from "../utils/urlSafety";
+import {
+  buildFollowUpContextText,
+  type FollowUpContextPayload,
+} from "../utils/followUpContext";
 
 type OpenAICompatibleMessage =
   | {
@@ -96,6 +100,54 @@ async function postChatCompletion(
   }
 
   return text;
+}
+
+export function buildOpenAICompatibleTutorConversation(
+  history: { role: string; text: string }[],
+  message: string,
+  followUpContext?: FollowUpContextPayload,
+) {
+  const messages: OpenAICompatibleMessage[] = [];
+
+  if (followUpContext) {
+    const content: OpenAICompatibleMessage["content"] = [];
+    if (followUpContext.originalImageBase64) {
+      content.push({
+        type: "image_url",
+        image_url: {
+          url: `data:image/jpeg;base64,${followUpContext.originalImageBase64}`,
+        },
+      });
+    }
+    const contextText = buildFollowUpContextText(followUpContext);
+    if (contextText) {
+      content.push({
+        type: "text",
+        text: contextText,
+      });
+    }
+    if (content.length > 0) {
+      messages.push({ role: "user", content });
+      messages.push({
+        role: "assistant",
+        content: "Understood. I will use the original question, image, and earlier solution in this follow-up reply.",
+      });
+    }
+  }
+
+  for (const item of history) {
+    messages.push({
+      role: item.role === "user" ? "user" : "assistant",
+      content: item.text,
+    });
+  }
+
+  messages.push({
+    role: "user",
+    content: message,
+  });
+
+  return messages;
 }
 
 export async function solveTextQuestionWithOpenAICompatible(options: {
@@ -235,7 +287,7 @@ export async function chatWithOpenAICompatible(options: {
   model: string;
   history: { role: string; text: string }[];
   message: string;
-  originalQuestion?: { text?: string; imageBase64?: string };
+  followUpContext?: FollowUpContextPayload;
   preferredLocation?: string;
   subject?: string;
   localDateTime?: string;
@@ -248,7 +300,7 @@ export async function chatWithOpenAICompatible(options: {
     model,
     history,
     message,
-    originalQuestion,
+    followUpContext,
     preferredLocation,
     subject,
     localDateTime,
@@ -269,46 +321,13 @@ export async function chatWithOpenAICompatible(options: {
         localDateTime,
         timeZone,
         routeLabel: "browser-local",
-        hasImageInput: Boolean(originalQuestion?.imageBase64),
+        hasImageInput: Boolean(followUpContext?.originalImageBase64),
         subject,
       }),
     },
   ];
 
-  if (originalQuestion?.text || originalQuestion?.imageBase64) {
-    const content: OpenAICompatibleMessage["content"] = [];
-    if (originalQuestion.imageBase64) {
-      content.push({
-        type: "image_url",
-        image_url: {
-          url: `data:image/jpeg;base64,${originalQuestion.imageBase64}`,
-        },
-      });
-    }
-    if (originalQuestion.text) {
-      content.push({
-        type: "text",
-        text: `The user originally asked: ${originalQuestion.text}`,
-      });
-    }
-    messages.push({ role: "user", content });
-    messages.push({
-      role: "assistant",
-      content: "Understood. I will keep the original question context in mind.",
-    });
-  }
-
-  for (const item of history) {
-    messages.push({
-      role: item.role === "user" ? "user" : "assistant",
-      content: item.text,
-    });
-  }
-
-  messages.push({
-    role: "user",
-    content: message,
-  });
+  messages.push(...buildOpenAICompatibleTutorConversation(history, message, followUpContext));
 
   return postChatCompletion(
     { providerId, apiKey, baseUrl, model },

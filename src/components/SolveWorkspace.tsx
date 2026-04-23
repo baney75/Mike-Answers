@@ -17,6 +17,7 @@ interface SolveWorkspaceProps {
   lastFollowUpQuestion: string | null;
   lastMode: Exclude<SolveMode, "research">;
   canRetryEdit: boolean;
+  canRetrySolve: boolean;
   onCiteAi: () => void;
   onSolveAgain: (mode: Exclude<SolveMode, "research">, detailed?: boolean) => void;
   onRetry: () => void;
@@ -38,6 +39,7 @@ export function SolveWorkspace({
   lastFollowUpQuestion,
   lastMode,
   canRetryEdit,
+  canRetrySolve,
   onCiteAi,
   onSolveAgain,
   onRetry,
@@ -127,6 +129,7 @@ export function SolveWorkspace({
         <ActionBar
           lastMode={lastMode}
           canRetryEdit={canRetryEdit}
+          canRetrySolve={canRetrySolve}
           onCiteAi={onCiteAi}
           onSolveAgain={onSolveAgain}
           onRetry={onRetry}
