@@ -4,7 +4,7 @@ import { PencilLine, RefreshCw, Send } from "lucide-react";
 import type { ChatMessage } from "../types";
 import { RichResponse } from "./RichResponse";
 
-interface ChatPanelProps {
+interface FollowUpPanelProps {
   messages: ChatMessage[];
   isLoading: boolean;
   onSend: (text: string) => Promise<boolean>;
@@ -18,6 +18,15 @@ interface ChatPanelProps {
   onEscape?: () => void;
 }
 
+interface FollowUpTranscriptProps {
+  messages: ChatMessage[];
+  isLoading: boolean;
+}
+
+interface FollowUpDockProps extends Omit<FollowUpPanelProps, "messages"> {
+  messages: ChatMessage[];
+}
+
 function cleanSuggestionLabel(suggestion: string) {
   return suggestion
     .replace(/\s+/g, " ")
@@ -25,29 +34,16 @@ function cleanSuggestionLabel(suggestion: string) {
     .trim();
 }
 
+function isTutorFailureMessage(text: string) {
+  return /^Sorry, I couldn't process that right now\./i.test(text.trim()) ||
+    /Mike needs a configured provider before .* chat can run\./i.test(text.trim());
+}
+
 function TutorMessage({ text }: { text: string }) {
   return <RichResponse text={text} compact />;
 }
 
-export function ChatPanel({
-  messages,
-  isLoading,
-  onSend,
-  onRetryLast,
-  lastUserMessage,
-  contextText,
-  inputRef,
-  prefillText,
-  onConsumePrefill,
-  starterPrompts = [],
-  onEscape,
-}: ChatPanelProps) {
-  const [input, setInput] = useState("");
-  const panelRef = useRef<HTMLDivElement>(null);
-  const internalInputRef = useRef<HTMLTextAreaElement>(null);
-  const effectiveInputRef = inputRef ?? internalInputRef;
-  const endRef = useRef<HTMLDivElement>(null);
-
+function useFollowUpGuidance(messages: ChatMessage[], contextText: string | undefined, starterPrompts: string[]) {
   const latestTutorMessage = useMemo(
     () => [...messages].reverse().find((message) => message.role === "tutor")?.text ?? "",
     [messages],
@@ -70,18 +66,121 @@ export function ChatPanel({
     [guidanceText],
   );
 
-  const visibleSuggestions = (
-    followUpSuggestions.length > 0 ? followUpSuggestions : starterPrompts
-  ).slice(0, 3);
+  const visibleSuggestions = useMemo(
+    () => (followUpSuggestions.length > 0 ? followUpSuggestions : starterPrompts).slice(0, 3),
+    [followUpSuggestions, starterPrompts],
+  );
 
+  return {
+    isClarificationMode,
+    visibleSuggestions,
+  };
+}
+
+export function FollowUpTranscript({ messages, isLoading }: FollowUpTranscriptProps) {
   const turnCount = useMemo(
     () => messages.filter((message) => message.role === "user").length,
     [messages],
   );
 
-  useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: messages.length > 0 ? "smooth" : "auto", block: "end" });
-  }, [messages]);
+  return (
+    <section className="print-follow-up-transcript flex min-h-[16rem] max-h-[min(38vh,26rem)] flex-col overflow-hidden rounded-[1.9rem] border border-(--aqs-ink)/10 bg-white/90 shadow-[0_18px_38px_rgba(34,24,29,0.08)] dark:border-white/10 dark:bg-slate-950/74 print:max-h-none">
+      <div className="flex flex-col gap-3 border-b border-(--aqs-ink)/10 bg-[linear-gradient(180deg,rgba(255,241,244,0.96),rgba(255,252,251,0.94))] px-5 py-4 dark:border-white/10 dark:bg-[linear-gradient(180deg,rgba(100,17,42,0.36),rgba(12,11,13,0.82))] md:px-6">
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-1.5">
+            <p className="text-[11px] font-black uppercase tracking-[0.32em] text-(--aqs-accent-strong) dark:text-(--aqs-accent-dark)">
+              Continue With Mike
+            </p>
+            <h3 className="text-xl font-black tracking-tight text-(--aqs-ink) dark:text-white">
+              Keep learning from the same answer.
+            </h3>
+            <p className="max-w-2xl text-sm font-medium leading-relaxed text-slate-600 dark:text-slate-300">
+              Ask for the next step, check your work, or test the idea against Scripture, sources, and reason.
+            </p>
+          </div>
+
+          {turnCount > 0 ? (
+            <span className="rounded-full border border-(--aqs-ink)/10 bg-white/92 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-slate-500 dark:border-white/10 dark:bg-slate-950 dark:text-slate-400">
+              {turnCount} turn{turnCount === 1 ? "" : "s"}
+            </span>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="scroll-panel min-h-0 flex-1 overflow-y-auto px-4 py-4 md:px-5 md:py-5">
+        {messages.length === 0 ? (
+          <div className="rounded-[1.25rem] border border-dashed border-(--aqs-accent)/20 bg-(--aqs-paper-strong) px-6 py-10 text-center dark:bg-slate-950/28">
+            <p className="text-sm font-black uppercase tracking-[0.24em] text-(--aqs-accent-strong) dark:text-(--aqs-accent-dark)">
+              Ask for the next move
+            </p>
+            <p className="mx-auto mt-2 max-w-xl text-sm font-medium leading-relaxed text-slate-600 dark:text-slate-300">
+              Mike can check the weak step, explain the concept again, or help you apply the answer without losing the thread.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {messages.map((message, index) => (
+              <div key={`${message.role}-${index}`} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
+                <div
+                  className={`max-w-[96%] rounded-[1.25rem] border px-4 py-3.5 md:max-w-[86%] ${
+                    message.role === "user"
+                      ? "border-(--aqs-accent)/16 bg-(--aqs-accent-soft) text-(--aqs-ink) dark:border-(--aqs-accent-dark)/16 dark:bg-[rgba(139,30,63,0.22)] dark:text-white"
+                      : isTutorFailureMessage(message.text)
+                        ? "border-(--aqs-accent)/20 bg-(--aqs-accent-soft) text-(--aqs-ink)"
+                        : "border-(--aqs-ink)/8 bg-(--aqs-paper-strong) text-(--aqs-ink) dark:border-white/8 dark:bg-slate-900 dark:text-white"
+                  }`}
+                >
+                  <p className="mb-2 text-[9px] font-black uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
+                    {message.role === "user" ? "You" : isTutorFailureMessage(message.text) ? "System" : "Mike"}
+                  </p>
+                  {message.role === "user" ? (
+                    <p className="break-words whitespace-pre-wrap text-[14px] font-medium leading-relaxed md:text-[15px]">
+                      {message.text}
+                    </p>
+                  ) : isTutorFailureMessage(message.text) ? (
+                    <p className="text-[14px] font-medium leading-relaxed md:text-[15px]">{message.text}</p>
+                  ) : (
+                    <TutorMessage text={message.text} />
+                  )}
+                </div>
+              </div>
+            ))}
+
+            {isLoading ? (
+              <div className="print:hidden">
+                <div className="flex items-center gap-1.5 rounded-full border border-(--aqs-ink)/8 bg-white px-4 py-2.5 dark:border-white/8 dark:bg-slate-900">
+                  <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-(--aqs-accent)" style={{ animationDelay: "0ms" }} />
+                  <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-(--aqs-accent)" style={{ animationDelay: "150ms" }} />
+                  <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-(--aqs-accent)" style={{ animationDelay: "300ms" }} />
+                </div>
+              </div>
+            ) : null}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+export function FollowUpDock({
+  messages,
+  isLoading,
+  onSend,
+  onRetryLast,
+  lastUserMessage,
+  contextText,
+  inputRef,
+  prefillText,
+  onConsumePrefill,
+  starterPrompts = [],
+  onEscape,
+}: FollowUpDockProps) {
+  const [input, setInput] = useState("");
+  const panelRef = useRef<HTMLDivElement>(null);
+  const internalInputRef = useRef<HTMLTextAreaElement>(null);
+  const effectiveInputRef = inputRef ?? internalInputRef;
+
+  const { isClarificationMode, visibleSuggestions } = useFollowUpGuidance(messages, contextText, starterPrompts);
 
   useEffect(() => {
     if (!prefillText?.text) {
@@ -131,103 +230,43 @@ export function ChatPanel({
     onEscape?.();
   };
 
-  const isTutorFailureMessage = (text: string) =>
-    /^Sorry, I couldn't process that right now\./i.test(text.trim()) ||
-    /Mike needs a configured provider before .* chat can run\./i.test(text.trim());
-
   return (
     <div
       ref={panelRef}
       data-chat-panel="true"
       onKeyDownCapture={handlePanelEscape}
-      className="no-print paper-panel flex h-full min-h-0 flex-col overflow-hidden p-0"
+      className="no-print paper-panel flex shrink-0 flex-col gap-3 p-4 md:p-5"
     >
-      {/* Header: compact, just the title and turn count */}
-      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-(--aqs-ink)/10 bg-(--aqs-paper-strong) px-4 py-2.5 dark:border-white/10 dark:bg-slate-900/40 md:px-5 md:py-3">
-        <h3 className="text-sm font-black text-(--aqs-ink) dark:text-white">
-          Follow-Up
-        </h3>
-        {turnCount > 0 ? (
-          <span className="rounded-full border border-(--aqs-ink)/10 bg-white/90 px-2.5 py-1 text-[10px] font-black text-slate-500 dark:border-white/10 dark:bg-slate-950 dark:text-slate-400">
-            {turnCount} turn{turnCount === 1 ? "" : "s"}
-          </span>
-        ) : null}
+      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.28em] text-(--aqs-accent-strong)">
+            Ask Mike Next
+          </p>
+          <p className="mt-1 hidden text-sm font-medium leading-relaxed text-slate-600 dark:text-slate-300 sm:block">
+            Ask for the next step, a work check, or a clearer explanation.
+          </p>
+        </div>
       </div>
 
-      {/* Messages */}
-      <div className="flex min-h-0 flex-1 flex-col gap-2 p-2.5 md:gap-2.5 md:p-3">
-        <div className="scroll-panel flex-1 min-h-0 overflow-y-auto rounded-[1.3rem] border border-(--aqs-ink)/8 bg-(--aqs-paper-strong) p-2.5 dark:border-white/8 dark:bg-slate-950/20 md:p-3">
-          {messages.length === 0 ? (
-            <div className="flex h-full items-center justify-center p-4">
-              <p className="text-center text-sm font-medium text-slate-400 dark:text-slate-500">
-                {isClarificationMode
-                  ? "State the exact problem or task."
-                  : "Ask a follow-up question to dig deeper."}
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {messages.map((message, index) => (
-                <div key={`${message.role}-${index}`} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
-                  <div
-                    className={`max-w-[94%] rounded-[1.2rem] border p-3 md:max-w-[88%] md:p-3.5 ${
-                      message.role === "user"
-                        ? "border-(--aqs-ink)/10 bg-(--aqs-accent-soft) text-(--aqs-ink) dark:border-white/10 dark:bg-[rgba(139,30,63,0.25)] dark:text-white"
-                        : isTutorFailureMessage(message.text)
-                          ? "border-(--aqs-accent)/20 bg-(--aqs-accent-soft) text-(--aqs-ink)"
-                          : "border-(--aqs-ink)/8 bg-white text-(--aqs-ink) dark:border-white/8 dark:bg-slate-900 dark:text-white"
-                    }`}
-                  >
-                    <p className="mb-2 text-[9px] font-black uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
-                      {message.role === "user" ? "You" : isTutorFailureMessage(message.text) ? "System" : "Mike"}
-                    </p>
-                    {message.role === "user" ? (
-                      <p className="break-words whitespace-pre-wrap text-[14px] font-medium leading-relaxed md:text-[15px]">
-                        {message.text}
-                      </p>
-                    ) : isTutorFailureMessage(message.text) ? (
-                      <p className="text-[14px] font-medium leading-relaxed md:text-[15px]">{message.text}</p>
-                    ) : (
-                      <TutorMessage text={message.text} />
-                    )}
-                  </div>
-                </div>
-              ))}
-
-              {isLoading ? (
-                <div className="flex justify-start">
-                  <div className="flex items-center gap-1.5 rounded-full border border-(--aqs-ink)/8 bg-white px-4 py-2.5 dark:border-white/8 dark:bg-slate-900">
-                    <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-(--aqs-accent)" style={{ animationDelay: "0ms" }} />
-                    <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-(--aqs-accent)" style={{ animationDelay: "150ms" }} />
-                    <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-(--aqs-accent)" style={{ animationDelay: "300ms" }} />
-                  </div>
-                </div>
-              ) : null}
-              <div ref={endRef} />
-            </div>
-          )}
+      {visibleSuggestions.length > 0 ? (
+        <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0">
+          {visibleSuggestions.map((suggestion) => (
+            <button
+              key={suggestion}
+              type="button"
+              onClick={() => {
+                void handleSuggestion(suggestion);
+              }}
+              className="shrink-0 rounded-full border border-(--aqs-ink)/8 bg-white px-3.5 py-2 text-xs font-black text-(--aqs-ink) transition hover:border-(--aqs-accent)/20 hover:bg-slate-50 dark:border-white/8 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800"
+            >
+              {suggestion}
+            </button>
+          ))}
         </div>
+      ) : null}
 
-        {/* Suggestions */}
-        {visibleSuggestions.length > 0 ? (
-          <div className="flex shrink-0 flex-wrap gap-1.5">
-            {visibleSuggestions.map((suggestion) => (
-              <button
-                key={suggestion}
-                type="button"
-                onClick={() => {
-                  void handleSuggestion(suggestion);
-                }}
-                className="rounded-full border border-(--aqs-ink)/8 bg-white px-2.5 py-1.5 text-[11px] font-bold text-(--aqs-ink) transition hover:border-(--aqs-accent)/20 hover:bg-slate-50 dark:border-white/8 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800"
-              >
-                {suggestion}
-              </button>
-            ))}
-          </div>
-        ) : null}
-
-        {/* Composer: textarea + send inline */}
-        <div className="shrink-0 flex items-end gap-2 rounded-[1.2rem] border border-(--aqs-ink)/10 bg-white p-2 dark:border-white/10 dark:bg-slate-900 md:rounded-[1.3rem] md:p-2.5">
+      <div className="rounded-[1.35rem] border border-(--aqs-ink)/10 bg-white p-2.5 dark:border-white/10 dark:bg-slate-900">
+        <div className="flex items-end gap-2">
           <textarea
             id="follow-up-input"
             ref={effectiveInputRef}
@@ -240,12 +279,12 @@ export function ChatPanel({
               }
             }}
             rows={1}
-            className="min-h-[2.5rem] max-h-[6rem] flex-1 resize-none bg-transparent px-2 py-1.5 text-[14px] font-medium leading-snug text-(--aqs-ink) outline-none placeholder:text-slate-400 dark:text-white md:min-h-[2.8rem] md:text-[15px]"
+            className="min-h-[2.9rem] max-h-[7rem] flex-1 resize-none bg-transparent px-2.5 py-2 text-[15px] font-medium leading-snug text-(--aqs-ink) outline-none placeholder:text-slate-400 dark:text-white"
             disabled={isLoading}
             placeholder={
               isClarificationMode
                 ? "Paste the exact problem..."
-                : "Ask a follow-up..."
+                : "Ask Mike for the next step, a work check, or a clearer explanation..."
             }
           />
           <button
@@ -254,38 +293,46 @@ export function ChatPanel({
               void handleSubmit();
             }}
             disabled={!input.trim() || isLoading}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-(--aqs-accent) text-white transition-all hover:bg-(--aqs-accent-strong) disabled:opacity-40 md:h-10 md:w-10"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-(--aqs-accent) text-white transition-all hover:bg-(--aqs-accent-strong) disabled:opacity-40"
           >
-            <Send className="h-4 w-4" />
+            <Send className="h-4.5 w-4.5" />
           </button>
         </div>
-
-        {/* Retry/edit row */}
-        {lastUserMessage ? (
-          <div className="flex shrink-0 gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                void onRetryLast();
-              }}
-              disabled={isLoading}
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-[0.9rem] border border-(--aqs-ink)/8 bg-white py-2 text-xs font-bold text-(--aqs-ink) transition disabled:opacity-40 dark:border-white/8 dark:bg-slate-900 dark:text-white"
-            >
-              <RefreshCw className="h-3.5 w-3.5 text-(--aqs-accent)" />
-              Retry
-            </button>
-            <button
-              type="button"
-              onClick={() => setInput(lastUserMessage)}
-              disabled={isLoading}
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-[0.9rem] border border-(--aqs-ink)/8 bg-white py-2 text-xs font-bold text-(--aqs-ink) transition disabled:opacity-40 dark:border-white/8 dark:bg-slate-900 dark:text-white"
-            >
-              <PencilLine className="h-3.5 w-3.5 text-(--aqs-gold)" />
-              Edit
-            </button>
-          </div>
-        ) : null}
       </div>
+
+      {lastUserMessage ? (
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              void onRetryLast();
+            }}
+            disabled={isLoading}
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-[0.95rem] border border-(--aqs-ink)/8 bg-white py-2.5 text-xs font-black text-(--aqs-ink) transition disabled:opacity-40 dark:border-white/8 dark:bg-slate-900 dark:text-white"
+          >
+            <RefreshCw className="h-3.5 w-3.5 text-(--aqs-accent)" />
+            Retry last turn
+          </button>
+          <button
+            type="button"
+            onClick={() => setInput(lastUserMessage)}
+            disabled={isLoading}
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-[0.95rem] border border-(--aqs-ink)/8 bg-white py-2.5 text-xs font-black text-(--aqs-ink) transition disabled:opacity-40 dark:border-white/8 dark:bg-slate-900 dark:text-white"
+          >
+            <PencilLine className="h-3.5 w-3.5 text-(--aqs-gold)" />
+            Edit the question
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+export function ChatPanel(props: FollowUpPanelProps) {
+  return (
+    <div className="flex min-h-0 flex-col gap-4">
+      <FollowUpTranscript messages={props.messages} isLoading={props.isLoading} />
+      <FollowUpDock {...props} />
     </div>
   );
 }

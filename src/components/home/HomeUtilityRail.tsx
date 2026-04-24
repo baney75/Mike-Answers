@@ -13,7 +13,30 @@ export function HomeUtilityRail({
 }: HomeUtilityRailProps) {
   return (
     <div className="flex min-h-0 flex-col gap-2.5 md:gap-3">
-      <section className="studio-card bg-white/92 p-4 dark:bg-slate-950/82">
+      {/* Mobile: compact horizontal strip */}
+      <div className="flex items-center gap-2 xl:hidden">
+        <button
+          type="button"
+          onClick={onOpenDailyDesk}
+          className="studio-card flex items-center gap-2 bg-white/92 px-3 py-2.5 text-xs font-black text-(--aqs-ink) dark:bg-slate-950/82 dark:text-white"
+        >
+          <BookOpen className="h-3.5 w-3.5 text-(--aqs-accent)" />
+          Daily Desk
+        </button>
+        {starterPrompts.slice(0, 2).map((prompt) => (
+          <button
+            key={prompt}
+            type="button"
+            onClick={() => onPrefillPrompt(prompt)}
+            className="studio-card min-w-0 flex-1 truncate bg-white/92 px-3 py-2.5 text-left text-xs font-semibold text-(--aqs-ink) dark:bg-slate-950/82 dark:text-white"
+          >
+            {prompt}
+          </button>
+        ))}
+      </div>
+
+      {/* Desktop: full card layout in sidebar */}
+      <section className="studio-card hidden bg-white/92 p-4 xl:block dark:bg-slate-950/82">
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="text-[10px] font-black uppercase tracking-[0.3em] text-(--aqs-accent-strong) dark:text-(--aqs-accent-dark)">
@@ -33,7 +56,7 @@ export function HomeUtilityRail({
         </div>
       </section>
 
-      <section className="studio-card bg-white/92 p-4 dark:bg-slate-950/82">
+      <section className="studio-card hidden bg-white/92 p-4 xl:block dark:bg-slate-950/82">
         <div className="flex items-center gap-2">
           <Sparkles className="h-3.5 w-3.5 text-(--aqs-gold)" />
           <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">

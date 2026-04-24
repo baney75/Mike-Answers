@@ -42,6 +42,7 @@ import {
   type InstallPromptEvent,
 } from "./services/pwa";
 import { getProviderDescriptor, getProviderLabel } from "./services/providers/registry";
+import { SUBJECT_OPTIONS } from "./constants/subjects";
 
 
 import { Header } from "./components/Header";
@@ -195,6 +196,13 @@ function buildIdlePrompts(subject: string) {
         "Turn this into a quick review sheet with the big ideas first.",
         "Check my reasoning and tell me where it first goes wrong.",
       ];
+    case "Bible & Theology":
+      return [
+        "Explain this passage with context, doctrine, and a careful application.",
+        "Compare the strongest biblical and secular arguments on this question.",
+        "Turn this doctrine into a study guide with key verses and terms.",
+        "Check whether this interpretation is faithful to the text.",
+      ];
     case "History":
     case "Literature":
     case "Philosophy":
@@ -219,7 +227,7 @@ function buildIdlePrompts(subject: string) {
         "Explain this screenshot step by step.",
         "Summarize this article in plain language.",
         "Check my work and find the first mistake.",
-        "Turn this into a study guide I can review fast.",
+        "Explain the worldview assumptions and what is actually true.",
       ];
   }
 }
@@ -1333,21 +1341,9 @@ export default function App({ externalHistory }: AppProps) {
                               onChange={(event) => setSubject(event.target.value)}
                               className="select-themed appearance-none rounded-full border border-(--aqs-ink)/10 bg-white/92 px-4 py-3 pr-12 text-sm font-semibold text-(--aqs-ink) outline-none transition focus-visible:border-(--aqs-accent) focus-visible:ring-4 focus-visible:ring-[rgba(122,31,52,0.14)] dark:border-white/10 dark:bg-slate-950 dark:text-white"
                             >
-                              <option>Auto-detect</option>
-                              <option>Mathematics</option>
-                              <option>Physics</option>
-                              <option>Chemistry</option>
-                              <option>Biology</option>
-                              <option>Computer Science</option>
-                              <option>Engineering</option>
-                              <option>Statistics</option>
-                              <option>Economics</option>
-                              <option>History</option>
-                              <option>Literature</option>
-                              <option>Philosophy</option>
-                              <option>Psychology</option>
-                              <option>Medicine</option>
-                              <option>Law</option>
+                              {SUBJECT_OPTIONS.map((option) => (
+                                <option key={option}>{option}</option>
+                              ))}
                             </select>
                             <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-(--aqs-accent-strong) dark:text-(--aqs-accent-dark)" />
                           </div>

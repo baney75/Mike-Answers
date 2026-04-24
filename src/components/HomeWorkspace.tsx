@@ -40,9 +40,9 @@ export function HomeWorkspace({
   onAudioTranscribe,
 }: HomeWorkspaceProps) {
   return (
-    <div className="scroll-studio flex h-full min-h-0 flex-1 flex-col overflow-y-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex min-h-full flex-col gap-2.5 xl:grid xl:grid-cols-12 xl:gap-3">
-        <section className="flex flex-col gap-2.5 xl:col-span-8 xl:gap-3">
+    <div className="flex h-full min-h-0 flex-1 flex-col animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="flex min-h-0 flex-1 flex-col gap-2.5 xl:grid xl:grid-cols-12 xl:gap-3">
+        <section className="flex min-h-0 flex-col gap-2.5 xl:col-span-8 xl:flex-1 xl:gap-3">
           <HomeIdentityBlock heroSrc={heroSrc} />
           <HomeComposerCard
             subject={subject}
@@ -60,7 +60,7 @@ export function HomeWorkspace({
           />
         </section>
 
-        <aside className="xl:col-span-4">
+        <aside className="shrink-0 xl:col-span-4">
           <HomeUtilityRail
             starterPrompts={starterPrompts}
             onPrefillPrompt={onPrefillPrompt}

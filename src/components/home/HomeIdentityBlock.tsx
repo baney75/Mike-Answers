@@ -16,10 +16,10 @@ export function HomeIdentityBlock({ heroSrc }: HomeIdentityBlockProps) {
       </div>
       <div className="min-w-0 flex-1">
         <h1 className="text-[0.95rem] font-black leading-tight tracking-tight text-(--aqs-ink) dark:text-white sm:text-[1.1rem] md:text-[1.25rem]">
-          Ask anything. Screenshot, text, or voice.
+          Truth-first tutoring for hard questions.
         </h1>
         <p className="mt-0.5 text-xs font-medium text-slate-500 dark:text-slate-400 md:text-sm">
-          Enter sends Fast. Shift+Enter for Deep.
+          Screenshot, text, or voice. Method before final answer.
         </p>
       </div>
     </section>

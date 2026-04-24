@@ -559,7 +559,7 @@ function VideoSearchResult({ query, compact = false }: { query: string; compact?
   return (
     <div className={compact ? "my-4" : "my-6"}>
       <div className={`grid gap-6 ${compact ? "" : "xl:grid-cols-[minmax(0,1.35fr)_minmax(18rem,0.8fr)]"}`}>
-        <div className="neo-border neo-shadow-sm overflow-hidden rounded-4xl">
+        <div className="neo-border neo-shadow-sm overflow-hidden rounded-[2rem]">
           <VideoEmbed videoId={video.videoId} title={video.title} channelTitle={video.channelTitle} compact={compact} />
         </div>
 
@@ -736,7 +736,7 @@ function WeatherResult({ query, compact = false }: { query: string; compact?: bo
   }
 
   return (
-    <section className="neo-border neo-shadow-sm my-8 rounded-4xl bg-white p-6 dark:bg-[#230f18] dark:ring-1 dark:ring-white/10">
+    <section className="neo-border neo-shadow-sm my-8 rounded-[2rem] bg-white p-6 dark:bg-[#230f18] dark:ring-1 dark:ring-white/10">
       <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
         <div>
           <span className="patch">Local Weather</span>
@@ -779,7 +779,7 @@ function WeatherResult({ query, compact = false }: { query: string; compact?: bo
 
 function MapResult({ query }: { query: string }) {
   return (
-    <section className="neo-border neo-shadow-sm my-8 rounded-4xl bg-(--aqs-paper) p-6 dark:bg-slate-900">
+    <section className="neo-border neo-shadow-sm my-8 rounded-[2rem] bg-(--aqs-paper) p-6 dark:bg-slate-900">
       <span className="patch">Map Brief</span>
       <h3 className="mt-4 text-xl font-black text-(--aqs-ink) dark:text-white">{query}</h3>
       <div className="mt-6 grid gap-4 sm:grid-cols-3">

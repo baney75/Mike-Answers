@@ -26,12 +26,12 @@ export function ImageRenderer({ src, alt, className = '', compact = false }: Ima
 
   return (
     <figure className={`my-4 relative group ${className}`}>
-      <div className={`overflow-hidden rounded-xl bg-white/80 dark:bg-slate-950/70 ${compact ? "max-h-[min(24dvh,13rem)]" : "max-h-[min(36dvh,24rem)]"}`}>
+      <div className={`overflow-hidden rounded-xl bg-white/80 dark:bg-slate-950/70 ${compact ? "max-h-[min(24dvh,13rem)]" : "max-h-[min(50dvh,32rem)]"}`}>
         <img 
         src={finalSrc} 
         alt={alt || 'Image'}
         className={`
-          h-full w-full rounded-xl border border-gray-200 bg-slate-50 object-contain dark:border-gray-700 dark:bg-slate-900
+          h-full w-full rounded-xl border border-gray-200 bg-slate-50 object-contain dark:border-slate-700 dark:bg-slate-900
           transition-opacity duration-300
           ${loading ? 'opacity-0' : 'opacity-100'}
         `}

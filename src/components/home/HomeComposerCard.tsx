@@ -1,5 +1,6 @@
 import { ChevronDown } from "lucide-react";
 
+import { SUBJECT_OPTIONS } from "../../constants/subjects";
 import { Dropzone } from "../Dropzone";
 
 interface HomeComposerCardProps {
@@ -39,21 +40,9 @@ function SubjectSelect({
           onChange={(event) => onSubjectChange(event.target.value)}
           className="select-themed appearance-none rounded-full border border-(--aqs-ink)/10 bg-white/96 py-1.5 pl-3 pr-8 text-sm font-semibold text-(--aqs-ink) outline-none transition focus-visible:border-(--aqs-accent) focus-visible:ring-4 focus-visible:ring-[rgba(122,31,52,0.14)] dark:border-white/10 dark:bg-slate-950 dark:text-white"
         >
-          <option>Auto-detect</option>
-          <option>Mathematics</option>
-          <option>Physics</option>
-          <option>Chemistry</option>
-          <option>Biology</option>
-          <option>Computer Science</option>
-          <option>Engineering</option>
-          <option>Statistics</option>
-          <option>Economics</option>
-          <option>History</option>
-          <option>Literature</option>
-          <option>Philosophy</option>
-          <option>Psychology</option>
-          <option>Medicine</option>
-          <option>Law</option>
+          {SUBJECT_OPTIONS.map((option) => (
+            <option key={option}>{option}</option>
+          ))}
         </select>
         <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-(--aqs-accent-strong) dark:text-(--aqs-accent-dark)" />
       </div>

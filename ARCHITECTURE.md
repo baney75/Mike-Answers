@@ -4,7 +4,7 @@ Last updated: 2026-04-14
 
 ## Overview
 
-**Mike Answers** is a React + Vite SPA for broad-domain answers, tutoring, research, and visual explanation with secure bring-your-own-key onboarding. Users can pick `Gemini`, `OpenRouter`, `MiniMax`, or `Custom OpenAI-compatible`. The preferred deployment path is browser-local on Cloudflare Workers with encrypted local storage and optional peer-to-peer sync.
+**Mike Answers** is a React + Vite SPA for conservative Christian tutoring, broad-domain answers, research, and visual explanation with secure bring-your-own-key onboarding. Users can pick `Gemini`, `OpenRouter`, `MiniMax`, or `Custom OpenAI-compatible`. The preferred deployment path is browser-local on Cloudflare Workers with encrypted local storage and optional peer-to-peer sync.
 
 ---
 
@@ -37,6 +37,7 @@ Last updated: 2026-04-14
 - Dense answer and tutoring surfaces therefore need visible hierarchy, strong grouping, and a clear next action.
 - The pinned follow-up composer, local `Escape` ownership, and one-screen layout are not just aesthetic choices; they reduce context loss and interaction cost.
 - Provider setup and capability messaging should prefer recognition over recall, progressive disclosure over immediate complexity, and honesty over marketing-style ambiguity.
+- Moral, spiritual, theological, cultural, and worldview questions default to a conservative Christian frame while still separating Scripture, verified fact, inference, and prudential judgment.
 
 ### Key Principle: **Browser-first inference with local encrypted storage and optional peer sync**
 
@@ -147,7 +148,7 @@ When the user asks follow-up questions after receiving a solution:
 - Original solve metadata (`provider`, `model`) remains immutable in stored history even if the user changes providers before a later follow-up
 - If the tutor asks a numbered clarification question, short replies are treated as answers to that clarification instead of restarting the loop
 - `ChatPanel` also seeds purpose-built starter prompts based on the current solution shape (for example video-heavy, homework-safe, or clarification-heavy answers)
-- The follow-up UI is a guided workspace: conversation rail on the left, targeted prompt chips above the composer, and a dedicated composer card
+- The follow-up UI is now an inline continuation of the solved answer: transcript directly under the solution, targeted prompt chips in a bottom dock, and a pinned composer that stays reachable without reopening a side rail
 - `Escape` is owned locally by the follow-up workspace: it clears the draft first, then blurs the focused control, and no longer triggers the app-level solved-screen exit while the panel is active
 - This ensures context continuity even in multi-turn tutoring sessions
 
@@ -197,7 +198,7 @@ Provider storage shape:
 
 ### Subject Selection
 
-Users can select a subject (Auto-detect, Mathematics, Physics, Chemistry, etc.) that influences AI routing.
+Users can select a subject (Auto-detect, Mathematics, Physics, Chemistry, Bible & Theology, etc.) that influences AI routing and starter prompts. Subject options live in `src/constants/subjects.ts` so the home composer and preview shell stay aligned.
 
 ### Daily Desk Surface
 
@@ -435,7 +436,7 @@ For homework-like prompts:
 ### Workspace Components
 
 - `HomeWorkspace` is the first-solve surface: editorial identity block, one provider-readiness banner, the subject selector, the composer, and secondary Daily Desk/prompt utilities
-- `SolveWorkspace` is the solved-study surface: answer column, action bar, follow-up rail, and print-only transcript rendering
+- `SolveWorkspace` is the solved-study surface: one reading column for the answer and transcript, a compact pinned follow-up dock, and a responsive command grid for solve actions
 - `DeskWorkspaceShell` is a thin bounded wrapper for secondary full-screen desk surfaces so they share one-screen behavior without pushing those layout concerns back into `App.tsx`
 
 ### Print / PDF Output
@@ -446,6 +447,7 @@ For homework-like prompts:
 - sets tighter page margins and print-safe typography
 - avoids splitting major cards, charts, tables, and code blocks across pages when possible
 - prints links with their URLs for shareable PDFs
+- prints the same inline follow-up transcript the user sees in the solved workspace instead of relying on a hidden duplicate rail
 
 ### Media Markers
 

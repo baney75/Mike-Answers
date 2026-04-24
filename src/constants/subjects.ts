@@ -1,0 +1,18 @@
+export const SUBJECT_OPTIONS = [
+  "Auto-detect",
+  "Mathematics",
+  "Physics",
+  "Chemistry",
+  "Biology",
+  "Bible & Theology",
+  "Computer Science",
+  "Engineering",
+  "Statistics",
+  "Economics",
+  "History",
+  "Literature",
+  "Philosophy",
+  "Psychology",
+  "Medicine",
+  "Law",
+] as const;

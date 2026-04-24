@@ -507,7 +507,7 @@ export function Dropzone({
         }`}
       >
         {/* Toolbar: upload, voice, subject, paste hint */}
-        <div className="flex items-center gap-2 border-b border-(--aqs-ink)/8 bg-(--aqs-paper-strong) px-2.5 py-2 dark:border-white/10 dark:bg-slate-950/40 md:px-4 md:py-2.5">
+        <div className="flex flex-wrap items-center gap-2 border-b border-(--aqs-ink)/8 bg-(--aqs-paper-strong) px-2.5 py-2 dark:border-white/10 dark:bg-slate-950/40 md:flex-nowrap md:px-4 md:py-2.5">
           <button
             type="button"
             onClick={triggerFilePicker}
@@ -537,7 +537,11 @@ export function Dropzone({
             </button>
           ) : null}
 
-          {subjectControl ? <div className="ml-auto shrink-0">{subjectControl}</div> : null}
+          {subjectControl ? (
+            <div className="min-w-0 flex-1 basis-full pt-1 md:ml-auto md:basis-auto md:flex-none md:pt-0">
+              {subjectControl}
+            </div>
+          ) : null}
 
           <div className="hidden items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500 md:flex">
             <div className="h-1 w-1 rounded-full bg-slate-300 dark:bg-slate-600" />
@@ -553,7 +557,7 @@ export function Dropzone({
             onChange={(e) => setTextInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Type or paste your question..."
-            className="block w-full resize-none bg-transparent text-[0.95rem] font-medium leading-snug text-(--aqs-ink) outline-none placeholder:text-slate-400 dark:text-white min-h-[4.5rem] max-h-[28dvh] min-[380px]:min-h-[5rem] md:max-h-[32dvh] md:min-h-[7rem] md:text-base md:leading-relaxed"
+            className="block w-full resize-none bg-transparent text-[0.95rem] font-medium leading-snug text-(--aqs-ink) outline-none placeholder:text-slate-400 dark:text-white min-h-[3rem] max-h-[28dvh] min-[380px]:min-h-[3.5rem] md:max-h-[32dvh] md:min-h-[7rem] md:text-base md:leading-relaxed"
           />
 
           {/* Clickable focus overlay when textarea is empty */}

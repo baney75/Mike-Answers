@@ -1,12 +1,13 @@
 # Mike Answers
 
-Mike Answers is a React + Vite app for fast, broad-domain answers, tutoring, research, and visual explanation with a bring-your-own-key model.
+Mike Answers is a React + Vite app for conservative Christian tutoring, fast broad-domain answers, research, and visual explanation with a bring-your-own-key model.
 Users can choose `Gemini`, `OpenRouter`, `MiniMax`, or a `Custom OpenAI-compatible` endpoint, and their keys stay local to the browser by default.
 
 ## Current product shape
 
 - Mike Answers is browser-first and BYOK-first.
 - The primary workspace supports direct text, screenshot paste, and voice capture.
+- Mike’s tutor posture is truth-first, method-first, and conservative Christian when worldview, moral, spiritual, or theological questions are involved.
 - The default student recommendation is `Gemini` because AI Studio offers the cleanest free-key onboarding and native multimodal support.
 - Settings are provider-registry driven rather than hard-coded to one or two providers.
 - OpenRouter supports a `free-only` model filter and the official `openrouter/free` router so users can stay on zero-cost models when possible.

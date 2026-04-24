@@ -9,7 +9,7 @@ import {
 import type { SolveMode } from "../types";
 
 const BTN =
-  "studio-card flex items-center justify-center gap-2 whitespace-nowrap px-4 py-2.5 text-xs font-black text-(--aqs-ink) outline-none transition-all focus-visible:ring-4 focus-visible:ring-[rgba(139,30,63,0.12)] dark:text-white md:px-5 md:py-3 md:text-sm";
+  "studio-card flex min-h-11 items-center justify-center gap-2 whitespace-nowrap px-3 py-2.5 text-xs font-black text-(--aqs-ink) outline-none transition-all focus-visible:ring-4 focus-visible:ring-[rgba(139,30,63,0.12)] dark:text-white md:px-5 md:py-3 md:text-sm";
 
 interface ActionBarProps {
   lastMode: Exclude<SolveMode, "research">;
@@ -32,27 +32,40 @@ export function ActionBar({
   onEditRequest,
   onClear,
 }: ActionBarProps) {
+  const handlePrint = () => {
+    const activeElement = document.activeElement;
+    if (activeElement instanceof HTMLElement) {
+      activeElement.blur();
+    }
+
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        window.print();
+      });
+    });
+  };
+
   return (
-    <div className="no-print studio-panel flex shrink-0 flex-col gap-3 bg-white/72 p-4 backdrop-blur-sm dark:bg-slate-900/48 md:px-5 md:py-4">
-      <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+    <div className="no-print studio-panel flex shrink-0 flex-col gap-3 bg-white/72 p-3 backdrop-blur-sm dark:bg-slate-900/48 md:px-5 md:py-4">
+      <div className="grid grid-cols-3 gap-2 xl:flex xl:items-center xl:justify-between">
+        <div className="contents xl:flex xl:flex-row xl:items-center xl:gap-3">
           <button
             type="button"
             onClick={onClear}
-            className="neo-border flex items-center justify-center gap-3 rounded-[1.15rem] bg-(--aqs-accent) px-6 py-3 text-sm font-black text-white outline-none transition-all hover:bg-(--aqs-accent-strong) focus-visible:ring-4 focus-visible:ring-[rgba(139,30,63,0.12)] active:translate-y-px"
+            className="neo-border col-span-3 flex min-h-11 items-center justify-center gap-3 rounded-[1.05rem] bg-(--aqs-accent) px-4 py-2.5 text-sm font-black text-white outline-none transition-all hover:bg-(--aqs-accent-strong) focus-visible:ring-4 focus-visible:ring-[rgba(139,30,63,0.12)] active:translate-y-px sm:col-span-1 xl:px-6 xl:py-3"
           >
             <X className="h-4 w-4" />
             New Solve
           </button>
 
-          <div className="scroll-studio flex items-center gap-2 overflow-x-auto pb-1">
+          <div className="contents xl:flex xl:items-center xl:gap-2">
             <button type="button" onClick={() => onSolveAgain(lastMode, true)} className={BTN}>
               <RefreshCw className="h-4 w-4 text-(--aqs-accent)" />
-              Deepen Answer
+              Deepen
             </button>
             <button type="button" onClick={onEditRequest} disabled={!canRetryEdit} className={`${BTN} disabled:opacity-40`}>
               <PencilLine className="h-4 w-4 text-(--aqs-accent)" />
-              Edit Request
+              Edit
             </button>
             <button type="button" onClick={onRetry} disabled={!canRetrySolve} className={`${BTN} disabled:opacity-40`}>
               <RotateCcw className="h-4 w-4 text-(--aqs-accent)" />
@@ -61,20 +74,14 @@ export function ActionBar({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 self-end xl:self-auto">
+        <div className="contents xl:flex xl:items-center xl:gap-2 xl:self-auto">
           <button type="button" onClick={onCiteAi} className={BTN}>
             <BookText className="h-4 w-4 text-(--aqs-accent)" />
             Cite AI
           </button>
           <button
             type="button"
-            onClick={() => {
-              const activeElement = document.activeElement;
-              if (activeElement instanceof HTMLElement) {
-                activeElement.blur();
-              }
-              window.print();
-            }}
+            onClick={handlePrint}
             className={BTN}
           >
             <Printer className="h-4 w-4 text-(--aqs-accent)" />
