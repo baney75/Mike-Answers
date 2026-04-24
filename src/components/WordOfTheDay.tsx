@@ -1264,7 +1264,7 @@ Answer directly. Stay anchored to the supplied Daily Desk content. If the user a
               </div>
             </div>
 
-            <aside className="flex min-h-0 flex-col gap-2 lg:overflow-hidden">
+            <aside className="flex min-h-0 flex-col gap-2 overflow-y-auto lg:overflow-hidden">
               <div className="studio-card shrink-0 bg-white p-3.5 dark:bg-slate-900">
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-[10px] font-black uppercase tracking-[0.32em] text-(--aqs-accent-strong) dark:text-(--aqs-accent-dark)">
@@ -1295,7 +1295,7 @@ Answer directly. Stay anchored to the supplied Daily Desk content. If the user a
               </div>
 
               <div className="studio-card flex min-h-0 flex-1 flex-col bg-white p-3 dark:bg-slate-900">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0">
                   <Sparkles className="h-4 w-4 text-(--aqs-accent)" />
                   <p className="text-[10px] font-black uppercase tracking-[0.32em] text-(--aqs-accent-strong) dark:text-(--aqs-accent-dark)">
                     Ask Mike
@@ -1303,7 +1303,7 @@ Answer directly. Stay anchored to the supplied Daily Desk content. If the user a
                 </div>
 
                 {chatMessages.length > 0 ? (
-                  <div className="scroll-studio mt-3 min-h-0 flex-1 space-y-3 overflow-y-auto rounded-[1.4rem] bg-slate-50/80 p-3.5 dark:bg-slate-950/60">
+                  <div className="scroll-studio mt-3 flex-1 min-h-0 space-y-3 overflow-y-auto rounded-[1.4rem] bg-slate-50/80 p-3.5 dark:bg-slate-950/60">
                     {chatMessages.map((message, index) => (
                       <div key={`${message.role}-${index}`} className={message.role === "user" ? "flex justify-end" : "flex justify-start"}>
                         <div
@@ -1335,14 +1335,14 @@ Answer directly. Stay anchored to the supplied Daily Desk content. If the user a
                     <div ref={chatEndRef} />
                   </div>
                 ) : (
-                  <div className="mt-2 rounded-[1.2rem] bg-slate-50/70 p-3 dark:bg-slate-950/60">
+                  <div className="mt-2 flex-1 min-h-0 rounded-[1.2rem] bg-slate-50/70 p-3 dark:bg-slate-950/60">
                     <p className="text-sm font-medium leading-relaxed text-slate-600 dark:text-slate-300">
                       {askMikeIntro}
                     </p>
                   </div>
                 )}
 
-                <div className="mt-2 grid gap-2">
+                <div className="mt-2 shrink-0 grid gap-2">
                   {promptSuggestions.slice(0, 3).map((suggestion) => (
                     <button
                       key={suggestion}
@@ -1360,7 +1360,7 @@ Answer directly. Stay anchored to the supplied Daily Desk content. If the user a
                     event.preventDefault();
                     void handleAsk();
                   }}
-                  className="mt-2 grid gap-2"
+                  className="mt-2 shrink-0 grid gap-2"
                 >
                   <div className="neo-border-thin studio-focus rounded-2xl bg-white p-1 dark:bg-slate-950">
                     <textarea
