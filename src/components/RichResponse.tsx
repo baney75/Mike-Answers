@@ -395,6 +395,14 @@ function ImageSearchResult({ query, compact = false }: { query: string; compact?
   }, [query]);
 
   if (loading) {
+    if (compact) {
+      return (
+        <div className="my-4 rounded-[1.1rem] border border-(--aqs-ink)/8 bg-slate-50 px-4 py-3 text-xs font-black uppercase tracking-[0.22em] text-slate-500 dark:border-white/8 dark:bg-slate-900 dark:text-slate-300">
+          Finding image
+        </div>
+      );
+    }
+
     return (
       <div className="neo-border-thin my-6 flex h-48 items-center justify-center rounded-2xl bg-gray-100 p-6 text-sm font-bold uppercase tracking-widest text-gray-500 dark:bg-gray-800">
         Finding image...
@@ -403,8 +411,33 @@ function ImageSearchResult({ query, compact = false }: { query: string; compact?
   }
 
   if (!imageUrl) {
+    if (compact) {
+      return (
+        <div className="my-4 rounded-[1.2rem] border border-(--aqs-ink)/8 bg-slate-50 px-4 py-3 dark:border-white/8 dark:bg-slate-900">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[10px] font-black uppercase tracking-[0.24em] text-slate-500 dark:text-slate-300">
+                Image unavailable
+              </p>
+              <p className="mt-1 text-sm font-medium leading-relaxed text-slate-600 dark:text-slate-400">
+                No stable preview for &quot;{query}&quot;.
+              </p>
+            </div>
+            <a
+              href={getGoogleImageSearchUrl(query)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex shrink-0 items-center justify-center rounded-[0.95rem] border border-(--aqs-ink)/8 bg-white px-3.5 py-2 text-xs font-black text-(--aqs-ink) transition hover:bg-slate-50 dark:border-white/8 dark:bg-slate-950 dark:text-white dark:hover:bg-slate-800"
+            >
+              Search images
+            </a>
+          </div>
+        </div>
+      );
+    }
+
     return (
-      <div className="neo-border-thin neo-shadow-sm my-6 rounded-[1.6rem] bg-gray-100 p-6 dark:bg-gray-800">
+      <div className="neo-border-thin neo-shadow-sm my-6 rounded-[1.35rem] bg-gray-100 p-5 dark:bg-gray-800">
         <div className="text-center">
           <div className="text-sm font-black uppercase tracking-widest text-gray-700 dark:text-gray-200">
             Image Unavailable
@@ -416,7 +449,7 @@ function ImageSearchResult({ query, compact = false }: { query: string; compact?
             href={getGoogleImageSearchUrl(query)}
             target="_blank"
             rel="noopener noreferrer"
-            className="neo-border-thin neo-shadow-sm mt-5 inline-flex items-center justify-center rounded-xl bg-white px-4 py-2 text-sm font-black text-gray-900 transition hover:bg-gray-50 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800"
+            className="neo-border-thin neo-shadow-sm mt-4 inline-flex items-center justify-center rounded-xl bg-white px-4 py-2 text-sm font-black text-gray-900 transition hover:bg-gray-50 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800"
           >
             Search Images
           </a>

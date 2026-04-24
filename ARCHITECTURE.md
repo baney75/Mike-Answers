@@ -217,6 +217,8 @@ The Daily Desk intentionally stays bounded:
 - its Ask Mike context is limited to the currently loaded desk content instead of pretending to browse beyond it
 - the shell renders immediately and loads word, verse, and news as independent sections instead of blocking the whole surface behind one all-or-nothing loader
 - word and verse can appear before the news stack is ready, and section-level fallback messages replace the old blank syncing takeover
+- Daily Desk chat unlocks as soon as at least one desk section is ready, so students can keep learning even while another section is still syncing or errored
+- browser CSP must allow the public Daily Desk and media-search fetch origins (`rss2json`, `codetabs`, `OurManna`, `Openverse`, `Wikipedia`, and YouTube transcript endpoints) because the app fetches those sources directly from the client
 
 ### Solve Modes
 
