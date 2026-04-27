@@ -74,7 +74,7 @@ export function HomeComposerCard({
         >
           <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-rose-500" />
           <p className="flex-1 text-xs font-semibold text-(--aqs-ink) dark:text-white">
-            Add your <span className="font-black">{providerName}</span> key to start solving
+            Add your <span className="font-black">{providerName}</span> key to start solving, or switch to Quick free start in settings.
           </p>
           <span className="shrink-0 text-[10px] font-black uppercase tracking-[0.14em] text-(--aqs-accent-strong) dark:text-(--aqs-accent-dark)">
             Setup →

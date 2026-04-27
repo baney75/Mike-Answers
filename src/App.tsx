@@ -55,6 +55,9 @@ import { ErrorState } from "./components/ErrorState";
 import { SetupGuide } from "./components/SetupGuide";
 import { buildWorkspaceTransferBundle } from "./services/workspaceTransfer";
 import { usePeerWorkspaceSync } from "./hooks/usePeerWorkspaceSync";
+import { useAppState } from "./hooks/useAppState";
+import { useKeyboard } from "./hooks/useKeyboard";
+import { useProviderCapabilities } from "./hooks/useProviderCapabilities";
 
 const SolveWorkspace = lazy(async () => ({
   default: (await import("./components/SolveWorkspace")).SolveWorkspace,
@@ -270,11 +273,44 @@ export default function App({ externalHistory }: AppProps) {
   const [needRefresh, setNeedRefresh] = useState(false);
   const [isOffline, setIsOffline] = useState(() => typeof navigator !== "undefined" && !navigator.onLine);
   const pwaUpdateRef = useRef<((reloadPage?: boolean) => Promise<void>) | null>(null);
+
+  // Use keyboard hook
+  useKeyboard({
+    appState,
+    onEnter: (mode) => {
+      if (textInput || imageFile) {
+        handleSolve(mode, false);
+      }
+    },
+    onEscape: () => {
+      if (appState === "SOLVED" || appState === "NEWS" || appState === "WOTD") {
+        toIdle();
+      } else if (textInput || imageFile) {
+        clearInput();
+      }
+    },
+    onClear: () => clearInput(),
+    onDeepMode: () => {
+      if (textInput || imageFile) {
+        handleSolve("deep", true);
+      }
+    },
+  });
   const idleDraftBufferRef = useRef("");
   const idleDraftCaptureTimeoutRef = useRef<number | null>(null);
 
   // ── Original question context for follow-up chat ────────────────────
   const originalQuestionContextRef = useRef<OriginalQuestionContext | null>(null);
+
+  // Use provider capabilities hook
+  const {
+    getDescriptor,
+    getCapabilities,
+    canSolveImage,
+    canTranscribeAudio,
+    canUseGrounding,
+    validateProviderReady,
+  } = useProviderCapabilities();
 
   // ── Feature toggle state ─────────────────────────────────────────────
   const [newsQuery, setNewsQuery] = useState("");
@@ -285,6 +321,20 @@ export default function App({ externalHistory }: AppProps) {
   const [backgroundTasks, setBackgroundTasks] = useState<BackgroundTask[]>([]);
   const [savedState, setSavedState] = useState<SavedState | null>(null);
   const [isReturning, setIsReturning] = useState(false);
+
+  // Use the useAppState hook for state management utilities
+  const {
+    toIdle,
+    toPreviewing,
+    toLoading,
+    toSolved,
+    toError,
+    toNews,
+    toWOTD,
+    clearInput,
+    saveCurrentState,
+    restoreSavedState,
+  } = useAppState();
 
   // ── Hooks ───────────────────────────────────────────────────────────
   const { theme, setTheme } = useDarkMode();
@@ -1130,7 +1180,14 @@ export default function App({ externalHistory }: AppProps) {
   }, []);
 
   const providerName = getProviderLabel(selectedProviderId);
-  const providerStatus = runtimeProviderReady ? "browser key ready" : "key needed";
+  const selectedProviderKey = settings.providers[selectedProviderId]?.apiKey?.trim();
+  const providerStatus = runtimeProviderReady
+    ? selectedProviderKey
+      ? "browser key ready"
+      : selectedProviderId === "openrouter"
+        ? "free mode ready"
+        : "ready"
+    : "key needed";
   const citationInput = solution
     ? {
         providerId: lastResolvedProviderId,
@@ -1209,6 +1266,7 @@ export default function App({ externalHistory }: AppProps) {
           canInstallApp={Boolean(installPromptEvent) && !standalonePwa}
           providerName={providerName}
           providerStatus={providerStatus}
+          freeModeEnabled={Boolean(settings.freeModeEnabled && selectedProviderId === "openrouter")}
           historyCount={history.items.length}
         />
 
@@ -1298,7 +1356,10 @@ export default function App({ externalHistory }: AppProps) {
                 onSubjectChange={setSubject}
                 heroSrc={heroAsset.webp}
                 providerName={providerName}
+                providerStatus={providerStatus}
                 providerReady={runtimeProviderReady}
+                freeModeEnabled={Boolean(settings.freeModeEnabled && selectedProviderId === "openrouter")}
+                legalAccepted={Boolean(settings.legalAcceptedAt)}
                 starterPrompts={idlePrompts}
 
                 onPrefillPrompt={handleTextPasted}

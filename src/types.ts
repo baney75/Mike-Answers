@@ -9,6 +9,7 @@ export type ProviderId = 'gemini' | 'openrouter' | 'minimax' | 'custom_openai';
 
 /** Families of provider integrations. */
 export type ProviderKind = 'gemini_native' | 'openai_compatible';
+export type ProviderTrustTier = 'byok_recommended' | 'free_trial' | 'community_experimental' | 'enterprise_ready';
 
 export interface ProviderModelProfile {
   fastModel?: string;
@@ -52,6 +53,13 @@ export interface ProviderDescriptor {
   defaultBaseUrl?: string;
   defaultModels: ProviderModelProfile;
   capabilities: ProviderCapabilities;
+  policy: {
+    trustTier: ProviderTrustTier;
+    privacySummary: string;
+    retentionSummary: string;
+    trainingSummary: string;
+    legalNotice: string;
+  };
 }
 
 /** A grounded source rendered in the app's custom source UI. */
@@ -161,6 +169,8 @@ export interface UserPreferencesSnapshot {
   preferredSubject?: string;
   preferredLocation?: string;
   onboardingCompleted?: boolean;
+  freeModeEnabled?: boolean;
+  legalAcceptedAt?: number;
   providers: Record<ProviderId, ProviderPreferenceConfig>;
   updatedAt?: number;
 }

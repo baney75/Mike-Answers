@@ -10,6 +10,19 @@ function CapabilityBadge({ label }: { label: string }) {
   );
 }
 
+function getTrustTierLabel(tier: ProviderDescriptor["policy"]["trustTier"]) {
+  switch (tier) {
+    case "byok_recommended":
+      return "BYOK recommended";
+    case "free_trial":
+      return "Free trial tier";
+    case "enterprise_ready":
+      return "Enterprise ready";
+    default:
+      return "Experimental";
+  }
+}
+
 export function ProviderPicker({
   providers,
   selectedProviderId,
@@ -55,6 +68,7 @@ export function ProviderPicker({
               {badges.map((badge) => (
                 <CapabilityBadge key={badge} label={badge} />
               ))}
+              <CapabilityBadge label={getTrustTierLabel(provider.policy.trustTier)} />
               {!provider.capabilities.supportsCustomBaseUrl && provider.id !== "gemini" ? <CapabilityBadge label="Preset URL" /> : null}
             </div>
             {provider.id === "minimax" ? (

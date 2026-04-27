@@ -42,6 +42,7 @@ bun run dev
 2. Keep `Free only` enabled in the app if the goal is equitable no-cost usage
 3. Leave model pickers on `Auto-pick recommended model` unless you need a specific `:free` model
 4. Auto-pick now favors OpenRouter's official free router for the lowest-maintenance free path
+5. Optional secure free mode can use a shared key if `VITE_OPENROUTER_FREE_API_KEY` is configured and the user explicitly enables free mode + accepts legal notice in setup
 
 ### Gemini
 
@@ -70,6 +71,12 @@ bun run dev
 - `Remember on this device` is available only as an explicit user choice.
 - Remembered provider keys are encrypted locally at rest before storage.
 - Cross-device movement is handled by encrypted transfer or live peer sync, not by a hosted account layer.
+
+## Legal and safety
+
+- Mike Answers is an educational tutoring app, not professional legal/medical/financial advice.
+- Review provider privacy/retention/training policies before sharing sensitive data.
+- See `LEGAL_SAFETY.md` for the current legal and safety guardrails checklist.
 
 ## Cloudflare Workers deployment
 

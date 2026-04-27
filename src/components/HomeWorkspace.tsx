@@ -7,7 +7,10 @@ interface HomeWorkspaceProps {
   onSubjectChange: (subject: string) => void;
   heroSrc: string;
   providerName: string;
+  providerStatus: string;
   providerReady: boolean;
+  freeModeEnabled: boolean;
+  legalAccepted: boolean;
   starterPrompts: string[];
   onPrefillPrompt: (text: string) => void;
   onOpenSetup: () => void;
@@ -26,7 +29,10 @@ export function HomeWorkspace({
   onSubjectChange,
   heroSrc,
   providerName,
+  providerStatus,
   providerReady,
+  freeModeEnabled,
+  legalAccepted,
   starterPrompts,
   onPrefillPrompt,
   onOpenSetup,
@@ -43,7 +49,7 @@ export function HomeWorkspace({
     <div className="flex h-full min-h-0 flex-1 flex-col animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex min-h-0 flex-1 flex-col gap-2.5 xl:grid xl:grid-cols-12 xl:gap-3">
         <section className="flex min-h-0 flex-col gap-2.5 xl:col-span-8 xl:flex-1 xl:gap-3">
-          <HomeIdentityBlock heroSrc={heroSrc} />
+          <HomeIdentityBlock heroSrc={heroSrc} providerReady={providerReady} />
           <HomeComposerCard
             subject={subject}
             onSubjectChange={onSubjectChange}
@@ -65,6 +71,9 @@ export function HomeWorkspace({
             starterPrompts={starterPrompts}
             onPrefillPrompt={onPrefillPrompt}
             onOpenDailyDesk={onOpenDailyDesk}
+            providerStatus={providerStatus}
+            freeModeEnabled={freeModeEnabled}
+            legalAccepted={legalAccepted}
           />
         </aside>
       </div>

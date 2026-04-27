@@ -26,6 +26,13 @@ export const providerDescriptors: Record<ProviderId, ProviderDescriptor> = {
       supportsCustomBaseUrl: false,
       supportsModelCatalog: false,
     },
+    policy: {
+      trustTier: "byok_recommended",
+      privacySummary: "Your own Gemini key keeps account control with you.",
+      retentionSummary: "Retention and logging follow Google's provider policy.",
+      trainingSummary: "Training behavior depends on Google's product terms for your key/project.",
+      legalNotice: "Review provider terms before uploading sensitive educational or personal data.",
+    },
   },
   openrouter: {
     id: "openrouter",
@@ -45,6 +52,13 @@ export const providerDescriptors: Record<ProviderId, ProviderDescriptor> = {
       supportsAudioTranscription: false,
       supportsCustomBaseUrl: false,
       supportsModelCatalog: true,
+    },
+    policy: {
+      trustTier: "free_trial",
+      privacySummary: "Routes through OpenRouter and selected upstream model providers.",
+      retentionSummary: "Retention varies by upstream provider and your OpenRouter settings.",
+      trainingSummary: "Training policies vary per provider; verify before sharing sensitive content.",
+      legalNotice: "Use the provider privacy controls and free-model constraints deliberately.",
     },
   },
   minimax: {
@@ -66,12 +80,19 @@ export const providerDescriptors: Record<ProviderId, ProviderDescriptor> = {
       supportsCustomBaseUrl: false,
       supportsModelCatalog: false,
     },
+    policy: {
+      trustTier: "community_experimental",
+      privacySummary: "Text and chat focused path for local-first browser use.",
+      retentionSummary: "Retention depends on MiniMax account and endpoint settings.",
+      trainingSummary: "Training policy should be confirmed in MiniMax account and terms.",
+      legalNotice: "Avoid regulated or highly sensitive data unless your compliance review approves it.",
+    },
   },
   custom_openai: {
     id: "custom_openai",
     kind: "openai_compatible",
     label: "Custom OpenAI-compatible",
-    shortDescription: "Manual base URL, key, and model slots for compatible providers.",
+    shortDescription: "Manual base URL, key, and model slots for ChatGPT-compatible or other compatible providers.",
     docsUrl: "https://platform.openai.com/docs/api-reference",
     apiKeyPlaceholder: "Enter API key",
     defaultBaseUrl: "",
@@ -85,6 +106,13 @@ export const providerDescriptors: Record<ProviderId, ProviderDescriptor> = {
       supportsAudioTranscription: false,
       supportsCustomBaseUrl: true,
       supportsModelCatalog: false,
+    },
+    policy: {
+      trustTier: "enterprise_ready",
+      privacySummary: "Privacy depends on the provider you configure.",
+      retentionSummary: "Retention depends on your configured endpoint and account contract.",
+      trainingSummary: "Training usage depends entirely on your chosen provider policy.",
+      legalNotice: "You are responsible for verifying data-processing and contractual compliance.",
     },
   },
 };

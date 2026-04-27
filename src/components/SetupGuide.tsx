@@ -79,7 +79,8 @@ export function SetupGuide({
   const selectedProvider = getProviderDescriptor(selectedProviderId);
   const selectedConfig = settings.providers[selectedProviderId];
   const providerKeyPresent = Boolean(selectedConfig.apiKey?.trim());
-  const canFinish = providerKeyPresent;
+  const usingOpenRouterFreeMode = selectedProviderId === "openrouter" && settings.freeModeEnabled && Boolean(settings.legalAcceptedAt);
+  const canFinish = providerKeyPresent || usingOpenRouterFreeMode;
   const providers = useMemo(
     () => providerOrder.map((providerId) => getProviderDescriptor(providerId)),
     [],
@@ -129,6 +130,40 @@ export function SetupGuide({
               <div className="rounded-[1.35rem] border border-(--aqs-accent)/16 bg-(--aqs-accent-soft)/75 px-4 py-4 text-sm leading-6 text-slate-700 dark:border-(--aqs-accent-dark)/20 dark:bg-[color:rgba(122,31,52,0.18)] dark:text-slate-200">
                 <strong className="text-(--aqs-ink) dark:text-white">Recommended for students:</strong> start with Gemini for the cleanest free setup and native screenshot support. Use OpenRouter with <strong>Free only</strong> enabled when you want community free models or Gemini hits limits.
               </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onUpdateSettings({ selectedProviderId: "openrouter" });
+                    setStep(2);
+                  }}
+                  className="rounded-[1.2rem] border border-(--aqs-ink)/10 bg-white px-4 py-4 text-left transition hover:border-(--aqs-accent)/30 hover:bg-(--aqs-paper-strong) dark:border-white/10 dark:bg-slate-950 dark:hover:bg-slate-900"
+                >
+                  <div className="text-[11px] font-black uppercase tracking-[0.2em] text-(--aqs-accent-strong) dark:text-(--aqs-accent-dark)">
+                    Quick free start
+                  </div>
+                  <p className="mt-1 text-sm font-semibold text-(--aqs-ink) dark:text-white">OpenRouter (Free only)</p>
+                  <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                    Fastest no-key trial path. Great for testing, but quality and limits vary by free model availability.
+                  </p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onUpdateSettings({ selectedProviderId: "gemini" });
+                    setStep(2);
+                  }}
+                  className="rounded-[1.2rem] border border-(--aqs-accent)/40 bg-(--aqs-accent-soft) px-4 py-4 text-left transition hover:border-(--aqs-accent) hover:bg-(--aqs-accent-soft-strong) dark:border-(--aqs-accent-dark)/30 dark:bg-[color:rgba(122,31,52,0.18)] dark:hover:bg-[color:rgba(122,31,52,0.24)]"
+                >
+                  <div className="text-[11px] font-black uppercase tracking-[0.2em] text-(--aqs-accent-strong) dark:text-(--aqs-accent-dark)">
+                    Best quality
+                  </div>
+                  <p className="mt-1 text-sm font-semibold text-(--aqs-ink) dark:text-white">Bring your own key (Gemini first)</p>
+                  <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                    Recommended for reliable collegiate tutoring quality, image support, and better control over quota and privacy settings.
+                  </p>
+                </button>
+              </div>
               <ProviderPicker
                 providers={providers}
                 selectedProviderId={selectedProviderId}
@@ -153,6 +188,53 @@ export function SetupGuide({
                 config={selectedConfig}
                 onConfigChange={(patch) => onUpdateProviderSettings(selectedProviderId, patch)}
               />
+              {selectedProviderId === "openrouter" ? (
+                <div className="rounded-[1.2rem] border border-(--aqs-accent)/18 bg-(--aqs-accent-soft)/75 px-4 py-4 text-sm leading-6 text-slate-700 dark:border-(--aqs-accent-dark)/25 dark:bg-[color:rgba(122,31,52,0.18)] dark:text-slate-200">
+                  <div className="text-[11px] font-black uppercase tracking-[0.2em] text-(--aqs-accent-strong) dark:text-(--aqs-accent-dark)">
+                    Secure free mode
+                  </div>
+                  <p className="mt-2">
+                    If no user key is provided, Mike can use a limited shared free route when available. This path is rate-limited and lower quality than BYOK.
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onUpdateSettings({ freeModeEnabled: !settings.freeModeEnabled })}
+                      className={`rounded-full border px-3 py-1.5 text-xs font-black uppercase tracking-[0.14em] ${
+                        settings.freeModeEnabled
+                          ? "border-(--aqs-accent) bg-(--aqs-accent) text-white"
+                          : "border-(--aqs-ink)/12 bg-white text-(--aqs-ink) dark:border-white/15 dark:bg-slate-950 dark:text-white"
+                      }`}
+                    >
+                      {settings.freeModeEnabled ? "Free mode on" : "Enable free mode"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onUpdateSettings({ legalAcceptedAt: Date.now() })}
+                      className={`rounded-full border px-3 py-1.5 text-xs font-black uppercase tracking-[0.14em] ${
+                        settings.legalAcceptedAt
+                          ? "border-emerald-500 bg-emerald-600 text-white"
+                          : "border-(--aqs-ink)/12 bg-white text-(--aqs-ink) dark:border-white/15 dark:bg-slate-950 dark:text-white"
+                      }`}
+                    >
+                      {settings.legalAcceptedAt ? "Legal notice accepted" : "Accept legal notice"}
+                    </button>
+                    <a
+                      href="/LEGAL_SAFETY.md"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded-full border border-(--aqs-ink)/12 bg-white px-3 py-1.5 text-xs font-black uppercase tracking-[0.14em] text-(--aqs-ink) dark:border-white/15 dark:bg-slate-950 dark:text-white"
+                    >
+                      Read safety doc
+                    </a>
+                  </div>
+                  {!settings.legalAcceptedAt ? (
+                    <p className="mt-2 text-xs font-semibold text-rose-700 dark:text-rose-300">
+                      Legal notice acknowledgement is required to continue without your own API key.
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
               <div className="flex flex-wrap gap-3">
                 <button
                   type="button"
@@ -164,7 +246,7 @@ export function SetupGuide({
                 <button
                   type="button"
                   onClick={() => setStep(3)}
-                  disabled={!providerKeyPresent}
+                  disabled={!(providerKeyPresent || usingOpenRouterFreeMode)}
                   className="inline-flex items-center gap-2 rounded-full border border-(--aqs-accent) bg-(--aqs-accent) px-5 py-2 text-sm font-semibold text-white transition hover:bg-(--aqs-accent-strong) disabled:cursor-not-allowed disabled:opacity-45"
                 >
                   Continue
@@ -298,6 +380,11 @@ export function SetupGuide({
             <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
               {selectedProvider.shortDescription}
             </p>
+            <div className="mt-3 rounded-[1rem] border border-(--aqs-ink)/10 bg-(--aqs-paper-strong) px-3 py-3 text-xs leading-5 text-slate-600 dark:border-white/10 dark:bg-slate-900/70 dark:text-slate-300">
+              <div><strong>Privacy:</strong> {selectedProvider.policy.privacySummary}</div>
+              <div><strong>Retention:</strong> {selectedProvider.policy.retentionSummary}</div>
+              <div><strong>Training:</strong> {selectedProvider.policy.trainingSummary}</div>
+            </div>
           </div>
 
           <div className="rounded-[1.7rem] border border-(--aqs-ink)/10 bg-white/82 p-4 dark:border-white/10 dark:bg-slate-950/58">

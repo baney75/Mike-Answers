@@ -29,6 +29,13 @@ import { getProviderDescriptor, getProviderLabel } from "./providers/registry";
 import { normalizeProviderBaseUrl } from "../utils/urlSafety";
 
 const OPENROUTER_FREE_ROUTER_MODEL = "openrouter/free";
+const OPENROUTER_SHARED_FREE_KEY =
+  (import.meta.env.VITE_OPENROUTER_FREE_API_KEY as string | undefined)?.trim() ?? "";
+const FREE_MODE_LIMIT_WINDOW_MS = 60_000;
+const FREE_MODE_MAX_REQUESTS_PER_WINDOW = 12;
+
+let freeModeWindowStartedAt = 0;
+let freeModeWindowCount = 0;
 
 function getSelectedProviderId(settings: RuntimeAISettings): ProviderId {
   return settings.selectedProviderId;
@@ -45,7 +52,50 @@ function getProviderApiKey(settings: RuntimeAISettings, providerId = getSelected
     return resolveGeminiApiKey(config.apiKey);
   }
 
+  if (providerId === "openrouter") {
+    const userKey = config.apiKey?.trim() ?? "";
+    if (userKey) {
+      return userKey;
+    }
+    if (settings.freeModeEnabled && settings.legalAcceptedAt && OPENROUTER_SHARED_FREE_KEY) {
+      return OPENROUTER_SHARED_FREE_KEY;
+    }
+  }
+
   return config.apiKey?.trim() ?? "";
+}
+
+function enforceFreeModeRateLimit(settings: RuntimeAISettings) {
+  const providerId = getSelectedProviderId(settings);
+  if (providerId !== "openrouter") {
+    return;
+  }
+  const userProvidedKey = settings.providers.openrouter.apiKey?.trim();
+  if (userProvidedKey) {
+    return;
+  }
+  if (!(settings.freeModeEnabled && settings.legalAcceptedAt)) {
+    return;
+  }
+
+  const now = Date.now();
+  if (now - freeModeWindowStartedAt > FREE_MODE_LIMIT_WINDOW_MS) {
+    freeModeWindowStartedAt = now;
+    freeModeWindowCount = 0;
+  }
+  freeModeWindowCount += 1;
+  if (freeModeWindowCount > FREE_MODE_MAX_REQUESTS_PER_WINDOW) {
+    throw new Error("Free mode is rate-limited. Wait a minute or add your own API key for higher reliability.");
+  }
+}
+
+function isSharedFreeMode(settings: RuntimeAISettings) {
+  const providerId = getSelectedProviderId(settings);
+  if (providerId !== "openrouter") {
+    return false;
+  }
+  const userProvidedKey = settings.providers.openrouter.apiKey?.trim();
+  return !userProvidedKey && Boolean(settings.freeModeEnabled && settings.legalAcceptedAt && OPENROUTER_SHARED_FREE_KEY);
 }
 
 function requireProviderApiKey(settings: RuntimeAISettings, providerId = getSelectedProviderId(settings)) {
@@ -145,6 +195,7 @@ export async function solveTextQuestionWithProvider(
   promptContext?: PromptRuntimeContext,
 ) {
   const providerId = getSelectedProviderId(settings);
+  enforceFreeModeRateLimit(settings);
 
   if (providerId === "gemini") {
     const apiKey = requireProviderApiKey(settings, providerId);
@@ -226,6 +277,11 @@ export async function solveImageQuestionWithProvider(
   promptContext?: PromptRuntimeContext,
 ) {
   const providerId = getSelectedProviderId(settings);
+  enforceFreeModeRateLimit(settings);
+
+  if (isSharedFreeMode(settings)) {
+    throw new Error("Secure free mode supports text tutoring only. Add your own key for image solving.");
+  }
 
   if (providerId === "gemini") {
     const apiKey = requireProviderApiKey(settings, providerId);
@@ -293,6 +349,7 @@ export async function chatWithTutorWithProvider(
   promptContext?: PromptRuntimeContext,
 ) {
   const providerId = getSelectedProviderId(settings);
+  enforceFreeModeRateLimit(settings);
 
   if (providerId === "gemini") {
     const apiKey = requireProviderApiKey(settings, providerId);
@@ -346,6 +403,9 @@ export async function chatWithTutorWithProvider(
 }
 
 export async function transcribeAudioWithProvider(audioBlob: Blob, settings: RuntimeAISettings) {
+  if (isSharedFreeMode(settings)) {
+    throw new Error("Secure free mode does not include audio transcription. Add your own Gemini key.");
+  }
   const providerId = getSelectedProviderId(settings);
   if (providerId !== "gemini") {
     throw new Error("Audio transcription is only available when Gemini is selected.");
@@ -359,6 +419,16 @@ export function isRuntimeProviderReady(settings: RuntimeAISettings) {
   const providerId = getSelectedProviderId(settings);
   const config = getSelectedProviderConfig(settings);
   const hasApiKey = Boolean(getProviderApiKey(settings, providerId));
+
+  if (
+    providerId === "openrouter" &&
+    !config.apiKey?.trim() &&
+    settings.freeModeEnabled &&
+    settings.legalAcceptedAt &&
+    OPENROUTER_SHARED_FREE_KEY
+  ) {
+    return true;
+  }
 
   if (!hasApiKey) {
     return false;
@@ -381,6 +451,14 @@ export function getProviderReadinessLabel(settings: RuntimeAISettings) {
   const hasApiKey = Boolean(getProviderApiKey(settings, providerId));
 
   if (!hasApiKey) {
+    if (
+      providerId === "openrouter" &&
+      settings.freeModeEnabled &&
+      settings.legalAcceptedAt &&
+      OPENROUTER_SHARED_FREE_KEY
+    ) {
+      return "OpenRouter free mode ready";
+    }
     return `Add ${descriptor.label} key`;
   }
 

@@ -4,12 +4,18 @@ interface HomeUtilityRailProps {
   starterPrompts: string[];
   onPrefillPrompt: (text: string) => void;
   onOpenDailyDesk: () => void;
+  providerStatus: string;
+  freeModeEnabled: boolean;
+  legalAccepted: boolean;
 }
 
 export function HomeUtilityRail({
   starterPrompts,
   onPrefillPrompt,
   onOpenDailyDesk,
+  providerStatus,
+  freeModeEnabled,
+  legalAccepted,
 }: HomeUtilityRailProps) {
   return (
     <div className="flex min-h-0 flex-col gap-2.5 md:gap-3">
@@ -74,6 +80,40 @@ export function HomeUtilityRail({
               {prompt}
             </button>
           ))}
+        </div>
+      </section>
+
+      <section className="studio-card hidden bg-white/92 p-4 xl:block dark:bg-slate-950/82">
+        <p className="text-[10px] font-black uppercase tracking-[0.28em] text-(--aqs-accent-strong) dark:text-(--aqs-accent-dark)">
+          Trust and policy
+        </p>
+        <p className="mt-2 text-sm font-medium leading-6 text-slate-600 dark:text-slate-300">
+          Mode: <strong className="text-(--aqs-ink) dark:text-white">{providerStatus}</strong>
+        </p>
+        <p className="mt-2 text-xs leading-6 text-slate-500 dark:text-slate-400">
+          {freeModeEnabled
+            ? legalAccepted
+              ? "Free mode is active with legal notice acknowledged. BYOK is still recommended for best quality."
+              : "Free mode is selected but legal acknowledgement is missing."
+            : "BYOK mode is preferred for higher quality and stable quotas."}
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold">
+          <a
+            href="/LEGAL_SAFETY.md"
+            target="_blank"
+            rel="noreferrer"
+            className="rounded-full border border-(--aqs-ink)/12 bg-(--aqs-paper-strong) px-3 py-1.5 text-(--aqs-ink) transition hover:border-(--aqs-accent)/30 dark:border-white/10 dark:bg-slate-900 dark:text-white"
+          >
+            Safety
+          </a>
+          <a
+            href="/README.md"
+            target="_blank"
+            rel="noreferrer"
+            className="rounded-full border border-(--aqs-ink)/12 bg-(--aqs-paper-strong) px-3 py-1.5 text-(--aqs-ink) transition hover:border-(--aqs-accent)/30 dark:border-white/10 dark:bg-slate-900 dark:text-white"
+          >
+            Privacy
+          </a>
         </div>
       </section>
     </div>

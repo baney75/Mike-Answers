@@ -26,6 +26,15 @@ export function CapabilityPanel({
   provider: ProviderDescriptor;
   config: ProviderRuntimeConfig;
 }) {
+  const trustTierLabel =
+    provider.policy.trustTier === "byok_recommended"
+      ? "BYOK recommended"
+      : provider.policy.trustTier === "free_trial"
+        ? "Free trial tier"
+        : provider.policy.trustTier === "enterprise_ready"
+          ? "Enterprise-ready"
+          : "Experimental";
+
   return (
     <div className="space-y-4 rounded-[1.5rem] border border-(--aqs-ink)/10 bg-white/84 p-5 dark:border-white/10 dark:bg-slate-950/55">
       <div className="space-y-2">
@@ -33,6 +42,14 @@ export function CapabilityPanel({
         <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">
           The app shows what this provider can honestly do in the local-first browser build.
         </p>
+      </div>
+      <div className="rounded-[1rem] border border-(--aqs-ink)/8 bg-(--aqs-paper) px-4 py-3 text-sm leading-6 text-slate-700 dark:border-white/10 dark:bg-slate-950/45 dark:text-slate-300">
+        <div className="text-[11px] font-black uppercase tracking-[0.2em] text-(--aqs-accent-strong) dark:text-(--aqs-accent-dark)">
+          Trust tier
+        </div>
+        <div className="mt-1 font-semibold text-(--aqs-ink) dark:text-white">{trustTierLabel}</div>
+        <div className="mt-2"><strong>Privacy:</strong> {provider.policy.privacySummary}</div>
+        <div><strong>Retention:</strong> {provider.policy.retentionSummary}</div>
       </div>
       <CapabilityRow title="Fast and deep text solve" active />
       <CapabilityRow title="Browser image solve" active={provider.capabilities.supportsImageInputInBrowser} />

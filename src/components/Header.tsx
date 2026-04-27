@@ -13,6 +13,7 @@ interface HeaderProps {
   canInstallApp?: boolean;
   providerName: string;
   providerStatus: string;
+  freeModeEnabled?: boolean;
   historyCount: number;
 }
 
@@ -61,6 +62,7 @@ export function Header({
   canInstallApp,
   providerName,
   providerStatus,
+  freeModeEnabled = false,
   historyCount,
 }: HeaderProps) {
   const providerNeedsSetup = providerStatus === "key needed" || providerStatus.startsWith("Add ");
@@ -106,6 +108,12 @@ export function Header({
                 <span className="opacity-30">•</span>
                 <span className="truncate sm:hidden">{compactProviderStatus}</span>
                 <span className="hidden truncate sm:inline">{providerStatus}</span>
+                {freeModeEnabled ? (
+                  <>
+                    <span className="opacity-30">•</span>
+                    <span className="truncate text-amber-700 dark:text-amber-300">free</span>
+                  </>
+                ) : null}
               </div>
             </div>
           </div>

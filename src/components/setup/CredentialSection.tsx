@@ -54,6 +54,9 @@ export function CredentialSection({
           </div>
         ) : null}
       </div>
+      <div className="rounded-[1.2rem] border border-amber-300/60 bg-amber-50/90 px-4 py-3 text-xs leading-6 text-amber-900 dark:border-amber-400/35 dark:bg-amber-950/20 dark:text-amber-100">
+        <strong>Safety and legal note:</strong> {provider.policy.legalNotice} Mike Answers is an educational tutor, not legal, medical, or licensed professional advice.
+      </div>
 
       <label className="block space-y-2">
         <span className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">

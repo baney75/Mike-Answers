@@ -38,6 +38,8 @@ const DEFAULT_SETTINGS: RuntimeAISettings = {
   preferredSubject: undefined,
   preferredLocation: undefined,
   onboardingCompleted: false,
+  freeModeEnabled: false,
+  legalAcceptedAt: undefined,
   providers: createDefaultProviderRuntimeConfigs(),
 };
 
@@ -79,6 +81,8 @@ function sanitizeForStorage(settings: RuntimeAISettings): UserPreferencesSnapsho
     preferredSubject: settings.preferredSubject,
     preferredLocation: settings.preferredLocation,
     onboardingCompleted: settings.onboardingCompleted,
+    freeModeEnabled: settings.freeModeEnabled,
+    legalAcceptedAt: settings.legalAcceptedAt,
     providers: {
       gemini: mergeProviderPreference(createDefaultProviderPreferences().gemini, settings.providers.gemini),
       openrouter: mergeProviderPreference(createDefaultProviderPreferences().openrouter, settings.providers.openrouter),

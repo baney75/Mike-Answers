@@ -10,6 +10,8 @@ function createSettings(selectedProviderId: RuntimeAISettings["selectedProviderI
     preferredSubject: "Auto-detect",
     preferredLocation: "",
     onboardingCompleted: false,
+    freeModeEnabled: false,
+    legalAcceptedAt: undefined,
     providers: createDefaultProviderRuntimeConfigs(),
   };
 }
