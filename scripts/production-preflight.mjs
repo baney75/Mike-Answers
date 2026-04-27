@@ -12,6 +12,22 @@ function readJsoncString(key) {
   return match?.[1] ?? "";
 }
 
+function inferOpenRouterRefererFromRoutes() {
+  const routePattern = /"pattern"\s*:\s*"([^"]+)"/g;
+  let match = routePattern.exec(wranglerConfig);
+  while (match) {
+    const value = match[1]?.trim();
+    if (value && !value.includes("*")) {
+      return value.startsWith("http://") || value.startsWith("https://")
+        ? value
+        : `https://${value}`;
+    }
+    match = routePattern.exec(wranglerConfig);
+  }
+
+  return "";
+}
+
 function pushLine(lines, status, message) {
   lines.push(`${status} ${message}`);
 }
@@ -34,7 +50,7 @@ function runWranglerWhoami() {
 }
 
 const accountId = readJsoncString("account_id") || process.env.CLOUDFLARE_ACCOUNT_ID || "";
-const openRouterReferer = process.env.OPENROUTER_REFERER || "";
+const openRouterReferer = process.env.OPENROUTER_REFERER || inferOpenRouterRefererFromRoutes();
 
 const whoami = runWranglerWhoami();
 
