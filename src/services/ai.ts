@@ -37,6 +37,10 @@ const FREE_MODE_MAX_REQUESTS_PER_WINDOW = 12;
 let freeModeWindowStartedAt = 0;
 let freeModeWindowCount = 0;
 
+export function isSharedFreeModeAvailable() {
+  return Boolean(OPENROUTER_SHARED_FREE_KEY);
+}
+
 function getSelectedProviderId(settings: RuntimeAISettings): ProviderId {
   return settings.selectedProviderId;
 }

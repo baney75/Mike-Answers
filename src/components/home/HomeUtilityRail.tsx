@@ -99,7 +99,7 @@ export function HomeUtilityRail({
         </p>
         <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold">
           <a
-            href="/LEGAL_SAFETY.md"
+            href="https://github.com/baney75/Mike-Answers/blob/main/LEGAL_SAFETY.md"
             target="_blank"
             rel="noreferrer"
             className="rounded-full border border-(--aqs-ink)/12 bg-(--aqs-paper-strong) px-3 py-1.5 text-(--aqs-ink) transition hover:border-(--aqs-accent)/30 dark:border-white/10 dark:bg-slate-900 dark:text-white"
@@ -107,7 +107,7 @@ export function HomeUtilityRail({
             Safety
           </a>
           <a
-            href="/README.md"
+            href="https://github.com/baney75/Mike-Answers/blob/main/README.md#legal-and-safety"
             target="_blank"
             rel="noreferrer"
             className="rounded-full border border-(--aqs-ink)/12 bg-(--aqs-paper-strong) px-3 py-1.5 text-(--aqs-ink) transition hover:border-(--aqs-accent)/30 dark:border-white/10 dark:bg-slate-900 dark:text-white"

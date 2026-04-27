@@ -24,6 +24,7 @@ interface SetupGuideProps {
   onRefreshOpenRouterModels: () => void;
   onUpdateSettings: (patch: Partial<RuntimeAISettings>) => void;
   onUpdateProviderSettings: (providerId: ProviderId, patch: Partial<ProviderRuntimeConfig>) => void;
+  sharedFreeModeAvailable: boolean;
   onResetSettings: () => void;
   onComplete: () => void;
 }
@@ -70,6 +71,7 @@ export function SetupGuide({
   onRefreshOpenRouterModels,
   onUpdateSettings,
   onUpdateProviderSettings,
+  sharedFreeModeAvailable,
   onResetSettings,
   onComplete,
 }: SetupGuideProps) {
@@ -79,7 +81,11 @@ export function SetupGuide({
   const selectedProvider = getProviderDescriptor(selectedProviderId);
   const selectedConfig = settings.providers[selectedProviderId];
   const providerKeyPresent = Boolean(selectedConfig.apiKey?.trim());
-  const usingOpenRouterFreeMode = selectedProviderId === "openrouter" && settings.freeModeEnabled && Boolean(settings.legalAcceptedAt);
+  const usingOpenRouterFreeMode =
+    selectedProviderId === "openrouter" &&
+    settings.freeModeEnabled &&
+    Boolean(settings.legalAcceptedAt) &&
+    sharedFreeModeAvailable;
   const canFinish = providerKeyPresent || usingOpenRouterFreeMode;
   const providers = useMemo(
     () => providerOrder.map((providerId) => getProviderDescriptor(providerId)),
@@ -220,7 +226,7 @@ export function SetupGuide({
                       {settings.legalAcceptedAt ? "Legal notice accepted" : "Accept legal notice"}
                     </button>
                     <a
-                      href="/LEGAL_SAFETY.md"
+                      href="https://github.com/baney75/Mike-Answers/blob/main/LEGAL_SAFETY.md"
                       target="_blank"
                       rel="noreferrer"
                       className="rounded-full border border-(--aqs-ink)/12 bg-white px-3 py-1.5 text-xs font-black uppercase tracking-[0.14em] text-(--aqs-ink) dark:border-white/15 dark:bg-slate-950 dark:text-white"
@@ -231,6 +237,11 @@ export function SetupGuide({
                   {!settings.legalAcceptedAt ? (
                     <p className="mt-2 text-xs font-semibold text-rose-700 dark:text-rose-300">
                       Legal notice acknowledgement is required to continue without your own API key.
+                    </p>
+                  ) : null}
+                  {settings.freeModeEnabled && !sharedFreeModeAvailable ? (
+                    <p className="mt-2 text-xs font-semibold text-rose-700 dark:text-rose-300">
+                      Shared secure free mode is not configured on this deployment. Add your own key or ask the site owner to enable it.
                     </p>
                   ) : null}
                 </div>

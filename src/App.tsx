@@ -26,6 +26,7 @@ import {
 } from "./utils/followUpContext";
 import {
   chatWithTutorWithProvider,
+  isSharedFreeModeAvailable,
   isRuntimeProviderReady,
   solveImageQuestionWithProvider,
   solveTextQuestionWithProvider,
@@ -1180,6 +1181,7 @@ export default function App({ externalHistory }: AppProps) {
   }, []);
 
   const providerName = getProviderLabel(selectedProviderId);
+  const sharedFreeModeAvailable = isSharedFreeModeAvailable();
   const selectedProviderKey = settings.providers[selectedProviderId]?.apiKey?.trim();
   const providerStatus = runtimeProviderReady
     ? selectedProviderKey
@@ -1294,6 +1296,7 @@ export default function App({ externalHistory }: AppProps) {
                 }}
                 onUpdateSettings={updateSettings}
                 onUpdateProviderSettings={updateProviderSettings}
+                sharedFreeModeAvailable={sharedFreeModeAvailable}
                 onResetSettings={resetSettings}
                 onComplete={() => {
                   updateSettings({ onboardingCompleted: true });
