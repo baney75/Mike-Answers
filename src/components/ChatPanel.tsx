@@ -36,7 +36,7 @@ function cleanSuggestionLabel(suggestion: string) {
 
 function isTutorFailureMessage(text: string) {
   return /^Sorry, I couldn't process that right now\./i.test(text.trim()) ||
-    /Mike needs a configured provider before .* chat can run\./i.test(text.trim());
+    /A configured provider is needed before .* chat can run\./i.test(text.trim());
 }
 
 function TutorMessage({ text }: { text: string }) {
@@ -84,12 +84,12 @@ export function FollowUpTranscript({ messages, isLoading }: FollowUpTranscriptPr
   );
 
   return (
-    <section className="print-follow-up-transcript flex min-h-[16rem] max-h-[min(38vh,26rem)] flex-col overflow-hidden rounded-[1.9rem] border border-(--aqs-ink)/10 bg-white/90 shadow-[0_18px_38px_rgba(34,24,29,0.08)] dark:border-white/10 dark:bg-slate-950/74 print:max-h-none">
+    <section className="print-follow-up-transcript flex min-h-64 max-h-[min(38vh,26rem)] flex-col overflow-hidden rounded-[1.9rem] border border-(--aqs-ink)/10 bg-white/90 shadow-[0_18px_38px_rgba(34,24,29,0.08)] dark:border-white/10 dark:bg-slate-950/74 print:max-h-none">
       <div className="flex flex-col gap-3 border-b border-(--aqs-ink)/10 bg-[linear-gradient(180deg,rgba(255,241,244,0.96),rgba(255,252,251,0.94))] px-5 py-4 dark:border-white/10 dark:bg-[linear-gradient(180deg,rgba(100,17,42,0.36),rgba(12,11,13,0.82))] md:px-6">
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-1.5">
             <p className="text-[11px] font-black uppercase tracking-[0.32em] text-(--aqs-accent-strong) dark:text-(--aqs-accent-dark)">
-              Continue With Mike
+              Continue Learning
             </p>
             <h3 className="text-xl font-black tracking-tight text-(--aqs-ink) dark:text-white">
               Keep learning from the same answer.
@@ -114,7 +114,7 @@ export function FollowUpTranscript({ messages, isLoading }: FollowUpTranscriptPr
               Ask for the next move
             </p>
             <p className="mx-auto mt-2 max-w-xl text-sm font-medium leading-relaxed text-slate-600 dark:text-slate-300">
-              Mike can check the weak step, explain the concept again, or help you apply the answer without losing the thread.
+              Check the weak step, explain the concept again, or apply the answer without losing the thread.
             </p>
           </div>
         ) : (
@@ -131,10 +131,10 @@ export function FollowUpTranscript({ messages, isLoading }: FollowUpTranscriptPr
                   }`}
                 >
                   <p className="mb-2 text-[9px] font-black uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
-                    {message.role === "user" ? "You" : isTutorFailureMessage(message.text) ? "System" : "Mike"}
+                    {message.role === "user" ? "You" : isTutorFailureMessage(message.text) ? "System" : "Tutor"}
                   </p>
                   {message.role === "user" ? (
-                    <p className="break-words whitespace-pre-wrap text-[14px] font-medium leading-relaxed md:text-[15px]">
+                    <p className="wrap-break-word whitespace-pre-wrap text-[14px] font-medium leading-relaxed md:text-[15px]">
                       {message.text}
                     </p>
                   ) : isTutorFailureMessage(message.text) ? (
@@ -240,7 +240,7 @@ export function FollowUpDock({
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div>
           <p className="text-[10px] font-black uppercase tracking-[0.28em] text-(--aqs-accent-strong)">
-            Ask Mike Next
+            Follow-up
           </p>
           <p className="mt-1 hidden text-sm font-medium leading-relaxed text-slate-600 dark:text-slate-300 sm:block">
             Ask for the next step, a work check, or a clearer explanation.
@@ -279,12 +279,12 @@ export function FollowUpDock({
               }
             }}
             rows={1}
-            className="min-h-[2.9rem] max-h-[7rem] flex-1 resize-none bg-transparent px-2.5 py-2 text-[15px] font-medium leading-snug text-(--aqs-ink) outline-none placeholder:text-slate-400 dark:text-white"
+            className="min-h-[2.9rem] max-h-28 flex-1 resize-none bg-transparent px-2.5 py-2 text-[15px] font-medium leading-snug text-(--aqs-ink) outline-none placeholder:text-slate-400 dark:text-white"
             disabled={isLoading}
             placeholder={
               isClarificationMode
                 ? "Paste the exact problem..."
-                : "Ask Mike for the next step, a work check, or a clearer explanation..."
+                : "Ask for the next step, a work check, or a clearer explanation..."
             }
           />
           <button

@@ -34,6 +34,7 @@ export function HomeUtilityRail({
             key={prompt}
             type="button"
             onClick={() => onPrefillPrompt(prompt)}
+            aria-label={prompt}
             className="studio-card min-w-0 flex-1 truncate bg-white/92 px-3 py-2.5 text-left text-xs font-semibold text-(--aqs-ink) dark:bg-slate-950/82 dark:text-white"
           >
             {prompt}

@@ -43,8 +43,11 @@ function IconButton({
         {children}
       </button>
       {badge && badge > 0 ? (
-        <span className="absolute -right-1.5 -top-1.5 inline-flex min-h-[1.2rem] min-w-[1.2rem] items-center justify-center rounded-full bg-(--aqs-accent) px-1.5 text-[9px] font-black text-white shadow-sm">
-          {badge}
+        <span
+          className="pointer-events-none absolute right-0 top-0 inline-flex h-4 min-w-4 translate-x-1/4 -translate-y-1/4 items-center justify-center rounded-full bg-(--aqs-accent) px-1 text-[8px] font-black leading-none text-white ring-2 ring-white dark:ring-slate-950"
+          aria-hidden="true"
+        >
+          {badge > 99 ? "99+" : badge}
         </span>
       ) : null}
     </div>
@@ -84,10 +87,10 @@ export function Header({
     <header className="no-print studio-panel mb-3 overflow-visible bg-white/88 px-2.5 py-2 backdrop-blur-xl dark:bg-slate-950/84 md:mb-4 md:px-4 md:py-3">
       <div className="flex items-center justify-between gap-2.5 md:gap-3">
         <div className="min-w-0 flex items-center gap-2.5 md:gap-3">
-          <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-[1rem] bg-linear-to-br from-(--aqs-accent)/8 to-(--aqs-gold)/12 ring-1 ring-(--aqs-accent)/10 md:h-12 md:w-12 md:rounded-[1.1rem]">
+          <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-linear-to-br from-(--aqs-accent)/8 to-(--aqs-gold)/12 ring-1 ring-(--aqs-accent)/10 md:h-12 md:w-12 md:rounded-[1.1rem]">
             <img
               src={emblemSrc}
-              alt="Mike Answers emblem"
+              alt="Mike Answers mark"
               className="h-[108%] w-[108%] object-contain object-center"
             />
           </div>
@@ -96,7 +99,7 @@ export function Header({
               <div className="text-[9px] font-black uppercase tracking-[0.28em] text-(--aqs-accent-strong) dark:text-(--aqs-gold)">
                 Mike Answers
               </div>
-              <div className="hidden h-[1px] w-5 bg-(--aqs-accent)/25 sm:block" />
+              <div className="hidden h-px w-5 bg-(--aqs-accent)/25 sm:block" />
               <div className="hidden text-[10px] font-semibold text-slate-500 dark:text-slate-400 sm:block">
                 Browser-first study desk
               </div>

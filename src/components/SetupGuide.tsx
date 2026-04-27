@@ -140,14 +140,14 @@ export function SetupGuide({
           <div className="max-w-3xl">
             <div className="flex items-center gap-4">
               <div className="neo-border-thin h-14 w-14 overflow-hidden rounded-[1.35rem] bg-white dark:bg-slate-900">
-                <img src={emblemSrc} alt="Mike Answers emblem" className="h-full w-full object-cover" />
+                <img src={emblemSrc} alt="Mike Answers mark" className="h-full w-full object-cover" />
               </div>
               <div>
                 <div className="text-[11px] font-bold uppercase tracking-[0.24em] text-(--aqs-accent-strong) dark:text-(--aqs-accent-dark)">
                   Mike settings
                 </div>
                 <h2 className="mt-2 text-[1.75rem] font-black tracking-tight text-(--aqs-ink) dark:text-white md:text-[2rem]">
-                  Start solving with Mike.
+                  Set up Mike Answers.
                 </h2>
               </div>
             </div>
@@ -250,7 +250,7 @@ export function SetupGuide({
                     Secure free mode
                   </div>
                   <p className="mt-2">
-                    If no user key is provided, Mike can use a limited shared free route when available. This path is rate-limited and lower quality than BYOK.
+                    If no user key is provided, this deployment can use a limited shared free route when available. This path is rate-limited and lower quality than BYOK.
                   </p>
                   <div className="mt-3 flex flex-wrap gap-2">
                     <button

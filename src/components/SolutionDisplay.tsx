@@ -33,7 +33,7 @@ export function SolutionDisplay({ solution, hideAnswerByDefault = false }: Solut
 
   useEffect(() => {
     setAnswerVisible(!hideAnswerByDefault);
-  }, [hideAnswerByDefault, solution]);
+  }, [hideAnswerByDefault]);
 
   return (
     <div className="print-solution-shell studio-panel bg-white/86 p-5 md:p-7 dark:bg-slate-950/78">
@@ -44,7 +44,7 @@ export function SolutionDisplay({ solution, hideAnswerByDefault = false }: Solut
       </div>
 
       {canHideAnswer ? (
-        <section className="mt-8 rounded-[1.5rem] border border-(--aqs-accent)/14 bg-(--aqs-accent-soft) p-5 dark:border-(--aqs-accent-dark)/20 dark:bg-[#1a0b12]">
+        <section className="mt-8 rounded-3xl border border-(--aqs-accent)/14 bg-(--aqs-accent-soft) p-5 dark:border-(--aqs-accent-dark)/20 dark:bg-[#1a0b12]">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-start gap-4">
               <div className="neo-border-thin flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-(--aqs-accent-strong) dark:bg-slate-900 dark:text-(--aqs-accent-dark)">
@@ -55,7 +55,7 @@ export function SolutionDisplay({ solution, hideAnswerByDefault = false }: Solut
                   Method first
                 </h3>
                 <p className="max-w-xl text-sm font-medium leading-relaxed text-slate-700 dark:text-slate-300">
-                  Mike is treating this like course work, so the reasoning stays visible before the final answer.
+                  This is treated like course work, so the reasoning stays visible before the final answer.
                 </p>
               </div>
             </div>

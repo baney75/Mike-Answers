@@ -368,12 +368,12 @@ export function WordOfTheDay({
           ? "Ask one clear question about the lead story or headline stack."
           : "Ask one clear question about the word, verse, or headline."
     : canAskDesk
-      ? `This scene is still syncing. Mike can already help with the ${loadedDeskTopicLabel}.`
-      : "Mike unlocks as soon as the first desk section finishes loading.";
+      ? `This scene is still syncing. Ask is available for the ${loadedDeskTopicLabel}.`
+      : "Ask unlocks as soon as the first desk section finishes loading.";
   const askMikePlaceholder = canAskCurrentScene
-    ? `Ask Mike about ${activeScene.shortLabel.toLowerCase()}...`
+    ? `Ask about ${activeScene.shortLabel.toLowerCase()}...`
     : canAskDesk
-      ? "Ask Mike about the parts of the desk that are already loaded..."
+      ? "Ask about the parts of the desk that are already loaded..."
       : "The desk is still loading...";
 
   const slideSummary = useMemo(() => {
@@ -605,7 +605,7 @@ Answer directly. Stay anchored to the supplied Daily Desk content. If the user a
                     ? "Current events"
                     : "Daily Desk",
           })
-        : "Mike needs a configured provider before Daily Desk chat can run.";
+        : "A configured provider is needed before Daily Desk chat can run.";
 
       setChatMessages((prev) => [...prev, { role: "tutor", text: reply }]);
     } catch {
@@ -649,9 +649,8 @@ Answer directly. Stay anchored to the supplied Daily Desk content. If the user a
     verse?.reference ?? (verseStatus === "loading" ? "Loading verse" : "Verse unavailable");
 
   const renderOverviewScene = (
-    <div className="grid gap-3 xl:grid-cols-[1.14fr_0.86fr]">
-      <div className="space-y-3">
-        <section className="studio-card overflow-hidden bg-[linear-gradient(135deg,rgba(122,31,52,0.1),rgba(255,255,255,0.98))] p-5 dark:bg-[linear-gradient(135deg,rgba(122,31,52,0.18),rgba(15,23,42,0.94))]">
+    <div className="space-y-3">
+      <section className="studio-card overflow-hidden bg-[linear-gradient(135deg,rgba(122,31,52,0.1),rgba(255,255,255,0.98))] p-5 dark:bg-[linear-gradient(135deg,rgba(122,31,52,0.18),rgba(15,23,42,0.94))]">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="max-w-2xl">
               <div className="flex flex-wrap items-center gap-3">
@@ -682,13 +681,13 @@ Answer directly. Stay anchored to the supplied Daily Desk content. If the user a
               </span>
             </div>
           </div>
-        </section>
+      </section>
 
-        <section className="grid gap-3 md:grid-cols-3">
+      <section className="grid gap-3 xl:grid-cols-2 2xl:grid-cols-3">
           <button
             type="button"
             onClick={() => setActiveView("word")}
-            className="studio-card bg-white p-4 text-left dark:bg-slate-900"
+            className="studio-card bg-white p-4 text-left dark:bg-slate-900 2xl:min-h-60"
           >
             <div className="flex items-center justify-between gap-3">
               <p className="text-[10px] font-black uppercase tracking-[0.32em] text-(--aqs-accent-strong)">
@@ -712,7 +711,7 @@ Answer directly. Stay anchored to the supplied Daily Desk content. If the user a
           <button
             type="button"
             onClick={() => setActiveView("verse")}
-            className="studio-card bg-white p-4 text-left dark:bg-slate-900"
+            className="studio-card bg-white p-4 text-left dark:bg-slate-900 2xl:min-h-60"
           >
             <div className="flex items-center justify-between gap-3">
               <p className="text-[10px] font-black uppercase tracking-[0.32em] text-(--aqs-gold)">
@@ -736,7 +735,7 @@ Answer directly. Stay anchored to the supplied Daily Desk content. If the user a
           <button
             type="button"
             onClick={() => setActiveView("news")}
-            className="studio-card bg-white p-4 text-left dark:bg-slate-900"
+            className="studio-card bg-white p-4 text-left dark:bg-slate-900 xl:col-span-2 2xl:col-span-1 2xl:min-h-60"
           >
             <div className="flex items-center justify-between gap-3">
               <p className="text-[10px] font-black uppercase tracking-[0.32em] text-slate-500 dark:text-slate-400">
@@ -756,10 +755,9 @@ Answer directly. Stay anchored to the supplied Daily Desk content. If the user a
                   : newsError || "Open the news scene and retry the desk sync.")}
             </p>
           </button>
-        </section>
-      </div>
+      </section>
 
-      <div className="space-y-3">
+      <div className="grid gap-3 xl:grid-cols-3">
         <section className="studio-card bg-white p-4 dark:bg-slate-900">
           <p className="text-[10px] font-black uppercase tracking-[0.32em] text-slate-500 dark:text-slate-400">
             Best next move
@@ -785,7 +783,7 @@ Answer directly. Stay anchored to the supplied Daily Desk content. If the user a
 
         <section className="studio-card bg-(--aqs-paper-strong) p-4 dark:bg-slate-900">
           <p className="text-[10px] font-black uppercase tracking-[0.3em] text-(--aqs-accent-strong)">
-            Mike helps with
+            Study help
           </p>
           <ul className="mt-3 space-y-2 text-sm font-medium leading-relaxed text-slate-600 dark:text-slate-300">
             <li>Meaning and usage when the word is unfamiliar</li>
@@ -850,7 +848,7 @@ Answer directly. Stay anchored to the supplied Daily Desk content. If the user a
             {word.definition}
           </p>
           {word.example ? (
-            <div className="mt-5 rounded-[1.5rem] bg-white p-5 shadow-sm dark:bg-slate-950">
+            <div className="mt-5 rounded-3xl bg-white p-5 shadow-sm dark:bg-slate-950">
               <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">
                 Usage Context
               </p>
@@ -892,7 +890,7 @@ Answer directly. Stay anchored to the supplied Daily Desk content. If the user a
       title={wordStatus === "loading" ? "Loading today’s word." : "The Daily Word is unavailable."}
       body={
         wordStatus === "loading"
-          ? "Mike is pulling the Merriam-Webster entry now, and the rest of the desk can still keep loading around it."
+          ? "The Merriam-Webster entry is loading, and the rest of the desk can still keep working around it."
           : wordError || "Try syncing the Daily Desk again."
       }
       onRetry={wordStatus === "error" ? () => void loadDesk(true) : undefined}
@@ -1002,7 +1000,7 @@ Answer directly. Stay anchored to the supplied Daily Desk content. If the user a
       {leadArticle ? (
         <section className="studio-card overflow-hidden bg-white p-5 dark:bg-slate-900 md:p-6">
           <div className="grid gap-4 xl:grid-cols-[16rem_1fr]">
-            <div className="relative aspect-[4/3] max-h-[16rem] overflow-hidden rounded-[1.7rem] border-2 border-(--aqs-border)">
+            <div className="relative aspect-4/3 max-h-64 overflow-hidden rounded-[1.7rem] border-2 border-(--aqs-border)">
               {safeLeadThumbnail ? (
                 <img
                   src={safeLeadThumbnail}
@@ -1116,7 +1114,7 @@ Answer directly. Stay anchored to the supplied Daily Desk content. If the user a
                 </button>
               ))
             ) : (
-              <div className="rounded-[1.5rem] border-2 border-dashed border-(--aqs-border)/15 bg-slate-50/80 p-5 dark:bg-slate-950/60">
+              <div className="rounded-3xl border-2 border-dashed border-(--aqs-border)/15 bg-slate-50/80 p-5 dark:bg-slate-950/60">
                 <p className="text-sm font-medium leading-relaxed text-slate-600 dark:text-slate-300">
                   {newsError || "The desk is still refreshing the news stack."}
                 </p>
@@ -1160,7 +1158,7 @@ Answer directly. Stay anchored to the supplied Daily Desk content. If the user a
     <div className="studio-card shrink-0 bg-white p-3.5 dark:bg-slate-900">
       <div className="flex items-center justify-between gap-3">
         <p className="text-[10px] font-black uppercase tracking-[0.32em] text-(--aqs-accent-strong) dark:text-(--aqs-accent-dark)">
-          Scene brief
+          Desk brief
         </p>
         <span className="patch bg-white text-(--aqs-accent-strong) dark:bg-slate-950">
           {activeScene.shortLabel}
@@ -1172,27 +1170,31 @@ Answer directly. Stay anchored to the supplied Daily Desk content. If the user a
       <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600 dark:text-slate-300">
         {slideSummary}
       </p>
-      <div className="mt-2.5 grid gap-2 sm:grid-cols-2">
-        {DAILY_DESK_SCENES.filter((scene) => scene.id !== activeView).slice(0, 3).map((scene) => (
-          <button
-            key={scene.id}
-            type="button"
-            onClick={() => setActiveView(scene.id)}
-            className="studio-card bg-(--aqs-paper-strong) px-3 py-2 text-[10px] font-black uppercase tracking-[0.22em] text-slate-500 hover:bg-white dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-slate-800"
-          >
-            Jump to {scene.shortLabel}
-          </button>
-        ))}
-      </div>
+      {activeView !== "overview" ? (
+        <div className="mt-2.5 grid gap-2 sm:grid-cols-2">
+          {DAILY_DESK_SCENES.filter((scene) => scene.id !== activeView).slice(0, 3).map((scene) => (
+            <button
+              key={scene.id}
+              type="button"
+              onClick={() => setActiveView(scene.id)}
+              className="studio-card bg-(--aqs-paper-strong) px-3 py-2 text-[10px] font-black uppercase tracking-[0.22em] text-slate-500 hover:bg-white dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-slate-800"
+            >
+              Jump to {scene.shortLabel}
+            </button>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 
+  const visiblePromptSuggestions = promptSuggestions.slice(0, 2);
+
   const askMikePanel = (
-    <div className="studio-card flex min-h-0 flex-1 flex-col bg-white p-3 dark:bg-slate-900">
+    <div className="studio-card flex min-h-0 flex-col bg-white p-3 dark:bg-slate-900 lg:max-h-[min(28rem,62dvh)]">
       <div className="flex shrink-0 items-center gap-2">
         <Sparkles className="h-4 w-4 text-(--aqs-accent)" />
         <p className="text-[10px] font-black uppercase tracking-[0.32em] text-(--aqs-accent-strong) dark:text-(--aqs-accent-dark)">
-          Ask Mike
+          Ask about this
         </p>
       </div>
 
@@ -1208,7 +1210,7 @@ Answer directly. Stay anchored to the supplied Daily Desk content. If the user a
                 }`}
               >
                 <p className={`mb-2 text-[9px] font-black uppercase tracking-widest ${message.role === "user" ? "text-white/60" : "text-slate-400"}`}>
-                  {message.role === "user" ? "Question" : "Mike"}
+                  {message.role === "user" ? "Question" : "Tutor"}
                 </p>
                 {message.role === "tutor" ? (
                   <RichResponse text={message.text} compact />
@@ -1229,7 +1231,7 @@ Answer directly. Stay anchored to the supplied Daily Desk content. If the user a
           <div ref={chatEndRef} />
         </div>
       ) : (
-        <div className="mt-2 min-h-0 flex-1 rounded-[1.2rem] bg-slate-50/70 p-3 dark:bg-slate-950/60">
+        <div className="mt-2 rounded-[1.2rem] bg-slate-50/70 p-3 dark:bg-slate-950/60">
           <p className="text-sm font-medium leading-relaxed text-slate-600 dark:text-slate-300">
             {askMikeIntro}
           </p>
@@ -1237,7 +1239,7 @@ Answer directly. Stay anchored to the supplied Daily Desk content. If the user a
       )}
 
       <div className="mt-2 shrink-0 grid gap-2">
-        {promptSuggestions.slice(0, 3).map((suggestion) => (
+        {visiblePromptSuggestions.map((suggestion) => (
           <button
             key={suggestion}
             type="button"
@@ -1261,22 +1263,22 @@ Answer directly. Stay anchored to the supplied Daily Desk content. If the user a
             value={chatInput}
             onChange={(event) => setChatInput(event.target.value)}
             placeholder={askMikePlaceholder}
-            aria-label="Ask Mike about the Daily Desk"
+            aria-label="Ask about the Daily Desk"
             name="daily-desk-chat"
             autoComplete="off"
             disabled={isChatLoading || !canAskDesk}
-            rows={2}
-            className="min-h-[3.75rem] w-full resize-none bg-transparent px-4 py-3 text-sm font-medium leading-relaxed text-(--aqs-ink) outline-none dark:text-white"
+            rows={1}
+            className="min-h-12 w-full resize-none bg-transparent px-4 py-3 text-sm font-medium leading-relaxed text-(--aqs-ink) outline-none dark:text-white lg:min-h-15"
           />
         </div>
         {!canAskCurrentScene && canAskDesk ? (
           <p className="text-xs font-medium leading-relaxed text-slate-500 dark:text-slate-400">
-            This scene is still syncing. Mike can already help with the {loadedDeskTopicLabel}.
+            This scene is still syncing. Ask is available for the {loadedDeskTopicLabel}.
           </p>
         ) : null}
         {!canAskDesk ? (
           <p className="text-xs font-medium leading-relaxed text-slate-500 dark:text-slate-400">
-            Mike unlocks as soon as the first Daily Desk section loads.
+            Ask unlocks as soon as the first Daily Desk section loads.
           </p>
         ) : null}
         <button
@@ -1326,6 +1328,7 @@ Answer directly. Stay anchored to the supplied Daily Desk content. If the user a
               type="button"
               onClick={() => void loadDesk(true)}
               disabled={refreshing}
+              aria-busy={refreshing}
               className="studio-card bg-white px-4 py-2.5 text-xs font-black uppercase tracking-widest dark:bg-slate-900"
             >
               <RefreshCw className={`mr-2 inline h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
@@ -1353,6 +1356,7 @@ Answer directly. Stay anchored to the supplied Daily Desk content. If the user a
                     key={scene.id}
                     type="button"
                     onClick={() => setActiveView(scene.id)}
+                    aria-pressed={activeView === scene.id}
                     className={`neo-border-thin neo-shadow-sm shrink-0 rounded-2xl px-3.5 py-2 text-[11px] font-black uppercase tracking-[0.24em] transition ${
                       activeView === scene.id
                         ? "bg-(--aqs-accent) text-white"
@@ -1365,16 +1369,7 @@ Answer directly. Stay anchored to the supplied Daily Desk content. If the user a
                 ))}
               </div>
 
-              <div className="flex items-center justify-between gap-3 rounded-[1.3rem] bg-(--aqs-paper-strong) px-4 py-2 dark:bg-slate-900">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.28em] text-(--aqs-accent-strong) dark:text-(--aqs-accent-dark)">
-                    Current scene
-                  </p>
-                  <p className="mt-1 line-clamp-1 text-sm font-medium leading-relaxed text-slate-600 dark:text-slate-300">
-                    {slideSummary}
-                  </p>
-                </div>
-                <div className="hidden items-center gap-2 md:flex">
+              <div className="flex items-center justify-end gap-2">
                   <button
                     type="button"
                     onClick={() => cycleScene(-1)}
@@ -1391,7 +1386,6 @@ Answer directly. Stay anchored to the supplied Daily Desk content. If the user a
                   >
                     <ArrowRight className="mx-auto h-4 w-4" />
                   </button>
-                </div>
               </div>
 
               <div className="lg:scroll-studio min-h-0 lg:flex-1 lg:overflow-y-auto lg:pr-1">
@@ -1400,8 +1394,12 @@ Answer directly. Stay anchored to the supplied Daily Desk content. If the user a
             </div>
 
             <aside className="flex min-h-0 flex-col gap-2 overflow-hidden">
-              {sceneBriefCard}
-              {askMikePanel}
+              <div className="scroll-studio min-h-0 flex-1 overflow-y-auto pr-1">
+                {sceneBriefCard}
+              </div>
+              <div className="shrink-0">
+                {askMikePanel}
+              </div>
             </aside>
           </div>
 
@@ -1414,6 +1412,7 @@ Answer directly. Stay anchored to the supplied Daily Desk content. If the user a
                       key={scene.id}
                       type="button"
                       onClick={() => setActiveView(scene.id)}
+                      aria-pressed={activeView === scene.id}
                       className={`neo-border-thin neo-shadow-sm shrink-0 rounded-2xl px-3.5 py-2 text-[11px] font-black uppercase tracking-[0.24em] transition ${
                         activeView === scene.id
                           ? "bg-(--aqs-accent) text-white"
@@ -1426,15 +1425,7 @@ Answer directly. Stay anchored to the supplied Daily Desk content. If the user a
                   ))}
                 </div>
 
-                <div className="flex items-center justify-between gap-3 rounded-[1.3rem] bg-(--aqs-paper-strong) px-4 py-2 dark:bg-slate-900">
-                  <div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.28em] text-(--aqs-accent-strong) dark:text-(--aqs-accent-dark)">
-                      Current scene
-                    </p>
-                    <p className="mt-1 line-clamp-1 text-sm font-medium leading-relaxed text-slate-600 dark:text-slate-300">
-                      {slideSummary}
-                    </p>
-                  </div>
+                <div className="flex justify-end">
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
@@ -1460,7 +1451,7 @@ Answer directly. Stay anchored to the supplied Daily Desk content. If the user a
               </div>
             </div>
 
-            <div className="min-h-[17rem] shrink-0">
+            <div className="shrink-0">
               {askMikePanel}
             </div>
           </div>

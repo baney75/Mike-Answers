@@ -13,7 +13,7 @@ export function LoadingState() {
         Working on it...
       </h2>
       <p className="mt-2 max-w-sm text-center text-sm font-medium text-slate-500 dark:text-slate-400">
-        Mike is reading the question, choosing the right approach, and building the answer.
+        Reading the question, choosing the right approach, and building the answer.
       </p>
     </div>
   );

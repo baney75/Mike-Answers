@@ -1,7 +1,6 @@
 import type { ChatMessage, SolveMode } from "../types";
 import { ActionBar } from "./ActionBar";
 import { FollowUpDock, FollowUpTranscript } from "./ChatPanel";
-import { RichResponse } from "./RichResponse";
 import { SolutionDisplay } from "./SolutionDisplay";
 
 interface SolveWorkspaceProps {
@@ -55,6 +54,7 @@ export function SolveWorkspace({
       <div className="scroll-studio min-h-0 flex-1 overflow-y-auto pr-1">
         <div className="mx-auto flex w-full max-w-[1080px] flex-col gap-4">
           <SolutionDisplay
+            key={solution}
             solution={solution}
             hideAnswerByDefault={hideAnswerByDefault}
           />

@@ -102,7 +102,7 @@ function ArticleMeta({
 }) {
   return (
     <div className={`flex flex-wrap items-center gap-3 ${compact ? "text-[10px]" : "text-xs"} font-black uppercase tracking-widest text-slate-400`}>
-      <span className="rounded-full bg-(--aqs-accent-soft) px-3 py-1 text-(--aqs-accent-strong) dark:bg-[color:rgba(122,31,52,0.2)] dark:text-(--aqs-accent-dark)">
+      <span className="rounded-full bg-(--aqs-accent-soft) px-3 py-1 text-(--aqs-accent-strong) dark:bg-[rgba(122,31,52,0.2)] dark:text-(--aqs-accent-dark)">
         {article.source}
       </span>
       <span className="hidden sm:inline opacity-40">•</span>
@@ -170,7 +170,7 @@ function LeadStory({
   return (
     <article className="studio-panel overflow-hidden bg-white p-5 dark:bg-slate-900 md:p-8">
       <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-        <div className="group relative aspect-[4/3] max-h-[min(32dvh,18rem)] overflow-hidden rounded-[1.8rem] border-2 border-(--aqs-border)">
+        <div className="group relative aspect-4/3 max-h-[min(32dvh,18rem)] overflow-hidden rounded-[1.8rem] border-2 border-(--aqs-border)">
           {article.thumbnail ? (
             <img
               src={article.thumbnail}
@@ -193,7 +193,7 @@ function LeadStory({
                 <Sparkles className="h-3 w-3 text-(--aqs-gold)" />
                 Lead Analysis
               </div>
-              <div className="h-[1px] flex-1 bg-slate-100 dark:bg-slate-800" />
+              <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800" />
             </div>
             
             <div className="space-y-4">
@@ -208,7 +208,7 @@ function LeadStory({
             <ArticleMeta article={article} />
 
             {article.contentText ? (
-              <div className="rounded-[1.5rem] bg-slate-50 p-6 dark:bg-slate-950/50">
+              <div className="rounded-3xl bg-slate-50 p-6 dark:bg-slate-950/50">
                 <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">
                   Data Extract
                 </p>
@@ -347,6 +347,8 @@ export function NewsView({
   const [chatMessages, setChatMessages] = useState<Array<{ role: "user" | "tutor"; text: string }>>([]);
   const [chatInput, setChatInput] = useState("");
   const [isChatLoading, setIsChatLoading] = useState(false);
+  const ITEMS_PER_PAGE = 7; // 1 Lead + up to 6 Deck per page
+  const [currentPage, setCurrentPage] = useState(1);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<HTMLTextAreaElement>(null);
   const loadTokenRef = useRef(0);
@@ -369,6 +371,7 @@ export function NewsView({
         }
 
         setArticles(result.articles);
+        setCurrentPage(1);
         setLoading(false);
         setRefreshing(false);
         setHydrating(true);
@@ -427,13 +430,6 @@ export function NewsView({
     return articles.filter((article) => selectedSources.has(article.source));
   }, [articles, selectedSources]);
 
-  const ITEMS_PER_PAGE = 7; // 1 Lead + up to 6 Deck per page
-  const [currentPage, setCurrentPage] = useState(1);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [query, selectedSources, filteredArticles.length]);
-
   const totalPages = Math.max(1, Math.ceil(filteredArticles.length / ITEMS_PER_PAGE));
   const currentArticles = filteredArticles.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
@@ -443,6 +439,7 @@ export function NewsView({
 
   const handleSearch = (event: React.FormEvent) => {
     event.preventDefault();
+    setCurrentPage(1);
     setQuery(searchInput);
   };
 
@@ -454,6 +451,7 @@ export function NewsView({
       } else {
         next.add(sourceName);
       }
+      setCurrentPage(1);
       return next;
     });
   };
@@ -498,7 +496,7 @@ ${userMessage}`;
 
         const reply = onAskMike
           ? await onAskMike(history, prompt, { subject: "News Analysis" })
-          : "Mike needs a configured provider before desk chat can run.";
+          : "A configured provider is needed before desk chat can run.";
         setChatMessages((prev) => [...prev, { role: "tutor", text: reply }]);
       } catch {
         setChatMessages((prev) => [
@@ -512,7 +510,7 @@ ${userMessage}`;
         setIsChatLoading(false);
       }
     },
-    [filteredArticles, isChatLoading, query],
+    [chatMessages, filteredArticles, isChatLoading, onAskMike, query],
   );
 
   const handleChatSubmit = useCallback(() => {
@@ -791,7 +789,7 @@ ${userMessage}`;
             id="floating-news-chat"
             role="dialog"
             aria-label="News chat"
-            className="studio-panel flex h-[min(34rem,calc(100dvh-1.5rem))] w-full flex-col bg-white p-0 backdrop-blur-xl dark:bg-slate-950 sm:w-[24rem] lg:w-[28rem]"
+            className="studio-panel flex h-[min(34rem,calc(100dvh-1.5rem))] w-full flex-col bg-white p-0 backdrop-blur-xl dark:bg-slate-950 sm:w-[24rem] lg:w-md"
           >
               <div className="flex items-start justify-between gap-4 border-b-2 border-(--aqs-border)/5 bg-(--aqs-accent-soft) px-6 py-6 dark:bg-[#1a0b12] dark:ring-1 dark:ring-white/10">
                 <div>
@@ -825,7 +823,7 @@ ${userMessage}`;
                     {chatMessages.map((message, index) => (
                       <div key={`${message.role}-${index}`} className={message.role === "user" ? "flex justify-end" : "flex justify-start"}>
                         <div
-                          className={`max-w-[92%] rounded-[1.5rem] border-2 px-5 py-4 ${
+                          className={`max-w-[92%] rounded-3xl border-2 px-5 py-4 ${
                             message.role === "user"
                               ? "border-(--aqs-border) bg-(--aqs-accent) text-white"
                               : "border-(--aqs-border) bg-white text-(--aqs-ink) dark:bg-slate-900 dark:text-white"
@@ -880,7 +878,7 @@ ${userMessage}`;
                       className="neo-border neo-shadow flex items-center gap-3 rounded-xl bg-(--aqs-accent) px-6 py-3 text-sm font-black text-white transition-all hover:-translate-y-1 disabled:opacity-50"
                     >
                       <Send className="h-4 w-4" />
-                      Ask Mike
+                      Ask about this
                     </button>
                   </div>
                 </form>

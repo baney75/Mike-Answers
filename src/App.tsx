@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useState, useCallback, useEffect, useMemo, useRef } from "react";
+import { Suspense, lazy, useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { ChevronDown } from "lucide-react";
 
 import type {
@@ -32,7 +32,7 @@ import {
   solveTextQuestionWithProvider,
   transcribeAudioWithProvider,
 } from "./services/ai";
-import { getMikeEmblemAsset, getMikeHeroAsset } from "./services/assets";
+import { getMikeEmblemAsset } from "./services/assets";
 
 import { deriveNewsQuery } from "./services/news";
 import {
@@ -42,7 +42,7 @@ import {
   subscribeNetworkStatus,
   type InstallPromptEvent,
 } from "./services/pwa";
-import { getProviderDescriptor, getProviderLabel } from "./services/providers/registry";
+import { getProviderLabel } from "./services/providers/registry";
 import { SUBJECT_OPTIONS } from "./constants/subjects";
 
 
@@ -58,7 +58,6 @@ import { buildWorkspaceTransferBundle } from "./services/workspaceTransfer";
 import { usePeerWorkspaceSync } from "./hooks/usePeerWorkspaceSync";
 import { useAppState } from "./hooks/useAppState";
 import { useKeyboard } from "./hooks/useKeyboard";
-import { useProviderCapabilities } from "./hooks/useProviderCapabilities";
 
 const SolveWorkspace = lazy(async () => ({
   default: (await import("./components/SolveWorkspace")).SolveWorkspace,
@@ -302,16 +301,6 @@ export default function App({ externalHistory }: AppProps) {
   // ── Original question context for follow-up chat ────────────────────
   const originalQuestionContextRef = useRef<OriginalQuestionContext | null>(null);
 
-  // Use provider capabilities hook
-  const {
-    getDescriptor,
-    getCapabilities,
-    canSolveImage,
-    canTranscribeAudio,
-    canUseGrounding,
-    validateProviderReady,
-  } = useProviderCapabilities();
-
   // ── Feature toggle state ─────────────────────────────────────────────
   const [newsQuery, setNewsQuery] = useState("");
   const [dailyDeskView, setDailyDeskView] = useState<DailyDeskView>("overview");
@@ -325,15 +314,7 @@ export default function App({ externalHistory }: AppProps) {
   // Use the useAppState hook for state management utilities
   const {
     toIdle,
-    toPreviewing,
-    toLoading,
-    toSolved,
-    toError,
-    toNews,
-    toWOTD,
     clearInput,
-    saveCurrentState,
-    restoreSavedState,
   } = useAppState();
 
   // ── Hooks ───────────────────────────────────────────────────────────
@@ -343,7 +324,6 @@ export default function App({ externalHistory }: AppProps) {
   const appStateRef = useRef<AppState>("IDLE");
   const { settings, updateSettings, updateProviderSettings, replaceSettings, resetSettings } = useAISettings();
   const selectedProviderId = settings.selectedProviderId;
-  const selectedProvider = getProviderDescriptor(selectedProviderId);
   const runtimeProviderReady = isRuntimeProviderReady(settings);
   const providerCatalog = useProviderCatalog(settings);
 
@@ -473,22 +453,6 @@ export default function App({ externalHistory }: AppProps) {
 
   // ── Feature handlers ────────────────────────────────────────────────
 
-  const handleOpenNews = useCallback((query?: string) => {
-    if (solution && appState === "SOLVED") {
-      setSavedState({
-        solution,
-        hideAnswerByDefault: solutionHideAnswerDefault,
-        chatHistory,
-        mode: lastMode,
-        subject,
-        input: { imageFile: imageFile ?? undefined, textInput: textInput ?? undefined },
-      });
-      setIsReturning(true);
-    }
-    setNewsQuery(query || "");
-    setAppState("NEWS");
-  }, [solution, solutionHideAnswerDefault, chatHistory, lastMode, subject, imageFile, textInput, appState]);
-
   const handleOpenDailyDesk = useCallback((view: DailyDeskView = "overview") => {
     if (solution && appState === "SOLVED") {
       setSavedState({
@@ -521,7 +485,7 @@ export default function App({ externalHistory }: AppProps) {
     }
 
     const completedTask = backgroundTasks.find((t) => t.status === "completed" && t.type === "solve");
-    if (completedTask && completedTask.solution) {
+    if (completedTask?.solution) {
       setSolution(completedTask.solution);
       setSolutionHideAnswerDefault(completedTask.hideAnswerByDefault ?? false);
       setChatHistory([]);
@@ -1030,7 +994,7 @@ export default function App({ externalHistory }: AppProps) {
           ...nextHistory,
           {
             role: "tutor",
-            text: "Mike needs a configured provider before follow-up chat can run. Open Setup, add a key, and try again.",
+            text: "A configured provider is needed before follow-up chat can run. Open Setup, add a key, and try again.",
           },
         ]);
         return true;
@@ -1099,7 +1063,7 @@ export default function App({ externalHistory }: AppProps) {
       options?: { subject?: string },
     ) => {
       if (!runtimeProviderReady) {
-        return "Mike needs a configured provider before desk chat can run. Open Setup, add a key, and try again.";
+        return "A configured provider is needed before desk chat can run. Open Setup, add a key, and try again.";
       }
 
       return chatWithTutorWithProvider(
@@ -1216,7 +1180,6 @@ export default function App({ externalHistory }: AppProps) {
     settings.providers.openrouter.options?.freeOnly
       ? providerCatalog.models.filter((model) => model.free)
       : providerCatalog.models;
-  const heroAsset = getMikeHeroAsset(subject);
   const emblemAsset = getMikeEmblemAsset();
   const idlePrompts = useMemo(() => buildIdlePrompts(subject), [subject]);
   const transferBundle = useMemo(() => buildWorkspaceTransferBundle(settings, history.items), [history.items, settings]);
@@ -1261,7 +1224,7 @@ export default function App({ externalHistory }: AppProps) {
 
       <div
         className={`relative mx-auto flex w-full flex-1 flex-col overflow-hidden px-3 py-3 transition-all duration-500 md:px-4 md:py-4 ${
-          appState === "NEWS" ? "max-w-[1780px]" : appState === "WOTD" ? "max-w-6xl" : "max-w-[1280px]"
+          appState === "NEWS" ? "max-w-[1780px]" : appState === "WOTD" ? "max-w-[1520px]" : "max-w-[1280px]"
         }`}
       >
         <Header
@@ -1368,7 +1331,7 @@ export default function App({ externalHistory }: AppProps) {
               <HomeWorkspace
                 subject={subject}
                 onSubjectChange={setSubject}
-                heroSrc={heroAsset.webp}
+                heroSrc={emblemAsset.webp}
                 providerName={providerName}
                 providerStatus={providerStatus}
                 providerReady={runtimeProviderReady}
