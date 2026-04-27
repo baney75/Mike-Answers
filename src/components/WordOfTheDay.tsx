@@ -1156,6 +1156,141 @@ Answer directly. Stay anchored to the supplied Daily Desk content. If the user a
           ? renderNewsScene
           : renderOverviewScene;
 
+  const sceneBriefCard = (
+    <div className="studio-card shrink-0 bg-white p-3.5 dark:bg-slate-900">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-[10px] font-black uppercase tracking-[0.32em] text-(--aqs-accent-strong) dark:text-(--aqs-accent-dark)">
+          Scene brief
+        </p>
+        <span className="patch bg-white text-(--aqs-accent-strong) dark:bg-slate-950">
+          {activeScene.shortLabel}
+        </span>
+      </div>
+      <p className="mt-2.5 text-lg font-black leading-tight text-(--aqs-ink) dark:text-white">
+        {activeScene.label}
+      </p>
+      <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600 dark:text-slate-300">
+        {slideSummary}
+      </p>
+      <div className="mt-2.5 grid gap-2 sm:grid-cols-2">
+        {DAILY_DESK_SCENES.filter((scene) => scene.id !== activeView).slice(0, 3).map((scene) => (
+          <button
+            key={scene.id}
+            type="button"
+            onClick={() => setActiveView(scene.id)}
+            className="studio-card bg-(--aqs-paper-strong) px-3 py-2 text-[10px] font-black uppercase tracking-[0.22em] text-slate-500 hover:bg-white dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-slate-800"
+          >
+            Jump to {scene.shortLabel}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  const askMikePanel = (
+    <div className="studio-card flex min-h-0 flex-1 flex-col bg-white p-3 dark:bg-slate-900">
+      <div className="flex shrink-0 items-center gap-2">
+        <Sparkles className="h-4 w-4 text-(--aqs-accent)" />
+        <p className="text-[10px] font-black uppercase tracking-[0.32em] text-(--aqs-accent-strong) dark:text-(--aqs-accent-dark)">
+          Ask Mike
+        </p>
+      </div>
+
+      {chatMessages.length > 0 ? (
+        <div className="scroll-studio mt-3 min-h-0 flex-1 space-y-3 overflow-y-auto rounded-[1.4rem] bg-slate-50/80 p-3.5 dark:bg-slate-950/60">
+          {chatMessages.map((message, index) => (
+            <div key={`${message.role}-${index}`} className={message.role === "user" ? "flex justify-end" : "flex justify-start"}>
+              <div
+                className={`max-w-[94%] rounded-[1.4rem] border-2 px-4 py-3 ${
+                  message.role === "user"
+                    ? "border-(--aqs-border) bg-(--aqs-accent) text-white"
+                    : "border-(--aqs-border) bg-white text-(--aqs-ink) dark:bg-slate-900 dark:text-white"
+                }`}
+              >
+                <p className={`mb-2 text-[9px] font-black uppercase tracking-widest ${message.role === "user" ? "text-white/60" : "text-slate-400"}`}>
+                  {message.role === "user" ? "Question" : "Mike"}
+                </p>
+                {message.role === "tutor" ? (
+                  <RichResponse text={message.text} compact />
+                ) : (
+                  <p className="text-sm font-medium leading-relaxed">{message.text}</p>
+                )}
+              </div>
+            </div>
+          ))}
+          {isChatLoading ? (
+            <div className="flex justify-start">
+              <div className="studio-card flex items-center gap-3 bg-white px-5 py-3 dark:bg-slate-900">
+                <Loader2 className="h-4 w-4 animate-spin text-(--aqs-accent)" />
+                <span className="text-xs font-black uppercase tracking-widest text-slate-500">Processing...</span>
+              </div>
+            </div>
+          ) : null}
+          <div ref={chatEndRef} />
+        </div>
+      ) : (
+        <div className="mt-2 min-h-0 flex-1 rounded-[1.2rem] bg-slate-50/70 p-3 dark:bg-slate-950/60">
+          <p className="text-sm font-medium leading-relaxed text-slate-600 dark:text-slate-300">
+            {askMikeIntro}
+          </p>
+        </div>
+      )}
+
+      <div className="mt-2 shrink-0 grid gap-2">
+        {promptSuggestions.slice(0, 3).map((suggestion) => (
+          <button
+            key={suggestion}
+            type="button"
+            onClick={() => setChatInput(suggestion)}
+            className="studio-card bg-white px-3 py-2 text-left text-[10px] leading-snug font-black text-slate-500 hover:bg-slate-50 dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-slate-800"
+          >
+            {suggestion}
+          </button>
+        ))}
+      </div>
+
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          void handleAsk();
+        }}
+        className="mt-2 shrink-0 grid gap-2"
+      >
+        <div className="neo-border-thin studio-focus rounded-2xl bg-white p-1 dark:bg-slate-950">
+          <textarea
+            value={chatInput}
+            onChange={(event) => setChatInput(event.target.value)}
+            placeholder={askMikePlaceholder}
+            aria-label="Ask Mike about the Daily Desk"
+            name="daily-desk-chat"
+            autoComplete="off"
+            disabled={isChatLoading || !canAskDesk}
+            rows={2}
+            className="min-h-[3.75rem] w-full resize-none bg-transparent px-4 py-3 text-sm font-medium leading-relaxed text-(--aqs-ink) outline-none dark:text-white"
+          />
+        </div>
+        {!canAskCurrentScene && canAskDesk ? (
+          <p className="text-xs font-medium leading-relaxed text-slate-500 dark:text-slate-400">
+            This scene is still syncing. Mike can already help with the {loadedDeskTopicLabel}.
+          </p>
+        ) : null}
+        {!canAskDesk ? (
+          <p className="text-xs font-medium leading-relaxed text-slate-500 dark:text-slate-400">
+            Mike unlocks as soon as the first Daily Desk section loads.
+          </p>
+        ) : null}
+        <button
+          type="submit"
+          disabled={!chatInput.trim() || isChatLoading || !canAskDesk}
+          className="neo-border neo-shadow flex items-center justify-center gap-3 rounded-2xl bg-(--aqs-accent) px-6 py-2.5 text-sm font-black text-white transition-all hover:bg-(--aqs-accent-strong) disabled:opacity-50"
+        >
+          <Send className="h-4 w-4" />
+          Ask
+        </button>
+      </form>
+    </div>
+  );
+
   return (
     <div className="flex h-full min-h-0 flex-col gap-3 animate-in fade-in duration-700">
       {onReturn ? <DailyDeskBanner onReturn={onReturn} /> : null}
@@ -1209,9 +1344,9 @@ Answer directly. Stay anchored to the supplied Daily Desk content. If the user a
           </div>
         </div>
 
-        <div className="scroll-studio min-h-0 flex-1 overflow-y-auto p-3 md:p-4 lg:overflow-hidden">
-          <div className="grid min-h-full gap-3 lg:grid-cols-[1fr_19rem] xl:grid-cols-[1fr_20rem] lg:grid-rows-1">
-            <div className="flex min-h-0 flex-col gap-3 lg:overflow-hidden">
+        <div className="min-h-0 flex-1 p-3 md:p-4">
+          <div className="hidden h-full min-h-0 gap-3 lg:grid lg:grid-cols-[1fr_19rem] lg:grid-rows-1 xl:grid-cols-[1fr_20rem]">
+            <div className="flex min-h-0 flex-col gap-3 overflow-hidden">
               <div className="flex items-center gap-2 overflow-x-auto pb-1">
                 {DAILY_DESK_SCENES.map((scene) => (
                   <button
@@ -1264,138 +1399,70 @@ Answer directly. Stay anchored to the supplied Daily Desk content. If the user a
               </div>
             </div>
 
-            <aside className="flex min-h-0 flex-col gap-2 overflow-y-auto lg:overflow-hidden">
-              <div className="studio-card shrink-0 bg-white p-3.5 dark:bg-slate-900">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-[10px] font-black uppercase tracking-[0.32em] text-(--aqs-accent-strong) dark:text-(--aqs-accent-dark)">
-                    Scene brief
-                  </p>
-                  <span className="patch bg-white text-(--aqs-accent-strong) dark:bg-slate-950">
-                    {activeScene.shortLabel}
-                  </span>
-                </div>
-                <p className="mt-2.5 text-lg font-black leading-tight text-(--aqs-ink) dark:text-white">
-                  {activeScene.label}
-                </p>
-                <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600 dark:text-slate-300">
-                  {slideSummary}
-                </p>
-                <div className="mt-2.5 grid gap-2 sm:grid-cols-2">
-                  {DAILY_DESK_SCENES.filter((scene) => scene.id !== activeView).slice(0, 3).map((scene) => (
+            <aside className="flex min-h-0 flex-col gap-2 overflow-hidden">
+              {sceneBriefCard}
+              {askMikePanel}
+            </aside>
+          </div>
+
+          <div className="flex h-full min-h-0 flex-col gap-3 lg:hidden">
+            <div className="scroll-studio min-h-0 flex-1 overflow-y-auto pr-1">
+              <div className="flex min-h-full flex-col gap-3">
+                <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                  {DAILY_DESK_SCENES.map((scene) => (
                     <button
                       key={scene.id}
                       type="button"
                       onClick={() => setActiveView(scene.id)}
-                      className="studio-card bg-(--aqs-paper-strong) px-3 py-2 text-[10px] font-black uppercase tracking-[0.22em] text-slate-500 hover:bg-white dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-slate-800"
+                      className={`neo-border-thin neo-shadow-sm shrink-0 rounded-2xl px-3.5 py-2 text-[11px] font-black uppercase tracking-[0.24em] transition ${
+                        activeView === scene.id
+                          ? "bg-(--aqs-accent) text-white"
+                          : "bg-white text-(--aqs-ink) hover:bg-slate-50 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800"
+                      }`}
                     >
-                      Jump to {scene.shortLabel}
+                      <span className="sm:hidden">{scene.shortLabel}</span>
+                      <span className="hidden sm:inline">{scene.label}</span>
                     </button>
                   ))}
                 </div>
-              </div>
 
-              <div className="studio-card flex min-h-0 flex-1 flex-col bg-white p-3 dark:bg-slate-900">
-                <div className="flex items-center gap-2 shrink-0">
-                  <Sparkles className="h-4 w-4 text-(--aqs-accent)" />
-                  <p className="text-[10px] font-black uppercase tracking-[0.32em] text-(--aqs-accent-strong) dark:text-(--aqs-accent-dark)">
-                    Ask Mike
-                  </p>
-                </div>
-
-                {chatMessages.length > 0 ? (
-                  <div className="scroll-studio mt-3 flex-1 min-h-0 space-y-3 overflow-y-auto rounded-[1.4rem] bg-slate-50/80 p-3.5 dark:bg-slate-950/60">
-                    {chatMessages.map((message, index) => (
-                      <div key={`${message.role}-${index}`} className={message.role === "user" ? "flex justify-end" : "flex justify-start"}>
-                        <div
-                          className={`max-w-[94%] rounded-[1.4rem] border-2 px-4 py-3 ${
-                            message.role === "user"
-                              ? "border-(--aqs-border) bg-(--aqs-accent) text-white"
-                              : "border-(--aqs-border) bg-white text-(--aqs-ink) dark:bg-slate-900 dark:text-white"
-                          }`}
-                        >
-                          <p className={`mb-2 text-[9px] font-black uppercase tracking-widest ${message.role === "user" ? "text-white/60" : "text-slate-400"}`}>
-                            {message.role === "user" ? "Question" : "Mike"}
-                          </p>
-                          {message.role === "tutor" ? (
-                            <RichResponse text={message.text} compact />
-                          ) : (
-                            <p className="text-sm font-medium leading-relaxed">{message.text}</p>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                    {isChatLoading ? (
-                      <div className="flex justify-start">
-                        <div className="studio-card flex items-center gap-3 bg-white px-5 py-3 dark:bg-slate-900">
-                          <Loader2 className="h-4 w-4 animate-spin text-(--aqs-accent)" />
-                          <span className="text-xs font-black uppercase tracking-widest text-slate-500">Processing...</span>
-                        </div>
-                      </div>
-                    ) : null}
-                    <div ref={chatEndRef} />
-                  </div>
-                ) : (
-                  <div className="mt-2 flex-1 min-h-0 rounded-[1.2rem] bg-slate-50/70 p-3 dark:bg-slate-950/60">
-                    <p className="text-sm font-medium leading-relaxed text-slate-600 dark:text-slate-300">
-                      {askMikeIntro}
+                <div className="flex items-center justify-between gap-3 rounded-[1.3rem] bg-(--aqs-paper-strong) px-4 py-2 dark:bg-slate-900">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.28em] text-(--aqs-accent-strong) dark:text-(--aqs-accent-dark)">
+                      Current scene
+                    </p>
+                    <p className="mt-1 line-clamp-1 text-sm font-medium leading-relaxed text-slate-600 dark:text-slate-300">
+                      {slideSummary}
                     </p>
                   </div>
-                )}
-
-                <div className="mt-2 shrink-0 grid gap-2">
-                  {promptSuggestions.slice(0, 3).map((suggestion) => (
+                  <div className="flex items-center gap-2">
                     <button
-                      key={suggestion}
                       type="button"
-                      onClick={() => setChatInput(suggestion)}
-                      className="studio-card bg-white px-3 py-2 text-left text-[10px] leading-snug font-black text-slate-500 hover:bg-slate-50 dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-slate-800"
+                      onClick={() => cycleScene(-1)}
+                      className="studio-card h-10 w-10 bg-white hover:bg-slate-50 dark:bg-slate-950 dark:hover:bg-slate-800"
+                      aria-label="Previous Daily Desk scene"
                     >
-                      {suggestion}
+                      <ArrowLeft className="mx-auto h-4 w-4" />
                     </button>
-                  ))}
+                    <button
+                      type="button"
+                      onClick={() => cycleScene(1)}
+                      className="studio-card h-10 w-10 bg-white hover:bg-slate-50 dark:bg-slate-950 dark:hover:bg-slate-800"
+                      aria-label="Next Daily Desk scene"
+                    >
+                      <ArrowRight className="mx-auto h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
 
-                <form
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    void handleAsk();
-                  }}
-                  className="mt-2 shrink-0 grid gap-2"
-                >
-                  <div className="neo-border-thin studio-focus rounded-2xl bg-white p-1 dark:bg-slate-950">
-                    <textarea
-                      value={chatInput}
-                      onChange={(event) => setChatInput(event.target.value)}
-                      placeholder={askMikePlaceholder}
-                      aria-label="Ask Mike about the Daily Desk"
-                      name="daily-desk-chat"
-                      autoComplete="off"
-                      disabled={isChatLoading || !canAskDesk}
-                      rows={2}
-                      className="min-h-[3.75rem] w-full resize-none bg-transparent px-4 py-3 text-sm font-medium leading-relaxed text-(--aqs-ink) outline-none dark:text-white"
-                    />
-                  </div>
-                  {!canAskCurrentScene && canAskDesk ? (
-                    <p className="text-xs font-medium leading-relaxed text-slate-500 dark:text-slate-400">
-                      This scene is still syncing. Mike can already help with the {loadedDeskTopicLabel}.
-                    </p>
-                  ) : null}
-                  {!canAskDesk ? (
-                    <p className="text-xs font-medium leading-relaxed text-slate-500 dark:text-slate-400">
-                      Mike unlocks as soon as the first Daily Desk section loads.
-                    </p>
-                  ) : null}
-                  <button
-                    type="submit"
-                    disabled={!chatInput.trim() || isChatLoading || !canAskDesk}
-                    className="neo-border neo-shadow flex items-center justify-center gap-3 rounded-2xl bg-(--aqs-accent) px-6 py-2.5 text-sm font-black text-white transition-all hover:bg-(--aqs-accent-strong) disabled:opacity-50"
-                  >
-                    <Send className="h-4 w-4" />
-                    Ask
-                  </button>
-                </form>
+                {sceneContent}
+                {sceneBriefCard}
               </div>
-            </aside>
+            </div>
+
+            <div className="min-h-[17rem] shrink-0">
+              {askMikePanel}
+            </div>
           </div>
         </div>
       </section>
