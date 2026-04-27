@@ -59,8 +59,12 @@ export function HistorySidebar({ items, onSelect, onClose }: HistorySidebarProps
         </div>
 
         <div className="relative mb-4">
+          <label htmlFor="history-search" className="sr-only">
+            Search history
+          </label>
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
           <input
+            id="history-search"
             ref={searchInputRef}
             type="text"
             value={searchQuery}

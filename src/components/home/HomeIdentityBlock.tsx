@@ -28,7 +28,7 @@ export function HomeIdentityBlock({ heroSrc, providerReady }: HomeIdentityBlockP
       <div className={`rounded-[0.95rem] border px-3 py-2 text-xs font-semibold leading-5 ${
         providerReady
           ? "border-emerald-500/25 bg-emerald-50/80 text-emerald-900 dark:border-emerald-400/25 dark:bg-emerald-950/25 dark:text-emerald-100"
-          : "border-(--aqs-accent)/20 bg-(--aqs-accent-soft) text-(--aqs-ink) dark:border-(--aqs-accent-dark)/25 dark:bg-[color:rgba(122,31,52,0.18)] dark:text-slate-100"
+          : "border-(--aqs-accent)/20 bg-(--aqs-accent-soft) text-(--aqs-ink) dark:border-(--aqs-accent-dark)/25 dark:bg-[rgba(122,31,52,0.18)] dark:text-slate-100"
       }`}>
         Mike says: {providerReady
           ? "You're set. Use Fast for quick checks and Deep when you need full collegiate walkthroughs."

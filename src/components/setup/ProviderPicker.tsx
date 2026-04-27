@@ -47,9 +47,10 @@ export function ProviderPicker({
             key={provider.id}
             type="button"
             onClick={() => onSelect(provider.id)}
+            aria-pressed={active}
             className={`w-full rounded-[1.7rem] border px-5 py-5 text-left transition ${
               active
-                ? "border-(--aqs-accent) bg-(--aqs-accent-soft) shadow-[0_18px_36px_rgba(122,31,52,0.14)] dark:bg-[color:rgba(122,31,52,0.24)]"
+                ? "border-(--aqs-accent) bg-(--aqs-accent-soft) shadow-[0_18px_36px_rgba(122,31,52,0.14)] dark:bg-[rgba(122,31,52,0.24)]"
                 : "border-(--aqs-ink)/10 bg-white/90 hover:-translate-y-0.5 hover:border-(--aqs-accent)/35 dark:border-white/10 dark:bg-slate-950/65"
             }`}
           >
@@ -72,7 +73,7 @@ export function ProviderPicker({
               {!provider.capabilities.supportsCustomBaseUrl && provider.id !== "gemini" ? <CapabilityBadge label="Preset URL" /> : null}
             </div>
             {provider.id === "minimax" ? (
-              <div className="mt-4 flex items-start gap-2 rounded-[1rem] border border-(--aqs-ink)/8 bg-white/70 px-3 py-3 text-xs leading-6 text-slate-600 dark:border-white/10 dark:bg-slate-950/45 dark:text-slate-300">
+              <div className="mt-4 flex items-start gap-2 rounded-2xl border border-(--aqs-ink)/8 bg-white/70 px-3 py-3 text-xs leading-6 text-slate-600 dark:border-white/10 dark:bg-slate-950/45 dark:text-slate-300">
                 Browser mode is text/chat only in the local-first build.
               </div>
             ) : null}

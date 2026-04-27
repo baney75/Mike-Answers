@@ -25,6 +25,13 @@ describe("provider registry", () => {
     expect(defaults.minimax.models.deepModel).toBe("MiniMax-M2.7");
   });
 
+  test("defaults API key storage to session only", () => {
+    const defaults = createDefaultProviderRuntimeConfigs();
+
+    expect(defaults.gemini.rememberKey).toBe(false);
+    expect(defaults.openrouter.rememberKey).toBe(false);
+  });
+
   test("marks MiniMax browser limitations honestly", () => {
     const minimax = getProviderDescriptor("minimax");
 

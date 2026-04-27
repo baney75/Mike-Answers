@@ -994,13 +994,11 @@ export function RichResponse({ text, compact = false }: RichResponseProps) {
   }, [elements, processed]);
 
   const proseClass = compact
-    ? "prose prose-sm max-w-none text-[16px] leading-8 text-slate-800 dark:prose-invert dark:text-slate-100 prose-p:my-4 prose-p:leading-8 prose-headings:mb-4 prose-headings:mt-6 prose-headings:font-sans prose-headings:font-black prose-strong:text-slate-900 dark:prose-strong:text-white prose-ul:my-4 prose-ul:pl-6 prose-ol:my-4 prose-ol:pl-6 prose-li:my-2 prose-li:leading-8 prose-pre:bg-white dark:prose-pre:bg-slate-950 prose-pre:border-2 prose-pre:border-(--aqs-border) prose-pre:rounded-2xl prose-blockquote:border-l-[6px] prose-blockquote:border-(--aqs-accent) prose-blockquote:bg-(--aqs-accent-soft) prose-blockquote:px-6 prose-blockquote:py-3 dark:prose-blockquote:bg-[#1a0b12] dark:prose-blockquote:ring-1 dark:prose-blockquote:ring-white/10 prose-a:text-(--aqs-accent) dark:prose-a:text-(--aqs-accent-dark) prose-a:font-bold prose-a:underline prose-a:underline-offset-4"
-    : "prose prose-lg prose-gray max-w-none dark:prose-invert prose-p:leading-relaxed prose-pre:bg-white dark:prose-pre:bg-slate-950 prose-pre:text-gray-900 dark:prose-pre:text-gray-100 prose-pre:border-[3px] prose-pre:border-(--aqs-border) prose-pre:rounded-[1.8rem] prose-pre:neo-shadow prose-headings:font-sans prose-headings:font-black prose-headings:tracking-tight prose-headings:text-(--aqs-ink) dark:prose-headings:text-white prose-a:text-(--aqs-accent) dark:prose-a:text-(--aqs-accent-dark) prose-a:font-black prose-a:underline prose-a:underline-offset-4 prose-table:border-[3px] prose-table:border-(--aqs-border) prose-table:rounded-2xl prose-table:overflow-hidden prose-th:border-b-[3px] prose-th:border-(--aqs-border) prose-th:bg-(--aqs-paper-strong) dark:prose-th:bg-slate-900 prose-td:border-b-2 prose-td:border-slate-100 dark:prose-td:border-slate-800";
+    ? "prose prose-sm max-w-none text-[16px] leading-8 text-slate-800 dark:prose-invert dark:text-slate-100 prose-p:my-4 prose-p:leading-8 prose-headings:mb-4 prose-headings:mt-6 prose-headings:break-words prose-headings:font-sans prose-headings:font-black prose-strong:text-slate-900 dark:prose-strong:text-white prose-ul:my-4 prose-ul:pl-6 prose-ol:my-4 prose-ol:pl-6 prose-li:my-2 prose-li:leading-8 prose-pre:max-w-full prose-pre:overflow-x-auto prose-pre:bg-white dark:prose-pre:bg-slate-950 prose-pre:border-2 prose-pre:border-(--aqs-border) prose-pre:rounded-2xl prose-blockquote:border-l-[6px] prose-blockquote:border-(--aqs-accent) prose-blockquote:bg-(--aqs-accent-soft) prose-blockquote:px-6 prose-blockquote:py-3 dark:prose-blockquote:bg-[#1a0b12] dark:prose-blockquote:ring-1 dark:prose-blockquote:ring-white/10 prose-a:text-(--aqs-accent) dark:prose-a:text-(--aqs-accent-dark) prose-a:font-bold prose-a:underline prose-a:underline-offset-4"
+    : "prose prose-lg prose-gray max-w-none dark:prose-invert prose-p:leading-relaxed prose-pre:max-w-full prose-pre:overflow-x-auto prose-pre:bg-white dark:prose-pre:bg-slate-950 prose-pre:text-gray-900 dark:prose-pre:text-gray-100 prose-pre:border-[3px] prose-pre:border-(--aqs-border) prose-pre:rounded-[1.8rem] prose-pre:neo-shadow prose-headings:break-words prose-headings:font-sans prose-headings:font-black prose-headings:tracking-tight prose-headings:text-(--aqs-ink) prose-h1:text-[clamp(2.35rem,9vw,4.5rem)] prose-h1:leading-[0.95] dark:prose-headings:text-white prose-a:text-(--aqs-accent) dark:prose-a:text-(--aqs-accent-dark) prose-a:font-black prose-a:underline prose-a:underline-offset-4 prose-table:block prose-table:max-w-full prose-table:overflow-x-auto prose-table:border-[3px] prose-table:border-(--aqs-border) prose-table:rounded-2xl prose-th:border-b-[3px] prose-th:border-(--aqs-border) prose-th:bg-(--aqs-paper-strong) dark:prose-th:bg-slate-900 prose-td:border-b-2 prose-td:border-slate-100 dark:prose-td:border-slate-800";
 
   return (
     <div className="space-y-4">
-      {!compact ? <SourcesPanel sources={sources} /> : null}
-
       {parts.map((part, index) => {
         if (part.type === "image") {
           return <ImageSearchResult key={part.id || `img-${index}`} query={part.content} compact={compact} />;
@@ -1083,7 +1081,7 @@ export function RichResponse({ text, compact = false }: RichResponseProps) {
         );
       })}
 
-      {compact ? <SourcesPanel sources={sources} compact /> : null}
+      <SourcesPanel sources={sources} compact={compact} />
     </div>
   );
 }

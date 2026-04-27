@@ -145,6 +145,6 @@ Custom domain target:
 
 ```bash
 bun lint
-bun test src/utils/image.test.ts src/utils/input.test.ts src/utils/solution.test.ts src/utils/request.test.ts src/services/gemini.test.ts src/services/ai.test.ts src/services/providers/registry.test.ts src/services/news.test.ts src/services/wotd.test.ts
+bun test src/utils/image.test.ts src/utils/input.test.ts src/utils/solution.test.ts src/utils/request.test.ts src/services/gemini.test.ts src/services/ai.test.ts src/services/aiCitation.test.ts src/services/openaiCompatible.test.ts src/services/providers/registry.test.ts src/services/news.test.ts src/services/wotd.test.ts src/services/workspaceTransfer.test.ts src/utils/followUpContext.test.ts
 bun run build
 ```

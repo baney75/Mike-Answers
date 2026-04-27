@@ -270,7 +270,6 @@ export default function App({ externalHistory }: AppProps) {
   const [showHistory, setShowHistory] = useState(false);
   const [installPromptEvent, setInstallPromptEvent] = useState<InstallPromptEvent | null>(null);
   const [standalonePwa, setStandalonePwa] = useState(() => isStandalonePwa());
-  const [offlineReady, setOfflineReady] = useState(false);
   const [needRefresh, setNeedRefresh] = useState(false);
   const [isOffline, setIsOffline] = useState(() => typeof navigator !== "undefined" && !navigator.onLine);
   const pwaUpdateRef = useRef<((reloadPage?: boolean) => Promise<void>) | null>(null);
@@ -375,7 +374,7 @@ export default function App({ externalHistory }: AppProps) {
       setInstallPromptEvent(event);
     });
     const pwaLifecycle = registerPwaLifecycle({
-      onOfflineReady: () => setOfflineReady(true),
+      onOfflineReady: () => undefined,
       onNeedRefresh: () => setNeedRefresh(true),
       onRegisterError: (error) => console.error("PWA registration error", error),
     });
@@ -394,20 +393,6 @@ export default function App({ externalHistory }: AppProps) {
       window.removeEventListener("appinstalled", handleInstalled);
     };
   }, []);
-
-  useEffect(() => {
-    if (!offlineReady) {
-      return;
-    }
-
-    const timeout = window.setTimeout(() => {
-      setOfflineReady(false);
-    }, 5000);
-
-    return () => {
-      window.clearTimeout(timeout);
-    };
-  }, [offlineReady]);
 
   useEffect(() => {
     if (settings.preferredSubject && subject === "Auto-detect") {
@@ -470,6 +455,7 @@ export default function App({ externalHistory }: AppProps) {
       return {
         id: historyItemId,
         timestamp: Date.now(),
+        generatedAt: lastGeneratedAt ?? undefined,
         solution,
         chatHistory,
         type: "solve",
@@ -482,7 +468,7 @@ export default function App({ externalHistory }: AppProps) {
         model: lastResolvedModel,
       };
     },
-    [chatHistory, lastMode, lastResolvedModel, lastResolvedProviderId, solution, solutionHideAnswerDefault, subject, textInput],
+    [chatHistory, lastGeneratedAt, lastMode, lastResolvedModel, lastResolvedProviderId, solution, solutionHideAnswerDefault, subject, textInput],
   );
 
   // ── Feature handlers ────────────────────────────────────────────────
@@ -584,6 +570,26 @@ export default function App({ externalHistory }: AppProps) {
     }: SolveRequest) => {
       const trimmedText = nextTextInput?.trim() ?? null;
       const persistedImageBase64 = nextImageBase64?.trim() || null;
+
+      if (!nextImageFile && !persistedImageBase64 && trimmedText) {
+        if (isVerseOfTheDayRequest(trimmedText)) {
+          setDailyDeskView("verse");
+          setAppState("WOTD");
+          return;
+        }
+
+        if (isWordOfTheDayRequest(trimmedText)) {
+          setDailyDeskView("word");
+          setAppState("WOTD");
+          return;
+        }
+
+        if (isNewsRequest(trimmedText)) {
+          setNewsQuery(deriveNewsQuery(trimmedText));
+          setAppState("NEWS");
+          return;
+        }
+      }
 
       if (!runtimeProviderReady) {
         if (nextImageFile) {
@@ -757,12 +763,16 @@ export default function App({ externalHistory }: AppProps) {
           return;
         }
 
+        const generatedAt = new Date().toISOString();
+        const generatedTimestamp = Date.parse(generatedAt);
+
         setSolution(finalSolution);
         setSolutionHideAnswerDefault(nextHideAnswerByDefault);
         setAppState("SOLVED");
         const historyItem: HistoryItem = {
           id: Date.now().toString(),
-          timestamp: Date.now(),
+          timestamp: generatedTimestamp,
+          generatedAt,
           solution: finalSolution,
           chatHistory: [],
           type: "solve",
@@ -776,7 +786,7 @@ export default function App({ externalHistory }: AppProps) {
         currentHistoryItemIdRef.current = historyItem.id;
         setLastResolvedProviderId(resolvedProvider);
         setLastResolvedModel(resolvedModel);
-        setLastGeneratedAt(new Date().toISOString());
+        setLastGeneratedAt(generatedAt);
         history.push(historyItem);
       } catch (err) {
         if (currentTaskIdRef.current !== taskId) {
@@ -1116,6 +1126,7 @@ export default function App({ externalHistory }: AppProps) {
     setSubject(item.subject ?? "Auto-detect");
     setLastResolvedProviderId(item.provider ?? "gemini");
     setLastResolvedModel(item.model);
+    setLastGeneratedAt(item.generatedAt ?? new Date(item.timestamp).toISOString());
     setAppState("SOLVED");
     setShowHistory(false);
     setImageFile(null);
@@ -1274,7 +1285,7 @@ export default function App({ externalHistory }: AppProps) {
 
         {showSetup && appState !== "NEWS" && appState !== "WOTD" ? (
           <div className="fixed inset-0 z-40 flex items-start justify-center bg-slate-950/40 px-4 py-6 backdrop-blur-md md:items-center md:p-8">
-            <div className="relative max-h-[calc(100vh-3rem)] w-full max-w-5xl overflow-y-auto rounded-[2.5rem]">
+            <div className="relative max-h-[calc(100dvh-3rem)] w-full max-w-5xl overflow-y-auto rounded-[2.5rem]">
               <button
                 type="button"
                 onClick={() => setShowSetup(false)}
@@ -1515,9 +1526,7 @@ export default function App({ externalHistory }: AppProps) {
       <PwaNotice
         isOffline={isOffline}
         needRefresh={needRefresh}
-        offlineReady={offlineReady}
         onRefresh={() => void handleRefreshPwa()}
-        onDismissOfflineReady={() => setOfflineReady(false)}
         onDismissRefresh={() => setNeedRefresh(false)}
       />
     </div>

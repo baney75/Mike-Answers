@@ -55,6 +55,7 @@ export function HomeUtilityRail({
           <button
             type="button"
             onClick={onOpenDailyDesk}
+            aria-label="Open Daily Desk"
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-(--aqs-accent) text-white transition hover:bg-(--aqs-accent-strong)"
           >
             <BookOpen className="h-4 w-4" />

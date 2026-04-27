@@ -127,7 +127,7 @@ export const providerOrder: ProviderId[] = [
 function cloneDefaultConfig(providerId: ProviderId): ProviderPreferenceConfig {
   const descriptor = providerDescriptors[providerId];
   return {
-    rememberKey: true,
+    rememberKey: false,
     baseUrl: descriptor.defaultBaseUrl,
     models: { ...descriptor.defaultModels },
     options: providerId === "openrouter" ? { freeOnly: true } : {},

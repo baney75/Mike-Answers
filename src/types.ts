@@ -86,6 +86,7 @@ export interface OriginalQuestionContext {
 export interface HistoryItem {
   id: string;
   timestamp: number;
+  generatedAt?: string;
   solution: string;
   chatHistory?: ChatMessage[];
   type?: 'solve' | 'grade';

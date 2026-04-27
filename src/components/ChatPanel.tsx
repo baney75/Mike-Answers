@@ -293,6 +293,7 @@ export function FollowUpDock({
               void handleSubmit();
             }}
             disabled={!input.trim() || isLoading}
+            aria-label="Send follow-up"
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-(--aqs-accent) text-white transition-all hover:bg-(--aqs-accent-strong) disabled:opacity-40"
           >
             <Send className="h-4.5 w-4.5" />

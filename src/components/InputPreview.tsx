@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { BrainCircuit, X, Zap } from "lucide-react";
 import type { SolveMode } from "../types";
 import { shouldSubmitTextShortcut } from "../utils/input";
@@ -10,9 +10,6 @@ interface InputPreviewProps {
   onSolve: (mode: SolveMode) => void;
   onClear: () => void;
 }
-
-const BTN_BASE =
-  "flex min-h-[44px] w-full items-center justify-center gap-2 rounded-full border px-6 py-3 text-sm font-semibold transition sm:w-auto";
 
 export function InputPreview({
   imagePreviewUrl,
@@ -46,6 +43,7 @@ export function InputPreview({
         <button
           type="button"
           onClick={onClear}
+          aria-label="Clear input"
           className="neo-border-thin neo-shadow-sm flex h-10 w-10 items-center justify-center rounded-full bg-white transition-all hover:bg-slate-50 active:translate-y-px dark:bg-slate-950 dark:hover:bg-slate-900"
           title="Clear input"
         >
@@ -71,7 +69,11 @@ export function InputPreview({
         {textInput !== null && !imagePreviewUrl && (
           <div className="flex min-h-0 w-full flex-1 flex-col space-y-4">
             <div className="neo-border-thin rounded-[2rem] bg-white p-1 focus-within:ring-4 focus-within:ring-[color:rgba(139,30,63,0.08)] dark:bg-slate-950">
+              <label htmlFor="input-review-text" className="sr-only">
+                Review or edit your question before solving
+              </label>
               <textarea
+                id="input-review-text"
                 ref={textAreaRef}
                 value={textInput}
                 onChange={(event) => onTextChange(event.target.value)}

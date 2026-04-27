@@ -145,7 +145,7 @@ When the user asks follow-up questions after receiving a solution:
 - The solve flow keeps two image encodings for image questions: a full-quality analysis image for the current solve and a smaller persisted image for history, reloads, transfers, and retries
 - Every follow-up turn rebuilds a deterministic context payload that includes the original question, the retained original image, and a compact base-solution summary from the earlier solve
 - Reloaded history items and imported transfer bundles restore that same follow-up context instead of falling back to `requestText` alone
-- Original solve metadata (`provider`, `model`) remains immutable in stored history even if the user changes providers before a later follow-up
+- Original solve metadata (`provider`, `model`, and `generatedAt`) remains immutable in stored history even if the user changes providers before a later follow-up
 - If the tutor asks a numbered clarification question, short replies are treated as answers to that clarification instead of restarting the loop
 - `ChatPanel` also seeds purpose-built starter prompts based on the current solution shape (for example video-heavy, homework-safe, or clarification-heavy answers)
 - The follow-up UI is now an inline continuation of the solved answer: transcript directly under the solution, targeted prompt chips in a bottom dock, and a pinned composer that stays reachable without reopening a side rail
@@ -379,7 +379,7 @@ Lightweight RSS/Atom parsing + remote fetch fallback layer for browser-safe feed
 Run these after meaningful code changes:
 
 - `bun lint`
-- `bun test src/utils/image.test.ts src/utils/input.test.ts src/utils/solution.test.ts src/utils/request.test.ts src/services/gemini.test.ts src/services/ai.test.ts src/services/openaiCompatible.test.ts src/services/providers/registry.test.ts src/services/news.test.ts src/services/wotd.test.ts src/services/workspaceTransfer.test.ts src/utils/followUpContext.test.ts`
+- `bun test src/utils/image.test.ts src/utils/input.test.ts src/utils/solution.test.ts src/utils/request.test.ts src/services/gemini.test.ts src/services/ai.test.ts src/services/aiCitation.test.ts src/services/openaiCompatible.test.ts src/services/providers/registry.test.ts src/services/news.test.ts src/services/wotd.test.ts src/services/workspaceTransfer.test.ts src/utils/followUpContext.test.ts`
 - `bun run build`
 
 Browser verification expectations:
