@@ -194,6 +194,17 @@ export interface OpenRouterModelSummary {
   free: boolean;
 }
 
+/** Normalized model entry from any OpenAI-compatible /v1/models catalog endpoint.
+ * Used for generic model fetching across providers (OpenAI, Ollama Cloud, Groq, etc.). */
+export interface ModelCatalogEntry {
+  id: string;
+  name: string;
+  description?: string;
+  contextLength: number;
+  supportsImages: boolean;
+  free: boolean;
+}
+
 export interface UserPreferencesSnapshot {
   selectedProviderId: LegacyProviderId;
   preferredSubject?: string;

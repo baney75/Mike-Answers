@@ -2,6 +2,7 @@ import { useMemo, useRef, useState, type ReactNode } from "react";
 import { ArrowRight, BadgeCheck, RefreshCw, UserRound } from "lucide-react";
 
 import type {
+  ModelCatalogEntry,
   OpenRouterModelSummary,
   ProviderId,
   ProviderRuntimeConfig,
@@ -23,7 +24,7 @@ interface SetupGuideProps {
   transferControls?: ReactNode;
   historyLabel?: string;
   emblemSrc: string;
-  openrouterModels: OpenRouterModelSummary[];
+  openrouterModels: (OpenRouterModelSummary | ModelCatalogEntry)[];
   openrouterLoading: boolean;
   openrouterError: string | null;
   onRefreshOpenRouterModels: () => void;
@@ -444,81 +445,88 @@ export function SetupGuide({
                 </p>
               </div>
 
-              {selectedProviderId === "openrouter" ? (
-                <div className="space-y-5 rounded-3xl border border-(--aqs-ink)/10 bg-white/84 p-5 dark:border-white/10 dark:bg-slate-950/55">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <div className="text-sm font-semibold text-(--aqs-ink) dark:text-white">Model catalog</div>
-                      <div className="text-sm leading-6 text-slate-600 dark:text-slate-300">
-                        Use OpenRouter discovery if you want a safer preset list. With <strong>Free only</strong> on, leaving the model fields on auto-pick lets Mike use OpenRouter's official free router.
+              {(() => {
+                const usesCatalog = selectedPreset?.capabilities.supportsModelCatalog ?? selectedProvider.capabilities.supportsModelCatalog;
+                return usesCatalog ? (
+                  <div className="space-y-5 rounded-3xl border border-(--aqs-ink)/10 bg-white/84 p-5 dark:border-white/10 dark:bg-slate-950/55">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <div className="text-sm font-semibold text-(--aqs-ink) dark:text-white">Model catalog</div>
+                        <div className="text-sm leading-6 text-slate-600 dark:text-slate-300">
+                          {selectedProviderId === "openrouter"
+                            ? <>Use OpenRouter discovery. With <strong>Free only</strong> on, auto-pick uses OpenRouter's official free router.</>
+                            : <>Live models fetched from the provider. Pick your <strong>fast</strong> and <strong>deep</strong> defaults below.</>}
+                        </div>
                       </div>
+                      {selectedProviderId === "openrouter" ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onUpdateProviderSettings("openrouter", {
+                              options: {
+                                ...settings.providers.openrouter.options,
+                                freeOnly: !settings.providers.openrouter.options?.freeOnly,
+                              },
+                            })
+                          }
+                          className={`rounded-full px-4 py-2 text-sm font-semibold ${
+                            settings.providers.openrouter.options?.freeOnly
+                              ? "bg-(--aqs-accent) text-white"
+                              : "border border-(--aqs-ink)/10 bg-white text-(--aqs-ink) dark:border-white/10 dark:bg-slate-950 dark:text-white"
+                          }`}
+                        >
+                          {settings.providers.openrouter.options?.freeOnly ? "Free only: on" : "Free only: off"}
+                        </button>
+                      ) : null}
                     </div>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        onUpdateProviderSettings("openrouter", {
-                          options: {
-                            ...settings.providers.openrouter.options,
-                            freeOnly: !settings.providers.openrouter.options?.freeOnly,
+
+                    <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
+                      <button
+                        type="button"
+                        onClick={onRefreshOpenRouterModels}
+                        className="inline-flex items-center gap-2 rounded-full border border-(--aqs-ink)/10 bg-white px-3 py-2 font-semibold text-(--aqs-ink) dark:border-white/10 dark:bg-slate-950 dark:text-white"
+                      >
+                        <RefreshCw className={`h-4 w-4 ${openrouterLoading ? "animate-spin" : ""}`} />
+                        Refresh models
+                      </button>
+                      <span>{openrouterModels.length} options visible</span>
+                      {openrouterError ? <span className="text-rose-600 dark:text-rose-300">{openrouterError}</span> : null}
+                    </div>
+
+                    <ModelProfileEditor
+                      provider={selectedProvider}
+                      models={selectedConfig.models}
+                      openrouterModels={openrouterModels}
+                      modelOptions={selectedPreset?.modelOptions ?? selectedProvider.modelOptions}
+                      onChange={(patch) =>
+                        onUpdateProviderSettings(selectedProviderId, {
+                          models: {
+                            ...selectedConfig.models,
+                            ...patch,
                           },
                         })
                       }
-                      className={`rounded-full px-4 py-2 text-sm font-semibold ${
-                        settings.providers.openrouter.options?.freeOnly
-                          ? "bg-(--aqs-accent) text-white"
-                          : "border border-(--aqs-ink)/10 bg-white text-(--aqs-ink) dark:border-white/10 dark:bg-slate-950 dark:text-white"
-                      }`}
-                    >
-                      {settings.providers.openrouter.options?.freeOnly ? "Free only: on" : "Free only: off"}
-                    </button>
+                    />
                   </div>
-
-                  <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
-                    <button
-                      type="button"
-                      onClick={onRefreshOpenRouterModels}
-                      className="inline-flex items-center gap-2 rounded-full border border-(--aqs-ink)/10 bg-white px-3 py-2 font-semibold text-(--aqs-ink) dark:border-white/10 dark:bg-slate-950 dark:text-white"
-                    >
-                      <RefreshCw className={`h-4 w-4 ${openrouterLoading ? "animate-spin" : ""}`} />
-                      Refresh models
-                    </button>
-                    <span>{openrouterModels.length} options visible</span>
-                    {openrouterError ? <span className="text-rose-600 dark:text-rose-300">{openrouterError}</span> : null}
+                ) : (
+                  <div className="space-y-5 rounded-3xl border border-(--aqs-ink)/10 bg-white/84 p-5 dark:border-white/10 dark:bg-slate-950/55">
+                    <ModelProfileEditor
+                      provider={selectedProvider}
+                      models={selectedConfig.models}
+                      openrouterModels={[]}
+                      modelOptions={selectedPreset?.modelOptions ?? selectedProvider.modelOptions}
+                      onChange={(patch) =>
+                        onUpdateProviderSettings(selectedProviderId, {
+                          models: {
+                            ...selectedConfig.models,
+                            ...patch,
+                          },
+                        })
+                      }
+                    />
                   </div>
-
-                  <ModelProfileEditor
-                    provider={selectedProvider}
-                    models={selectedConfig.models}
-                    openrouterModels={openrouterModels}
-                    modelOptions={selectedPreset?.modelOptions ?? selectedProvider.modelOptions}
-                    onChange={(patch) =>
-                      onUpdateProviderSettings(selectedProviderId, {
-                        models: {
-                          ...selectedConfig.models,
-                          ...patch,
-                        },
-                      })
-                    }
-                  />
-                </div>
-              ) : (
-                <div className="space-y-5 rounded-3xl border border-(--aqs-ink)/10 bg-white/84 p-5 dark:border-white/10 dark:bg-slate-950/55">
-                  <ModelProfileEditor
-                    provider={selectedProvider}
-                    models={selectedConfig.models}
-                    openrouterModels={[]}
-                    modelOptions={selectedPreset?.modelOptions ?? selectedProvider.modelOptions}
-                    onChange={(patch) =>
-                      onUpdateProviderSettings(selectedProviderId, {
-                        models: {
-                          ...selectedConfig.models,
-                          ...patch,
-                        },
-                      })
-                    }
-                  />
-                </div>
-              )}
+                );
+              })()}
 
               <CapabilityPanel provider={selectedProvider} config={selectedConfig} />
 

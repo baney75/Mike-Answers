@@ -1,6 +1,9 @@
 import { Search, Check } from "lucide-react";
 import { useState, useRef, useEffect, useMemo } from "react";
-import type { OpenRouterModelSummary, ProviderModelOption, ProviderModelProfile, ProviderDescriptor } from "../../types";
+import type { ModelCatalogEntry, OpenRouterModelSummary, ProviderModelOption, ProviderModelProfile, ProviderDescriptor } from "../../types";
+
+/** Models can come from the OpenRouter live catalog or any other provider's model catalog. */
+type CatalogModel = OpenRouterModelSummary | ModelCatalogEntry;
 
 function SearchableModelSelect({
   label,
@@ -13,7 +16,7 @@ function SearchableModelSelect({
   label: string;
   value: string | undefined;
   onChange: (value: string) => void;
-  options?: OpenRouterModelSummary[];
+  options?: CatalogModel[];
   modelOptions?: ProviderModelOption[];
   placeholder?: string;
 }) {
@@ -135,16 +138,18 @@ function SearchableModelSelect({
               <div className="px-4 py-6 text-center text-sm text-slate-400">No models match your search</div>
             ) : (
               filteredOptions.map((model) => {
-                const modelId = "id" in model ? model.id : model.id;
+                const catalogModel = model as CatalogModel;
+                const staticModel = model as ProviderModelOption;
+                const modelId = catalogModel.id ?? staticModel.id;
                 const modelLabel = isOpenRouter
-                  ? (model as OpenRouterModelSummary).name
-                  : (model as ProviderModelOption).label;
+                  ? catalogModel.name
+                  : staticModel.label;
                 const supportsImg = isOpenRouter
-                  ? (model as OpenRouterModelSummary).supportsImages
-                  : (model as ProviderModelOption).supportsImages;
+                  ? catalogModel.supportsImages
+                  : staticModel.supportsImages;
                 const modelNote = isOpenRouter
-                  ? (model as OpenRouterModelSummary).description
-                  : (model as ProviderModelOption).note;
+                  ? catalogModel.description
+                  : staticModel.note;
                 const isSelected = value === modelId;
                 return (
                   <button
@@ -198,11 +203,12 @@ export function ModelProfileEditor({
 }: {
   provider: ProviderDescriptor;
   models: ProviderModelProfile;
-  openrouterModels: OpenRouterModelSummary[];
+  openrouterModels: CatalogModel[];
   modelOptions?: ProviderModelOption[];
   onChange: (patch: Partial<ProviderModelProfile>) => void;
 }) {
-  const usesCatalog = provider.id === "openrouter";
+  // Catalog mode: show live-fetched models (OpenRouter, Ollama Cloud, etc.)
+  const usesCatalog = openrouterModels.length > 0;
 
   return (
     <div className="grid gap-4 md:grid-cols-2">

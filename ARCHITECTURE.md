@@ -372,6 +372,41 @@ The `NewsView` component (`src/components/NewsView.tsx`) is a news-only editoria
 
 Lightweight RSS/Atom parsing + remote fetch fallback layer for browser-safe feed ingestion.
 
+### Model Catalog System
+
+`src/services/catalogs/` contains explicit per-provider model catalog fetchers. Each provider with a live model listing endpoint gets its own file and fetcher function:
+
+| Fetcher | Endpoint | Provider |
+|---------|----------|----------|
+| `fetchOllamaCloudCatalog` | `ollama.com/v1/models` + `/api/tags` enrichment | Ollama Cloud |
+| `fetchOpenAICatalog` | `api.openai.com/v1/models` | OpenAI |
+| `fetchDeepSeekCatalog` | `api.deepseek.com/v1/models` | DeepSeek |
+| `fetchGroqCatalog` | `api.groq.com/openai/v1/models` | Groq |
+| `fetchTogetherCatalog` | `api.together.xyz/v1/models` | Together AI |
+| `fetchFireworksCatalog` | `api.fireworks.ai/inference/v1/models` | Fireworks AI |
+| `fetchMistralCatalog` | `api.mistral.ai/v1/models` | Mistral |
+| `fetchXAICatalog` | `api.x.ai/v1/models` | xAI |
+| `fetchCerebrasCatalog` | `api.cerebras.ai/v1/models` | Cerebras |
+| `fetchSambaNovaCatalog` | `api.sambanova.ai/v1/models` | SambaNova |
+| `fetchDeepInfraCatalog` | `api.deepinfra.com/v1/openai/models` | DeepInfra |
+| `fetchCohereCatalog` | `api.cohere.ai/compatibility/v1/models` | Cohere |
+| `fetchHyperbolicCatalog` | `api.hyperbolic.xyz/v1/models` | Hyperbolic |
+| `fetchHuggingFaceCatalog` | `router.huggingface.co/hf-inference/v1/models` | Hugging Face |
+| `fetchNvidiaNimCatalog` | `integrate.api.nvidia.com/v1/models` | NVIDIA NIM |
+| `fetchNovitaCatalog` | `api.novita.ai/v3/openai/models` | Novita AI |
+| `fetchSiliconFlowCatalog` | `api.siliconflow.cn/v1/models` | SiliconFlow |
+| `fetchVeniceCatalog` | `api.venice.ai/api/v1/models` | Venice.ai |
+
+Each fetcher:
+- Has its own function name, base URL, and cache
+- Uses Bearer token auth with the user's API key
+- Calls `parseModelListResponse` from `modelCatalog.ts` for parsing
+- Is independently testable
+
+The routing is handled explicitly by `useProviderCatalog` hook through a switch statement on provider/preset ID. No shared generic fetch function exists — each provider's endpoint is hardcoded.
+
+Providers without model catalog support (Anthropic, Azure, Vertex AI, Bedrock, Perplexity, gateways, local servers) keep `supportsModelCatalog: false` and use hardcoded `modelOptions[]` dropdowns.
+
 ### Other Services
 
 - `dictionary.ts` - Definition lookups (dictionaryapi.dev)

@@ -16,6 +16,7 @@
     "cf:whoami": "wrangler whoami"
   },
   "dependencies": {
+    "@asciidoctor/core": "^3.0.4",
     "@google/genai": "^1.29.0",
     "@tailwindcss/typography": "^0.5.19",
     "html5-qrcode": "^2.3.8",

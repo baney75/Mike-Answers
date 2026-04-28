@@ -74,32 +74,102 @@ const veniceModelOptions: ProviderModelOption[] = [
   },
 ];
 
-/** Ollama Cloud OpenAI-compat — list live models from `GET https://ollama.com/v1/models` with your key. Model tags change over time.
+/** Ollama Cloud OpenAI-compat — list live models from `GET https://ollama.com/v1/models` with your key.
+ * The v1/models endpoint returns bare model IDs (no `:cloud` suffix).
+ * The `:cloud` tagging is consumed by the local Ollama CLI, not the hosted API.
+ * Refresh catalog on demand to see newly released models; these static options
+ * serve as fallback when the live catalog is unreachable.
  */
 const ollamaCloudModelOptions: ProviderModelOption[] = [
   {
-    id: "llama3.2:3b-cloud",
-    label: "Llama 3.2 3B (cloud)",
-    note: "Economy-tier cloud latency; weaker on hard exams or subtle reasoning.",
+    id: "deepseek-v4-flash",
+    label: "DeepSeek V4 Flash",
+    note: "284B total / 13B active MoE, 1M context. Good fast route.",
     supportsImages: false,
   },
   {
-    id: "glm-5:cloud",
-    label: "GLM 5 (cloud)",
-    note: "Larger hosted cloud slot; stronger general answers than tiny Llama trims.",
+    id: "deepseek-v4-pro",
+    label: "DeepSeek V4 Pro",
+    note: "Heavy reasoning MoE, 1M context. Hard math and coding.",
     supportsImages: false,
   },
   {
-    id: "gpt-oss:120b-cloud",
-    label: "gpt-oss 120B (cloud)",
-    note: "Heavier reasoning and coding; slower and pricier. Confirm exact tag in /v1/models.",
-    supportsImages: false,
-  },
-  {
-    id: "qwen3-vl:235b-cloud",
-    label: "Qwen3 VL 235B (cloud)",
-    note: "Use for multimodal/screenshot solves. Large model: expect slow responses and quota impact.",
+    id: "kimi-k2.6",
+    label: "Kimi K2.6",
+    note: "Moonshot multimodal agentic model; vision, tools, thinking.",
     supportsImages: true,
+  },
+  {
+    id: "glm-5.1",
+    label: "GLM 5.1",
+    note: "Z.ai flagship for agentic engineering; strong coding.",
+    supportsImages: false,
+  },
+  {
+    id: "glm-5",
+    label: "GLM 5",
+    note: "744B total (40B active), strong reasoning, cloud-capable.",
+    supportsImages: false,
+  },
+  {
+    id: "gemini-3-flash-preview",
+    label: "Gemini 3 Flash Preview",
+    note: "Frontier intelligence via Ollama Cloud; preview model.",
+    supportsImages: true,
+  },
+  {
+    id: "gpt-oss:120b",
+    label: "GPT-OSS 120B",
+    note: "Open-weight GPT-class model; heavier reasoning, slower.",
+    supportsImages: false,
+  },
+  {
+    id: "gemma4:31b",
+    label: "Gemma 4 31B",
+    note: "Google frontier-class; reasoning, code, vision, tools.",
+    supportsImages: true,
+  },
+  {
+    id: "qwen3.5:397b",
+    label: "Qwen 3.5 397B",
+    note: "Open multimodal MoE, vision/tools/thinking.",
+    supportsImages: true,
+  },
+  {
+    id: "qwen3-vl:235b",
+    label: "Qwen3 VL 235B",
+    note: "Vision-language; best for screenshots.",
+    supportsImages: true,
+  },
+  {
+    id: "ministral-3:8b",
+    label: "Ministral 3 8B",
+    note: "Edge-deployable; vision-capable, lightweight.",
+    supportsImages: true,
+  },
+  {
+    id: "ministral-3:3b",
+    label: "Ministral 3 3B",
+    note: "Smallest option; fastest cloud inference.",
+    supportsImages: false,
+  },
+  {
+    id: "nemotron-3-super",
+    label: "Nemotron 3 Super",
+    note: "NVIDIA 120B open MoE; multi-agent.",
+    supportsImages: false,
+  },
+  {
+    id: "minimax-m2.7",
+    label: "MiniMax M2.7",
+    note: "Latest M2 for coding and productivity.",
+    supportsImages: false,
+  },
+  {
+    id: "glm-4.7",
+    label: "GLM 4.7",
+    note: "Fast GLM tier from Z.ai; good balance.",
+    supportsImages: false,
   },
 ];
 
@@ -897,7 +967,7 @@ export const openAICompatiblePresets: OpenAICompatiblePreset[] = [
     defaultBaseUrl: "https://api.openai.com/v1",
     defaultModels: { fastModel: "gpt-5.4-nano", deepModel: "gpt-5.4" },
     modelOptions: openAIModelOptions,
-    capabilities: { ...providerDescriptors.openai_compatible.capabilities, supportsImageInputInBrowser: true },
+    capabilities: { ...providerDescriptors.openai_compatible.capabilities, supportsImageInputInBrowser: true, supportsModelCatalog: true },
     policy: {
       trustTier: "byok_recommended",
       privacySummary: "Routes directly to OpenAI with your own project key.",
@@ -937,7 +1007,7 @@ export const openAICompatiblePresets: OpenAICompatiblePreset[] = [
     defaultBaseUrl: "https://api.deepseek.com/v1",
     defaultModels: { fastModel: "deepseek-v4-flash", deepModel: "deepseek-v4-pro" },
     modelOptions: deepseekModelOptions,
-    capabilities: { ...providerDescriptors.openai_compatible.capabilities, supportsImageInputInBrowser: false },
+    capabilities: { ...providerDescriptors.openai_compatible.capabilities, supportsImageInputInBrowser: false, supportsModelCatalog: true },
     policy: {
       trustTier: "byok_recommended",
       privacySummary: "Routes directly to DeepSeek with your key.",
@@ -956,7 +1026,7 @@ export const openAICompatiblePresets: OpenAICompatiblePreset[] = [
     defaultBaseUrl: "https://api.groq.com/openai/v1",
     defaultModels: { fastModel: "llama-3.1-8b-instant", deepModel: "llama-3.3-70b-versatile" },
     modelOptions: groqModelOptions,
-    capabilities: { ...providerDescriptors.openai_compatible.capabilities, supportsImageInputInBrowser: false },
+    capabilities: { ...providerDescriptors.openai_compatible.capabilities, supportsImageInputInBrowser: false, supportsModelCatalog: true },
     policy: {
       trustTier: "byok_recommended",
       privacySummary: "Routes directly to Groq Cloud with your key.",
@@ -975,7 +1045,7 @@ export const openAICompatiblePresets: OpenAICompatiblePreset[] = [
     defaultBaseUrl: "https://api.together.xyz/v1",
     defaultModels: { fastModel: "meta-llama/Llama-3.3-70B-Instruct-Turbo", deepModel: "deepseek-ai/DeepSeek-R1" },
     modelOptions: togetherModelOptions,
-    capabilities: { ...providerDescriptors.openai_compatible.capabilities, supportsImageInputInBrowser: false },
+    capabilities: { ...providerDescriptors.openai_compatible.capabilities, supportsImageInputInBrowser: false, supportsModelCatalog: true },
     policy: {
       trustTier: "byok_recommended",
       privacySummary: "Routes directly to Together AI with your key.",
@@ -997,7 +1067,7 @@ export const openAICompatiblePresets: OpenAICompatiblePreset[] = [
       deepModel: "accounts/fireworks/models/deepseek-v3p2",
     },
     modelOptions: fireworksModelOptions,
-    capabilities: { ...providerDescriptors.openai_compatible.capabilities, supportsImageInputInBrowser: false },
+    capabilities: { ...providerDescriptors.openai_compatible.capabilities, supportsImageInputInBrowser: false, supportsModelCatalog: true },
     policy: {
       trustTier: "byok_recommended",
       privacySummary: "Routes directly to Fireworks AI with your key.",
@@ -1016,7 +1086,7 @@ export const openAICompatiblePresets: OpenAICompatiblePreset[] = [
     defaultBaseUrl: "https://api.mistral.ai/v1",
     defaultModels: { fastModel: "mistral-small-2603", deepModel: "mistral-large-2512" },
     modelOptions: mistralModelOptions,
-    capabilities: { ...providerDescriptors.openai_compatible.capabilities, supportsImageInputInBrowser: true },
+    capabilities: { ...providerDescriptors.openai_compatible.capabilities, supportsImageInputInBrowser: true, supportsModelCatalog: true },
     policy: {
       trustTier: "byok_recommended",
       privacySummary: "Routes directly to Mistral with your key.",
@@ -1035,7 +1105,7 @@ export const openAICompatiblePresets: OpenAICompatiblePreset[] = [
     defaultBaseUrl: "https://api.x.ai/v1",
     defaultModels: { fastModel: "grok-4-1-fast-non-reasoning", deepModel: "grok-4-1-fast-reasoning" },
     modelOptions: xAIModelOptions,
-    capabilities: { ...providerDescriptors.openai_compatible.capabilities, supportsImageInputInBrowser: true },
+    capabilities: { ...providerDescriptors.openai_compatible.capabilities, supportsImageInputInBrowser: true, supportsModelCatalog: true },
     policy: {
       trustTier: "byok_recommended",
       privacySummary: "Routes directly to xAI with your key.",
@@ -1060,6 +1130,7 @@ export const openAICompatiblePresets: OpenAICompatiblePreset[] = [
       ...providerDescriptors.openai_compatible.capabilities,
       supportsImageInputInBrowser: true,
       supportsGrounding: false,
+      supportsModelCatalog: true,
     },
     policy: {
       trustTier: "byok_recommended",
@@ -1082,13 +1153,14 @@ export const openAICompatiblePresets: OpenAICompatiblePreset[] = [
     docsUrl: "https://docs.ollama.com/cloud",
     apiKeyPlaceholder: "Ollama API key (ollama.com/settings/keys)",
     defaultBaseUrl: "https://ollama.com/v1",
-    defaultModels: { fastModel: "glm-5:cloud", deepModel: "gpt-oss:120b-cloud" },
+    defaultModels: { fastModel: "glm-5.1", deepModel: "deepseek-v4-pro" },
     modelOptions: ollamaCloudModelOptions,
     capabilities: {
       ...providerDescriptors.openai_compatible.capabilities,
       requiresApiKey: true,
       supportsCustomBaseUrl: false,
       supportsImageInputInBrowser: true,
+      supportsModelCatalog: true,
     },
     policy: {
       trustTier: "byok_recommended",
@@ -1137,7 +1209,7 @@ export const openAICompatiblePresets: OpenAICompatiblePreset[] = [
     defaultBaseUrl: "https://api.cerebras.ai/v1",
     defaultModels: { fastModel: "llama3.1-8b", deepModel: "gpt-oss-120b" },
     modelOptions: cerebrasModelOptions,
-    capabilities: { ...providerDescriptors.openai_compatible.capabilities, supportsImageInputInBrowser: false },
+    capabilities: { ...providerDescriptors.openai_compatible.capabilities, supportsImageInputInBrowser: false, supportsModelCatalog: true },
     policy: {
       trustTier: "byok_recommended",
       privacySummary: "Routes directly to Cerebras Cloud with your key.",
@@ -1156,7 +1228,7 @@ export const openAICompatiblePresets: OpenAICompatiblePreset[] = [
      defaultBaseUrl: "https://api.sambanova.ai/v1",
      defaultModels: { fastModel: "Meta-Llama-3.1-8B-Instruct", deepModel: "Meta-Llama-3.3-70B-Instruct" },
      modelOptions: sambanovaModelOptions,
-     capabilities: { ...providerDescriptors.openai_compatible.capabilities, supportsImageInputInBrowser: true },
+     capabilities: { ...providerDescriptors.openai_compatible.capabilities, supportsImageInputInBrowser: true, supportsModelCatalog: true },
     policy: {
       trustTier: "byok_recommended",
       privacySummary: "Routes directly to SambaNova Cloud with your key.",
@@ -1175,7 +1247,7 @@ export const openAICompatiblePresets: OpenAICompatiblePreset[] = [
     defaultBaseUrl: "https://api.deepinfra.com/v1/openai",
     defaultModels: { fastModel: "Qwen/Qwen2.5-72B-Instruct", deepModel: "deepseek-ai/DeepSeek-R1-0528" },
     modelOptions: deepInfraModelOptions,
-    capabilities: { ...providerDescriptors.openai_compatible.capabilities, supportsImageInputInBrowser: true },
+    capabilities: { ...providerDescriptors.openai_compatible.capabilities, supportsImageInputInBrowser: true, supportsModelCatalog: true },
     policy: {
       trustTier: "byok_recommended",
       privacySummary: "Routes directly to DeepInfra with your key.",
@@ -1195,7 +1267,7 @@ export const openAICompatiblePresets: OpenAICompatiblePreset[] = [
     defaultBaseUrl: "https://api.cohere.ai/compatibility/v1",
     defaultModels: { fastModel: "command-r7b-12-2024", deepModel: "command-a-03-2025" },
     modelOptions: cohereModelOptions,
-    capabilities: { ...providerDescriptors.openai_compatible.capabilities, supportsImageInputInBrowser: true },
+    capabilities: { ...providerDescriptors.openai_compatible.capabilities, supportsImageInputInBrowser: true, supportsModelCatalog: true },
     policy: {
       trustTier: "byok_recommended",
       privacySummary: "Routes directly to Cohere with your key.",
@@ -1215,7 +1287,7 @@ export const openAICompatiblePresets: OpenAICompatiblePreset[] = [
     defaultBaseUrl: "https://api.novita.ai/v3/openai",
     defaultModels: { fastModel: "llama-3.1-8b-instruct", deepModel: "deepseek-v3" },
     modelOptions: novitaModelOptions,
-    capabilities: { ...providerDescriptors.openai_compatible.capabilities, supportsImageInputInBrowser: false },
+    capabilities: { ...providerDescriptors.openai_compatible.capabilities, supportsImageInputInBrowser: false, supportsModelCatalog: true },
     policy: {
       trustTier: "byok_recommended",
       privacySummary: "Routes directly to Novita AI with your key.",
@@ -1235,7 +1307,7 @@ export const openAICompatiblePresets: OpenAICompatiblePreset[] = [
     defaultBaseUrl: "https://router.huggingface.co/hf-inference/v1",
     defaultModels: { fastModel: "meta-llama/Llama-3.1-8B-Instruct", deepModel: "meta-llama/Llama-3.3-70B-Instruct" },
     modelOptions: huggingfaceModelOptions,
-    capabilities: { ...providerDescriptors.openai_compatible.capabilities, supportsImageInputInBrowser: true },
+    capabilities: { ...providerDescriptors.openai_compatible.capabilities, supportsImageInputInBrowser: true, supportsModelCatalog: true },
     policy: {
       trustTier: "byok_recommended",
       privacySummary: "Routes directly to Hugging Face Inference API with your token.",
@@ -1255,7 +1327,7 @@ export const openAICompatiblePresets: OpenAICompatiblePreset[] = [
     defaultBaseUrl: "https://integrate.api.nvidia.com/v1",
     defaultModels: { fastModel: "meta/llama-3.1-8b-instruct", deepModel: "nvidia/llama-3.1-nemotron-70b-instruct" },
     modelOptions: nvidiaNimModelOptions,
-    capabilities: { ...providerDescriptors.openai_compatible.capabilities, supportsImageInputInBrowser: true },
+    capabilities: { ...providerDescriptors.openai_compatible.capabilities, supportsImageInputInBrowser: true, supportsModelCatalog: true },
     policy: {
       trustTier: "byok_recommended",
       privacySummary: "Routes directly to NVIDIA cloud inference with your key.",
@@ -1344,7 +1416,7 @@ export const openAICompatiblePresets: OpenAICompatiblePreset[] = [
     defaultBaseUrl: "https://api.hyperbolic.xyz/v1",
     defaultModels: { fastModel: "meta-llama/Llama-3.3-70B-Instruct", deepModel: "deepseek-ai/DeepSeek-R1-0528" },
     modelOptions: hyperbolicModelOptions,
-    capabilities: { ...providerDescriptors.openai_compatible.capabilities, supportsImageInputInBrowser: false },
+    capabilities: { ...providerDescriptors.openai_compatible.capabilities, supportsImageInputInBrowser: false, supportsModelCatalog: true },
     policy: {
       trustTier: "community_experimental",
       privacySummary: "Routes directly to Hyperbolic with zero data retention policy.",
@@ -1364,7 +1436,7 @@ export const openAICompatiblePresets: OpenAICompatiblePreset[] = [
     defaultBaseUrl: "https://api.siliconflow.cn/v1",
     defaultModels: { fastModel: "Qwen/Qwen2.5-72B-Instruct", deepModel: "Qwen/Qwen3.5-397B-A17B" },
     modelOptions: siliconFlowModelOptions,
-    capabilities: { ...providerDescriptors.openai_compatible.capabilities, supportsImageInputInBrowser: false },
+    capabilities: { ...providerDescriptors.openai_compatible.capabilities, supportsImageInputInBrowser: false, supportsModelCatalog: true },
     policy: {
       trustTier: "byok_recommended",
       privacySummary: "Routes directly to SiliconFlow with your key.",
@@ -1403,7 +1475,7 @@ export const openAICompatiblePresets: OpenAICompatiblePreset[] = [
     defaultBaseUrl: "https://ai-gateway.vercel.sh/v1",
     defaultModels: { fastModel: "openai/gpt-5.4-nano", deepModel: "anthropic/claude-sonnet-4.6" },
     modelOptions: vercelGatewayModelOptions,
-    capabilities: { ...providerDescriptors.openai_compatible.capabilities, isGateway: true },
+    capabilities: { ...providerDescriptors.openai_compatible.capabilities, isGateway: true, supportsModelCatalog: true },
     policy: {
       trustTier: "enterprise_ready",
       privacySummary: "Routes through Vercel AI Gateway and selected upstream provider.",
@@ -1422,7 +1494,7 @@ export const openAICompatiblePresets: OpenAICompatiblePreset[] = [
     apiKeyPlaceholder: "LiteLLM proxy key",
     defaultBaseUrl: "http://localhost:4000/v1",
     defaultModels: { fastModel: "gpt-4.1-mini", deepModel: "gpt-4.1" },
-    capabilities: { ...providerDescriptors.openai_compatible.capabilities, supportsCustomBaseUrl: true, isGateway: true },
+    capabilities: { ...providerDescriptors.openai_compatible.capabilities, supportsCustomBaseUrl: true, isGateway: true, supportsModelCatalog: true },
     policy: {
       trustTier: "enterprise_ready",
       privacySummary: "Routes to your configured LiteLLM proxy and whatever upstreams it controls.",
@@ -1447,6 +1519,7 @@ export const openAICompatiblePresets: OpenAICompatiblePreset[] = [
       supportsImageInputInBrowser: false,
       supportsCustomBaseUrl: true,
       isLocalOnly: true,
+      supportsModelCatalog: true,
     },
     policy: {
       trustTier: "local_first",
@@ -1465,13 +1538,14 @@ export const openAICompatiblePresets: OpenAICompatiblePreset[] = [
     docsUrl: "https://github.com/ollama/ollama?tab=readme-ov-file",
     apiKeyPlaceholder: "No key required for local Ollama",
     defaultBaseUrl: "http://localhost:11434/v1",
-    defaultModels: { fastModel: "llama3.2", deepModel: "llama3.1" },
+    defaultModels: { fastModel: "gemma3:4b", deepModel: "gemma3:12b" },
     capabilities: {
       ...providerDescriptors.openai_compatible.capabilities,
       requiresApiKey: false,
       supportsImageInputInBrowser: false,
       supportsCustomBaseUrl: true,
       isLocalOnly: true,
+      supportsModelCatalog: true,
     },
     policy: {
       trustTier: "local_first",

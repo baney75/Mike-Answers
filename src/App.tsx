@@ -1214,8 +1214,8 @@ export default function App({ externalHistory }: AppProps) {
         appUrl: typeof window !== "undefined" ? window.location.origin : "https://mike-net.top",
       }
     : null;
-  const visibleOpenRouterModels =
-    settings.providers.openrouter.options?.freeOnly
+  const visibleCatalogModels =
+    selectedProviderId === "openrouter" && settings.providers.openrouter.options?.freeOnly
       ? providerCatalog.models.filter((model) => model.free)
       : providerCatalog.models;
   const heroAsset = getMikeHeroAsset(subject);
@@ -1318,7 +1318,7 @@ export default function App({ externalHistory }: AppProps) {
                 transferControls={transferControls}
                 historyLabel={history.label}
                 emblemSrc={emblemAsset.webp}
-                openrouterModels={visibleOpenRouterModels}
+                openrouterModels={visibleCatalogModels}
                 openrouterLoading={providerCatalog.loading}
                 openrouterError={providerCatalog.error}
                 onRefreshOpenRouterModels={() => {

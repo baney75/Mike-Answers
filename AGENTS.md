@@ -1,6 +1,6 @@
 # AGENTS.md - AnyQuestionSolver
 
-Last updated: 2026-04-27
+Last updated: 2026-04-28
 
 ## Scope
 
@@ -99,6 +99,10 @@ Last updated: 2026-04-27
   Editorial layout, floating desk chat, desktop/mobile behavior.
 - `src/services/search.ts`
   Video/image/web search reliability and free fallback paths.
+- `src/services/modelCatalog.ts` + `src/services/catalogs/`
+  Per-provider live model catalog fetchers. Each provider with a working GET /v1/models endpoint gets its own explicit fetcher file and routing case in `useProviderCatalog.ts`. Do NOT add a shared generic fetcher — each provider must be explicit.
+- `src/hooks/useProviderCatalog.ts`
+  Routes to the correct per-provider catalog fetcher via explicit switch statement. Handles OpenRouter, OpenAI, Ollama Cloud, DeepSeek, Groq, Together, Fireworks, Mistral, xAI, Cerebras, SambaNova, DeepInfra, Cohere, Hyperbolic, HuggingFace, NVIDIA NIM, Novita, SiliconFlow, Venice.
 
 ## Verification Commands
 
