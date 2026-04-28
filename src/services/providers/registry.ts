@@ -127,6 +127,255 @@ const vercelGatewayModelOptions: ProviderModelOption[] = [
   { id: "google/gemini-3.1-pro-preview", label: "Google Gemini 3.1 Pro Preview", note: "Gemini via Vercel when enabled.", supportsImages: true },
 ];
 
+const deepseekModelOptions: ProviderModelOption[] = [
+  {
+    id: "deepseek-v4-flash",
+    label: "DeepSeek V4 Flash",
+    note: "Current fast default: 284B total / 13B active, 1M context, thinking mode on by default. Replaces deepseek-chat.",
+    supportsImages: false,
+  },
+  {
+    id: "deepseek-v4-pro",
+    label: "DeepSeek V4 Pro",
+    note: "Heavy reasoning: 1.6T total / 49B active, 1M context. Use for hard math, proofs, or multi-step code.",
+    supportsImages: false,
+  },
+  {
+    id: "deepseek-chat",
+    label: "DeepSeek Chat (legacy)",
+    note: "Deprecated July 2026. Maps to V4 Flash non-thinking mode.",
+    supportsImages: false,
+  },
+  {
+    id: "deepseek-reasoner",
+    label: "DeepSeek Reasoner (legacy)",
+    note: "Deprecated July 2026. Maps to V4 Flash thinking mode.",
+    supportsImages: false,
+  },
+];
+
+const togetherModelOptions: ProviderModelOption[] = [
+  {
+    id: "deepseek-ai/DeepSeek-V4-Flash",
+    label: "DeepSeek V4 Flash",
+    note: "Fast lightweight route through Together, 1M context.",
+    supportsImages: false,
+  },
+  {
+    id: "deepseek-ai/DeepSeek-V4-Pro",
+    label: "DeepSeek V4 Pro",
+    note: "Heavy reasoning route, 1M context.",
+    supportsImages: false,
+  },
+  {
+    id: "deepseek-ai/DeepSeek-R1",
+    label: "DeepSeek R1",
+    note: "Dedicated reasoning model (0528 build).",
+    supportsImages: false,
+  },
+  {
+    id: "meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8",
+    label: "Llama 4 Maverick",
+    note: "Meta's latest multimodal, 1M context, image-capable.",
+    supportsImages: true,
+  },
+  {
+    id: "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+    label: "Llama 3.3 70B Turbo",
+    note: "Popular general-purpose workhorse, 131K context.",
+    supportsImages: false,
+  },
+  {
+    id: "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",
+    label: "Llama 3.1 8B Turbo",
+    note: "Lightning-fast light option, 131K context.",
+    supportsImages: false,
+  },
+  {
+    id: "Qwen/Qwen3.5-397B-A17B",
+    label: "Qwen 3.5 397B",
+    note: "Large Qwen model for harder tasks.",
+    supportsImages: false,
+  },
+  {
+    id: "Qwen/Qwen2.5-7B-Instruct-Turbo",
+    label: "Qwen 2.5 7B Turbo",
+    note: "Very fast / lightweight Qwen option.",
+    supportsImages: false,
+  },
+  {
+    id: "mistralai/Mistral-Small-24B-Instruct-2501",
+    label: "Mistral Small 3 (24B)",
+    note: "Compact versatile model through Together.",
+    supportsImages: false,
+  },
+];
+
+const fireworksModelOptions: ProviderModelOption[] = [
+  {
+    id: "accounts/fireworks/models/deepseek-v3p2",
+    label: "DeepSeek V3.2",
+    note: "Popular DeepSeek build on Fireworks.",
+    supportsImages: false,
+  },
+  {
+    id: "accounts/fireworks/models/deepseek-r1-0528",
+    label: "DeepSeek R1 0528",
+    note: "Dedicated reasoning model.",
+    supportsImages: false,
+  },
+  {
+    id: "accounts/fireworks/models/llama-v3p3-70b-instruct",
+    label: "Llama 3.3 70B Instruct",
+    note: "Solid general-purpose workhorse.",
+    supportsImages: false,
+  },
+  {
+    id: "accounts/fireworks/models/kimi-k2-6",
+    label: "Kimi K2.6",
+    note: "Moonshot's latest, multimodal-capable.",
+    supportsImages: true,
+  },
+  {
+    id: "accounts/fireworks/models/mistral-large-3-675b-instruct-2512",
+    label: "Mistral Large 3 (675B)",
+    note: "Top-tier open-weight model, vision-capable.",
+    supportsImages: true,
+  },
+  {
+    id: "accounts/fireworks/models/ministral-3-8b-instruct-2512",
+    label: "Ministral 3 8B",
+    note: "Lightweight multimodal option.",
+    supportsImages: true,
+  },
+];
+
+const mistralModelOptions: ProviderModelOption[] = [
+  {
+    id: "mistral-large-2512",
+    label: "Mistral Large 3",
+    note: "Flagship: 675B total / 41B active, multimodal, 256K context.",
+    supportsImages: true,
+  },
+  {
+    id: "mistral-small-2603",
+    label: "Mistral Small 4",
+    note: "Hybrid instruct/reason/code, 119B total / 6.5B active, multimodal.",
+    supportsImages: true,
+  },
+  {
+    id: "mistral-small-2506",
+    label: "Mistral Small 3.2",
+    note: "Previous-gen small model, text-only.",
+    supportsImages: false,
+  },
+  {
+    id: "ministral-8b-2512",
+    label: "Ministral 3 8B",
+    note: "Efficient multimodal, good for lightweight tasks.",
+    supportsImages: true,
+  },
+  {
+    id: "codestral-2508",
+    label: "Codestral",
+    note: "Code completion and generation specialist.",
+    supportsImages: false,
+  },
+];
+
+const perplexityModelOptions: ProviderModelOption[] = [
+  {
+    id: "sonar",
+    label: "Sonar",
+    note: "Built-in web search with inline citations. Fast and lightweight.",
+    supportsImages: true,
+  },
+  {
+    id: "sonar-pro",
+    label: "Sonar Pro",
+    note: "Deeper search with Pro multi-step reasoning. Higher quality.",
+    supportsImages: true,
+  },
+  {
+    id: "sonar-deep-research",
+    label: "Sonar Deep Research",
+    note: "Deep research mode with comprehensive multi-step investigation.",
+    supportsImages: true,
+  },
+  {
+    id: "sonar-reasoning-pro",
+    label: "Sonar Reasoning Pro",
+    note: "Reasoning-dedicated with chain-of-thought and enhanced retrieval.",
+    supportsImages: true,
+  },
+];
+
+const cerebrasModelOptions: ProviderModelOption[] = [
+  {
+    id: "llama3.1-8b",
+    label: "Llama 3.1 8B",
+    note: "Production: ~2200 tok/s, extremely fast. Deprecated May 2026.",
+    supportsImages: false,
+  },
+  {
+    id: "gpt-oss-120b",
+    label: "OpenAI GPT-OSS 120B",
+    note: "Production: ~3000 tok/s, fastest deep route on Cerebras.",
+    supportsImages: false,
+  },
+  {
+    id: "zai-glm-4.7",
+    label: "Z.ai GLM 4.7",
+    note: "Preview: ~1000 tok/s, 355B params.",
+    supportsImages: false,
+  },
+];
+
+const sambanovaModelOptions: ProviderModelOption[] = [
+  {
+    id: "DeepSeek-R1-0528",
+    label: "DeepSeek R1 0528",
+    note: "Dedicated reasoning model, popular choice.",
+    supportsImages: false,
+  },
+  {
+    id: "DeepSeek-V3.2",
+    label: "DeepSeek V3.2",
+    note: "Latest DeepSeek text/reasoning build.",
+    supportsImages: false,
+  },
+  {
+    id: "Meta-Llama-3.1-8B-Instruct",
+    label: "Llama 3.1 8B",
+    note: "Lightweight fast option.",
+    supportsImages: false,
+  },
+  {
+    id: "Meta-Llama-3.3-70B-Instruct",
+    label: "Llama 3.3 70B",
+    note: "Reliable general-purpose workhorse.",
+    supportsImages: false,
+  },
+  {
+    id: "Llama-4-Maverick-17B-128E-Instruct",
+    label: "Llama 4 Maverick",
+    note: "Multimodal vision-capable model.",
+    supportsImages: true,
+  },
+  {
+    id: "gemma-3-12b-it",
+    label: "Gemma 3 12B",
+    note: "Multimodal vision model from Google.",
+    supportsImages: true,
+  },
+  {
+    id: "gpt-oss-120b",
+    label: "OpenAI GPT-OSS 120B",
+    note: "Fast inference option on SambaNova.",
+    supportsImages: false,
+  },
+];
+
 export const providerDescriptors: Record<ProviderId, ProviderDescriptor> = {
   gemini: {
     id: "gemini",
@@ -304,11 +553,12 @@ export const openAICompatiblePresets: OpenAICompatiblePreset[] = [
     id: "deepseek",
     label: "DeepSeek",
     group: "popular",
-    shortDescription: "Low-cost OpenAI-compatible text models with strong coding and reasoning options.",
+    shortDescription: "Low-cost OpenAI-compatible text models with strong coding and reasoning options. V4 Flash is the new fast default (deepseek-chat deprecated July 2026).",
     docsUrl: "https://api-docs.deepseek.com/",
     apiKeyPlaceholder: "sk-...",
     defaultBaseUrl: "https://api.deepseek.com/v1",
-    defaultModels: { fastModel: "deepseek-chat", deepModel: "deepseek-reasoner" },
+    defaultModels: { fastModel: "deepseek-v4-flash", deepModel: "deepseek-v4-pro" },
+    modelOptions: deepseekModelOptions,
     capabilities: { ...providerDescriptors.openai_compatible.capabilities, supportsImageInputInBrowser: false },
     policy: {
       trustTier: "byok_recommended",
@@ -341,11 +591,12 @@ export const openAICompatiblePresets: OpenAICompatiblePreset[] = [
     id: "together",
     label: "Together AI",
     group: "openai_compatible",
-    shortDescription: "OpenAI-compatible hosted open models with broad model choice.",
+    shortDescription: "OpenAI-compatible hosted open models with broad model choice. Model IDs use organization/slug format.",
     docsUrl: "https://api.together.ai/settings/api-keys",
     apiKeyPlaceholder: "Paste Together API key",
     defaultBaseUrl: "https://api.together.xyz/v1",
     defaultModels: { fastModel: "meta-llama/Llama-3.3-70B-Instruct-Turbo", deepModel: "deepseek-ai/DeepSeek-R1" },
+    modelOptions: togetherModelOptions,
     capabilities: { ...providerDescriptors.openai_compatible.capabilities, supportsImageInputInBrowser: false },
     policy: {
       trustTier: "byok_recommended",
@@ -359,14 +610,15 @@ export const openAICompatiblePresets: OpenAICompatiblePreset[] = [
     id: "fireworks",
     label: "Fireworks AI",
     group: "openai_compatible",
-    shortDescription: "OpenAI-compatible hosted models with fast inference and popular open-weight choices.",
+    shortDescription: "OpenAI-compatible hosted models with fast inference and popular open-weight choices. Model IDs use accounts/fireworks/models/slug format.",
     docsUrl: "https://fireworks.ai/account/api-keys",
     apiKeyPlaceholder: "fw_...",
     defaultBaseUrl: "https://api.fireworks.ai/inference/v1",
     defaultModels: {
-      fastModel: "accounts/fireworks/models/llama-v3p1-8b-instruct",
-      deepModel: "accounts/fireworks/models/llama-v3p3-70b-instruct",
+      fastModel: "accounts/fireworks/models/llama-v3p3-70b-instruct",
+      deepModel: "accounts/fireworks/models/deepseek-v3p2",
     },
+    modelOptions: fireworksModelOptions,
     capabilities: { ...providerDescriptors.openai_compatible.capabilities, supportsImageInputInBrowser: false },
     policy: {
       trustTier: "byok_recommended",
@@ -380,12 +632,13 @@ export const openAICompatiblePresets: OpenAICompatiblePreset[] = [
     id: "mistral",
     label: "Mistral",
     group: "openai_compatible",
-    shortDescription: "Mistral's OpenAI-compatible endpoint for fast European-hosted model options.",
+    shortDescription: "Mistral's OpenAI-compatible endpoint for European-hosted model options. Many models now support vision (Small 4, Large 3, Ministral 3).",
     docsUrl: "https://console.mistral.ai/api-keys/",
     apiKeyPlaceholder: "Paste Mistral API key",
     defaultBaseUrl: "https://api.mistral.ai/v1",
-    defaultModels: { fastModel: "mistral-small-latest", deepModel: "mistral-large-latest" },
-    capabilities: { ...providerDescriptors.openai_compatible.capabilities, supportsImageInputInBrowser: false },
+    defaultModels: { fastModel: "mistral-small-2603", deepModel: "mistral-large-2512" },
+    modelOptions: mistralModelOptions,
+    capabilities: { ...providerDescriptors.openai_compatible.capabilities, supportsImageInputInBrowser: true },
     policy: {
       trustTier: "byok_recommended",
       privacySummary: "Routes directly to Mistral with your key.",
@@ -476,12 +729,17 @@ export const openAICompatiblePresets: OpenAICompatiblePreset[] = [
     id: "perplexity",
     label: "Perplexity",
     group: "openai_compatible",
-    shortDescription: "OpenAI-compatible online models for source-aware research-style answers.",
+    shortDescription: "OpenAI-compatible online models with built-in web search, citations, and optional deep research. All Sonar models include web search natively.",
     docsUrl: "https://www.perplexity.ai/settings/api",
     apiKeyPlaceholder: "pplx-...",
     defaultBaseUrl: "https://api.perplexity.ai",
     defaultModels: { fastModel: "sonar", deepModel: "sonar-pro" },
-    capabilities: { ...providerDescriptors.openai_compatible.capabilities, supportsImageInputInBrowser: false },
+    modelOptions: perplexityModelOptions,
+    capabilities: {
+      ...providerDescriptors.openai_compatible.capabilities,
+      supportsImageInputInBrowser: true,
+      supportsGrounding: true,
+    },
     policy: {
       trustTier: "byok_recommended",
       privacySummary: "Routes directly to Perplexity with your key.",
@@ -495,11 +753,12 @@ export const openAICompatiblePresets: OpenAICompatiblePreset[] = [
     id: "cerebras",
     label: "Cerebras",
     group: "openai_compatible",
-    shortDescription: "OpenAI-compatible fast inference for selected open models.",
+    shortDescription: "OpenAI-compatible fast inference for selected open models. Focuses on inference speed (1000-3000 tok/s).",
     docsUrl: "https://cloud.cerebras.ai/platform/",
     apiKeyPlaceholder: "csk-...",
     defaultBaseUrl: "https://api.cerebras.ai/v1",
-    defaultModels: { fastModel: "llama3.1-8b", deepModel: "llama3.1-70b" },
+    defaultModels: { fastModel: "llama3.1-8b", deepModel: "gpt-oss-120b" },
+    modelOptions: cerebrasModelOptions,
     capabilities: { ...providerDescriptors.openai_compatible.capabilities, supportsImageInputInBrowser: false },
     policy: {
       trustTier: "byok_recommended",
@@ -511,14 +770,15 @@ export const openAICompatiblePresets: OpenAICompatiblePreset[] = [
   },
   {
     id: "sambanova",
-    label: "SambaNova",
-    group: "openai_compatible",
-    shortDescription: "OpenAI-compatible hosted inference for supported Llama and reasoning models.",
-    docsUrl: "https://cloud.sambanova.ai/apis",
-    apiKeyPlaceholder: "Paste SambaNova API key",
-    defaultBaseUrl: "https://api.sambanova.ai/v1",
-    defaultModels: { fastModel: "Meta-Llama-3.1-8B-Instruct", deepModel: "Meta-Llama-3.3-70B-Instruct" },
-    capabilities: { ...providerDescriptors.openai_compatible.capabilities, supportsImageInputInBrowser: false },
+     label: "SambaNova",
+     group: "openai_compatible",
+     shortDescription: "OpenAI-compatible hosted inference for Llama, DeepSeek, Qwen, and vision models. Broad model catalog with fast ASIC hardware.",
+     docsUrl: "https://cloud.sambanova.ai/apis",
+     apiKeyPlaceholder: "Paste SambaNova API key",
+     defaultBaseUrl: "https://api.sambanova.ai/v1",
+     defaultModels: { fastModel: "Meta-Llama-3.1-8B-Instruct", deepModel: "Meta-Llama-3.3-70B-Instruct" },
+     modelOptions: sambanovaModelOptions,
+     capabilities: { ...providerDescriptors.openai_compatible.capabilities, supportsImageInputInBrowser: true },
     policy: {
       trustTier: "byok_recommended",
       privacySummary: "Routes directly to SambaNova Cloud with your key.",
