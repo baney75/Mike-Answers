@@ -70,24 +70,6 @@ export function CredentialSection({
         </div>
       ) : null}
 
-      {preset?.id === "ollama-cloud" ? (
-        <div className="rounded-[1.35rem] border border-cyan-400/26 bg-cyan-50/85 px-4 py-4 text-sm leading-6 text-cyan-950 dark:border-cyan-300/22 dark:bg-cyan-950/22 dark:text-cyan-100">
-          <strong>Ollama Cloud:</strong> use base URL{" "}
-          <code className="rounded bg-white/65 px-1 py-0.5 text-xs dark:bg-cyan-900/65">https://ollama.com/v1</code> with a key from{" "}
-          <a
-            href="https://ollama.com/settings/keys"
-            target="_blank"
-            rel="noreferrer"
-            className="font-semibold text-(--aqs-accent-strong) underline-offset-4 hover:underline dark:text-(--aqs-accent-dark)"
-          >
-            ollama.com/settings/keys
-          </a>
-          . This is hosted inference, not the local <code className="text-xs">localhost:11434</code> preset. Pick{" "}
-          <span className="font-semibold">VISION</span>-tagged cloud models under{" "}
-          <code className="text-xs">screenshot solves</code>; embeddings are limited on Cloud—stay on chat completions here.
-        </div>
-      ) : null}
-
       <div className="rounded-3xl border border-(--aqs-ink)/10 bg-white/84 p-4 text-sm leading-7 text-slate-700 dark:border-white/10 dark:bg-slate-950/55 dark:text-slate-200">
         <div>
           <strong>1.</strong> Open the official setup page for{" "}

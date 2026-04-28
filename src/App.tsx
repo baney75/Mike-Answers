@@ -397,18 +397,24 @@ export default function App({ externalHistory }: AppProps) {
     };
   }, []);
 
-  useEffect(() => {
-    if (settings.preferredSubject && subject === "Auto-detect") {
-      setSubject(settings.preferredSubject);
-    }
-  }, [settings.preferredSubject, subject]);
+  // Track whether this is the initial mount to prevent the subject→settings
+  // write from racing with the settings→subject restore.
+  const subjectReadyRef = useRef(false);
 
   useEffect(() => {
-    if (subject === settings.preferredSubject) {
+    if (!subjectReadyRef.current) {
+      // Initial mount: restore preferredSubject from persisted settings
+      if (settings.preferredSubject && subject === "Auto-detect") {
+        setSubject(settings.preferredSubject);
+      }
+      subjectReadyRef.current = true;
       return;
     }
 
-    updateSettings({ preferredSubject: subject });
+    // Subsequent changes: persist user-initiated subject changes to settings
+    if (subject !== settings.preferredSubject) {
+      updateSettings({ preferredSubject: subject });
+    }
   }, [settings.preferredSubject, subject, updateSettings]);
 
   // ── Helpers ─────────────────────────────────────────────────────────

@@ -4,7 +4,6 @@ import type { ModelCatalogEntry, RuntimeAISettings } from "../types";
 import { resolvePreferredOpenRouterModels } from "../services/ai";
 import { getProviderDescriptor, getSelectedOpenAICompatiblePreset } from "../services/providers/registry";
 
-import { fetchOllamaCloudCatalog } from "../services/catalogs/ollamaCloud";
 import { fetchOpenAICatalog } from "../services/catalogs/openai";
 import { fetchDeepSeekCatalog } from "../services/catalogs/deepseek";
 import { fetchGroqCatalog } from "../services/catalogs/groq";
@@ -68,8 +67,6 @@ async function fetchForPreset(
   force: boolean,
 ): Promise<ModelCatalogEntry[]> {
   switch (presetId) {
-    case "ollama-cloud":
-      return fetchOllamaCloudCatalog(apiKey, force);
     case "openai":
       return fetchOpenAICatalog(apiKey, force);
     case "deepseek":

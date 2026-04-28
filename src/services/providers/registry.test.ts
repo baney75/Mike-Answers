@@ -34,15 +34,10 @@ describe("provider registry", () => {
     expect(getOpenAICompatiblePreset("vercel-ai-gateway").defaultModels.deepModel).toBe("anthropic/claude-sonnet-4.6");
   });
 
-  test("includes Venice and Ollama Cloud OpenAI-compatible presets", () => {
+  test("includes Venice OpenAI-compatible preset", () => {
     const venice = getOpenAICompatiblePreset("venice");
     expect(venice.defaultBaseUrl).toBe("https://api.venice.ai/api/v1");
     expect((venice.modelOptions?.length ?? 0) > 2).toBe(true);
-
-    const ollamaCloud = getOpenAICompatiblePreset("ollama-cloud");
-    expect(ollamaCloud.defaultBaseUrl).toBe("https://ollama.com/v1");
-    expect(ollamaCloud.capabilities.requiresApiKey).toBe(true);
-    expect(ollamaCloud.capabilities.isLocalOnly).toBe(undefined);
   });
 
   test("includes DeepInfra as a popular OpenAI-compatible preset with models", () => {
@@ -197,7 +192,7 @@ describe("provider registry", () => {
   test("Every registered provider has a docs URL and key placeholder", () => {
     const allPresets = [
       "openai", "anthropic", "deepseek", "groq", "together", "fireworks",
-      "mistral", "xai", "venice", "ollama-cloud", "perplexity", "cerebras",
+      "mistral", "xai", "venice", "perplexity", "cerebras",
       "sambanova", "deepinfra", "cohere", "novita", "huggingface", "nvidia-nim",
       "vertex-ai", "bedrock", "azure-openai", "hyperbolic", "siliconflow",
       "cloudflare-ai-gateway", "vercel-ai-gateway", "litellm",

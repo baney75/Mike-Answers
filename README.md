@@ -1,7 +1,7 @@
 # Mike Answers
 
 Mike Answers is a React + Vite app for conservative Christian tutoring, fast broad-domain answers, research, and visual explanation with bring-your-own-key, gateway, and local provider routes.
-Users can start with `Gemini`, switch to `ChatGPT / OpenAI`, `Claude / Anthropic`, `Venice.ai`, `Ollama Cloud`, `xAI`, `OpenRouter`, `Vercel AI Gateway`, a searchable `Provider catalog`, or a `Custom OpenAI-compatible` endpoint. BYOK keys stay local to the browser by default.
+Users can start with `Gemini`, switch to `ChatGPT / OpenAI`, `Claude / Anthropic`, `Venice.ai`, `xAI`, `OpenRouter`, `Vercel AI Gateway`, a searchable `Provider catalog`, or a `Custom OpenAI-compatible` endpoint. BYOK keys stay local to the browser by default.
 
 ## Current product shape
 
@@ -11,7 +11,7 @@ Users can start with `Gemini`, switch to `ChatGPT / OpenAI`, `Claude / Anthropic
 - The default student recommendation is `Gemini` because Google AI Studio documents a free Gemini API tier with free input/output tokens for getting started, plus native screenshot solving.
 - Settings are provider-registry driven rather than hard-coded to one or two providers.
 - OpenRouter supports a `free-only` model filter and the official `openrouter/free` router so users can stay on zero-cost models when possible.
-- The provider catalog highlights ChatGPT/OpenAI, Claude/Anthropic, Venice.ai (OpenAI-compatible plus optional web-assisted answers when enabled by the API), Ollama Cloud (hosted `ollama.com/v1` vs local Ollama), xAI, Vercel AI Gateway, OpenRouter, other hosted APIs, gateways, and local routes such as localhost Ollama and LM Studio.
+- The provider catalog highlights ChatGPT/OpenAI, Claude/Anthropic, Venice.ai (OpenAI-compatible plus optional web-assisted answers when enabled by the API), xAI, Vercel AI Gateway, OpenRouter, other hosted APIs, gateways, and local routes such as localhost Ollama and LM Studio.
 - Custom OpenAI-compatible providers can define their own base URL, key, and model slots.
 - Cloudflare Workers deployment is configured with `wrangler.jsonc` and a GitHub Actions workflow.
 - The app now includes a stronger PWA shell with install, offline-ready prompts, update prompts, mascot asset pipeline, and an updated Mike Answers brand surface.
@@ -80,14 +80,6 @@ bun run dev
 1. Venice documents optional web-assisted completions (`venice_parameters`). Mike merges defaults into each chat (`enable_web_search: auto`, `enable_web_citations: true`). Verify behavior, limits, and billing in Venice.
 1. Model ids come from the Venice catalog (for example `zai-org-glm-5`, `qwen3-4b`). Drop-down entries label economy-tier picks as lower-quality shortcuts for casual checking.
 1. Venice’s built-in retrieval is independent from Mike’s screenshot image search / YouTube helpers: without Google Custom Search keys, those helpers still degrade to Openverse, Wikipedia thumbnails, or Jina fallbacks rather than disappearing.
-
-### Ollama Cloud
-
-1. Read [Ollama Cloud](https://docs.ollama.com/cloud) and create an API key at [ollama.com/settings/keys](https://ollama.com/settings/keys).
-1. Pick `Ollama Cloud`: OpenAI-compat base URL is `https://ollama.com/v1`, not `http://localhost:11434/v1`.
-1. Run `GET https://ollama.com/v1/models` with `Authorization: Bearer <key>` to see live cloud-capable ids; names change with releases.
-1. Use a multimodal/cloud vision model tag for pasted screenshots; embeddings on Cloud remain limited elsewhere—keep to chat completions in Mike.
-1. Local Ollama (localhost preset) stays separate—no hosted key—and only answers when your machine is serving it.
 
 ### OpenRouter
 

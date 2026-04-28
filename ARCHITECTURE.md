@@ -378,7 +378,6 @@ Lightweight RSS/Atom parsing + remote fetch fallback layer for browser-safe feed
 
 | Fetcher | Endpoint | Provider |
 |---------|----------|----------|
-| `fetchOllamaCloudCatalog` | `ollama.com/v1/models` + `/api/tags` enrichment | Ollama Cloud |
 | `fetchOpenAICatalog` | `api.openai.com/v1/models` | OpenAI |
 | `fetchDeepSeekCatalog` | `api.deepseek.com/v1/models` | DeepSeek |
 | `fetchGroqCatalog` | `api.groq.com/openai/v1/models` | Groq |
