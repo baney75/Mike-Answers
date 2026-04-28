@@ -34,6 +34,17 @@ describe("provider registry", () => {
     expect(getOpenAICompatiblePreset("vercel-ai-gateway").defaultModels.deepModel).toBe("anthropic/claude-sonnet-4.6");
   });
 
+  test("includes Venice and Ollama Cloud OpenAI-compatible presets", () => {
+    const venice = getOpenAICompatiblePreset("venice");
+    expect(venice.defaultBaseUrl).toBe("https://api.venice.ai/api/v1");
+    expect((venice.modelOptions?.length ?? 0) > 2).toBe(true);
+
+    const ollamaCloud = getOpenAICompatiblePreset("ollama-cloud");
+    expect(ollamaCloud.defaultBaseUrl).toBe("https://ollama.com/v1");
+    expect(ollamaCloud.capabilities.requiresApiKey).toBe(true);
+    expect(ollamaCloud.capabilities.isLocalOnly).toBe(undefined);
+  });
+
   test("defaults API key storage to session only", () => {
     const defaults = createDefaultProviderRuntimeConfigs();
 

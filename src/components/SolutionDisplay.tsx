@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Eye, EyeOff, GraduationCap } from "lucide-react";
 
 import { RichResponse } from "./RichResponse";
@@ -23,6 +23,7 @@ function splitAnswerSection(text: string) {
 
 export function SolutionDisplay({ solution, hideAnswerByDefault = false }: SolutionDisplayProps) {
   const [answerVisible, setAnswerVisible] = useState(!hideAnswerByDefault);
+  const hideRef = useRef(hideAnswerByDefault);
   const { body, sources } = useMemo(() => extractEmbeddedSources(solution), [solution]);
   const { teachingBody, answerSection } = useMemo(() => splitAnswerSection(body), [body]);
   const teachingWithSources = useMemo(
@@ -32,7 +33,10 @@ export function SolutionDisplay({ solution, hideAnswerByDefault = false }: Solut
   const canHideAnswer = hideAnswerByDefault && Boolean(answerSection);
 
   useEffect(() => {
-    setAnswerVisible(!hideAnswerByDefault);
+    if (hideRef.current !== hideAnswerByDefault) {
+      hideRef.current = hideAnswerByDefault;
+      setAnswerVisible(!hideAnswerByDefault);
+    }
   }, [hideAnswerByDefault]);
 
   return (

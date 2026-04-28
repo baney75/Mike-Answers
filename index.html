@@ -14,6 +14,7 @@
     <link rel="icon" type="image/png" sizes="16x16" href="%BASE_URL%favicon-16x16.png?v=7" />
     <link rel="apple-touch-icon" sizes="180x180" href="%BASE_URL%apple-touch-icon.png?v=7" />
     <link rel="manifest" href="%BASE_URL%site.webmanifest" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; media-src 'self' https:; frame-src https://www.youtube-nocookie.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://generativelanguage.googleapis.com https://openrouter.ai https://api.venice.ai https://ollama.com https://api.openai.com https://api.anthropic.com https://api.x.ai https://api.deepseek.com https://api.groq.com https://api.together.xyz https://api.fireworks.ai https://api.mistral.ai https://api.perplexity.ai https://api.cerebras.ai https://api.sambanova.ai https://gateway.ai.cloudflare.com https://ai-gateway.vercel.sh https://api.rss2json.com https://api.codetabs.com https://api.openverse.org https://en.wikipedia.org https://beta.ourmanna.com https://r.jina.ai https://www.googleapis.com https://www.youtube.com https://img.youtube.com wss:;" />
     <script>
       (function() {
         try {
@@ -23,7 +24,17 @@
             isDark = true;
           } else if (theme === 'system' || !theme) {
             isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            if (!theme && localStorage.getItem('aqs_dark_mode') === 'true') isDark = true;
+            if (!theme) {
+              var legacyDark = localStorage.getItem('aqs_dark_mode');
+              if (legacyDark === 'true') {
+                isDark = true;
+                localStorage.setItem('aqs_theme', 'dark');
+                localStorage.removeItem('aqs_dark_mode');
+              } else if (legacyDark === 'false') {
+                localStorage.setItem('aqs_theme', 'light');
+                localStorage.removeItem('aqs_dark_mode');
+              }
+            }
           }
           if (isDark) document.documentElement.classList.add('dark');
         } catch (e) {}

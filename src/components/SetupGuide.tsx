@@ -180,7 +180,7 @@ export function SetupGuide({
           <ol className="flex flex-wrap gap-4" aria-label="Setup progress">
             <StepDot index={1} title="Provider" active={step === 1} complete={step > 1} />
             <StepDot index={2} title="Credentials" active={step === 2} complete={step > 2} />
-            <StepDot index={3} title="Defaults" active={step === 3} complete={step === 3 && canFinish} />
+            <StepDot index={3} title="Defaults" active={step === 3} complete={Boolean(step === 3 && canFinish)} />
           </ol>
         </div>
       </div>

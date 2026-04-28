@@ -14,7 +14,7 @@ export function isLikelyHomeworkRequest(
   const trimmed = text?.trim() ?? "";
   const hasImage = options?.hasImage ?? false;
   const subject = options?.subject ?? "Auto-detect";
-  const academicSubject = subject !== "Auto-detect" && subject !== "History" && subject !== "Literature" ? true : subject !== "Auto-detect";
+  const academicSubject = subject !== "Auto-detect" && subject !== "History" && subject !== "Literature";
 
   if (!trimmed) {
     return hasImage && academicSubject;

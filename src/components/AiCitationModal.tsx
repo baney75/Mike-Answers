@@ -17,8 +17,11 @@ export function AiCitationModal({ open, citationInput, onClose }: AiCitationModa
     return null;
   }
 
-  async function copy(style: keyof typeof citations) {
-    await navigator.clipboard.writeText(citations[style]);
+  const citationMap = { APA: citations.apa, MLA: citations.mla, Chicago: citations.chicago } as const;
+  type CitationStyle = keyof typeof citationMap;
+
+  async function copy(style: CitationStyle) {
+    await navigator.clipboard.writeText(citationMap[style]);
     setCopied(style);
     window.setTimeout(() => setCopied(null), 1200);
   }
@@ -38,16 +41,12 @@ export function AiCitationModal({ open, citationInput, onClose }: AiCitationModa
         </div>
 
         <div className="scroll-panel min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-6">
-          {([
-            ["APA", citations.apa],
-            ["MLA", citations.mla],
-            ["Chicago", citations.chicago],
-          ] as const).map(([label, value]) => (
+          {(Object.entries(citationMap) as [CitationStyle, string][]).map(([label, value]) => (
             <section key={label} className="rounded-3xl border border-(--aqs-ink)/10 bg-white/84 p-5 dark:border-white/10 dark:bg-slate-950/55">
               <div className="flex items-center justify-between gap-4">
                 <h3 className="text-lg font-black text-(--aqs-ink) dark:text-white">{label}</h3>
-                <button type="button" onClick={() => void copy(label.toLowerCase() as keyof typeof citations)} className="inline-flex items-center gap-2 rounded-full border border-(--aqs-ink)/10 bg-white px-4 py-2 text-sm font-semibold text-(--aqs-ink) dark:border-white/10 dark:bg-slate-900 dark:text-white">
-                  <ClipboardCopy className="h-4 w-4" /> {copied === label.toLowerCase() ? "Copied" : "Copy"}
+                <button type="button" onClick={() => void copy(label)} className="inline-flex items-center gap-2 rounded-full border border-(--aqs-ink)/10 bg-white px-4 py-2 text-sm font-semibold text-(--aqs-ink) dark:border-white/10 dark:bg-slate-900 dark:text-white">
+                  <ClipboardCopy className="h-4 w-4" /> {copied === label ? "Copied" : "Copy"}
                 </button>
               </div>
               <p className="mt-4 text-sm leading-7 text-slate-700 dark:text-slate-200">{value}</p>

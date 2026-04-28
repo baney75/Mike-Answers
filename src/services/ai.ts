@@ -112,7 +112,8 @@ function isSharedFreeMode(settings: RuntimeAISettings) {
 function requireProviderApiKey(settings: RuntimeAISettings, providerId = getSelectedProviderId(settings)) {
   const apiKey = getProviderApiKey(settings, providerId);
   if (!apiKey && providerRequiresApiKey(settings, providerId)) {
-    throw new Error(`Add your ${getProviderLabel(providerId)} API key in Setup before using it.`);
+    const label = getEffectiveOpenAICompatibleLabel(settings, providerId);
+    throw new Error(`Add your ${label} API key in Setup before using it.`);
   }
 
   return apiKey;
@@ -137,8 +138,9 @@ function getEffectiveOpenAICompatibleLabel(settings: RuntimeAISettings, provider
 
 function requireOpenAICompatibleBaseUrl(settings: RuntimeAISettings, providerId: ProviderId) {
   const configured = getProviderBaseUrl(settings, providerId);
+  const label = getEffectiveOpenAICompatibleLabel(settings, providerId);
   if (!configured) {
-    throw new Error(`Add a base URL for ${getProviderLabel(providerId)} in Setup before using it.`);
+    throw new Error(`Add a base URL for ${label} in Setup before using it.`);
   }
 
   try {
@@ -146,8 +148,8 @@ function requireOpenAICompatibleBaseUrl(settings: RuntimeAISettings, providerId:
   } catch (error) {
     throw new Error(
       error instanceof Error
-        ? `${getProviderLabel(providerId)} base URL is invalid: ${error.message}`
-        : `${getProviderLabel(providerId)} base URL is invalid.`,
+        ? `${label} base URL is invalid: ${error.message}`
+        : `${label} base URL is invalid.`,
     );
   }
 }
@@ -501,6 +503,7 @@ export function isRuntimeProviderReady(settings: RuntimeAISettings) {
 export function getProviderReadinessLabel(settings: RuntimeAISettings) {
   const providerId = getSelectedProviderId(settings);
   const descriptor = getProviderDescriptor(providerId);
+  const displayLabel = getEffectiveOpenAICompatibleLabel(settings, providerId);
   const hasApiKey = Boolean(getProviderApiKey(settings, providerId));
 
   if (!hasApiKey && providerRequiresApiKey(settings, providerId)) {
@@ -512,22 +515,22 @@ export function getProviderReadinessLabel(settings: RuntimeAISettings) {
     ) {
       return "OpenRouter free mode ready";
     }
-    return `Add ${descriptor.label} key`;
+    return `Add ${displayLabel} key`;
   }
 
   if (descriptor.kind === "openai_compatible") {
     const configured = getProviderBaseUrl(settings, providerId);
     if (!configured) {
-      return `Add ${descriptor.label} base URL`;
+      return `Add ${displayLabel} base URL`;
     }
     try {
       normalizeProviderBaseUrl(configured);
     } catch {
-      return `Fix ${descriptor.label} base URL`;
+      return `Fix ${displayLabel} base URL`;
     }
   }
 
-  return `${descriptor.label} ready`;
+  return `${displayLabel} ready`;
 }
 
 export function validateOpenRouterSelection(

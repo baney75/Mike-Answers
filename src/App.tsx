@@ -57,7 +57,6 @@ import { ErrorState } from "./components/ErrorState";
 import { SetupGuide } from "./components/SetupGuide";
 import { buildWorkspaceTransferBundle } from "./services/workspaceTransfer";
 import { usePeerWorkspaceSync } from "./hooks/usePeerWorkspaceSync";
-import { useAppState } from "./hooks/useAppState";
 import { useKeyboard } from "./hooks/useKeyboard";
 
 const SolveWorkspace = lazy(async () => ({
@@ -320,11 +319,21 @@ export default function App({ externalHistory }: AppProps) {
   const [savedState, setSavedState] = useState<SavedState | null>(null);
   const [isReturning, setIsReturning] = useState(false);
 
-  // Use the useAppState hook for state management utilities
-  const {
-    toIdle,
-    clearInput,
-  } = useAppState();
+  // ── Inline state helpers (replaces useAppState hook) ─────────────────
+  const toIdle = useCallback(() => {
+    setAppState("IDLE");
+    setErrorMsg(null);
+    setSolution(null);
+    setChatHistory([]);
+    setSavedState(null);
+    setBackgroundTasks([]);
+  }, []);
+
+  const clearInput = useCallback(() => {
+    setImageFile(null);
+    setTextInput(null);
+    setSubject("Auto-detect");
+  }, []);
 
   // ── Hooks ───────────────────────────────────────────────────────────
   const { theme, setTheme } = useDarkMode();
@@ -1033,7 +1042,7 @@ export default function App({ externalHistory }: AppProps) {
           [...historyBeforeCurrentTurn].reverse().find((message) => message.role === "tutor")?.text ?? null;
         const looksLikeClarifyingTurn =
           Boolean(lastTutorMessage) &&
-          /(\bclarif|could you|which one|which of these|do you mean|specify|interested in|for example|1\.|2\.)/i.test(lastTutorMessage);
+          /(\bclarif|could you|which one|which of these|do you mean|specify|interested in|for example|1\.|2\.)/i.test(lastTutorMessage ?? "");
         const effectiveMessage =
           looksLikeClarifyingTurn && trimmed.length < 120
             ? `You asked a clarifying question in your previous reply. Treat the user's message below as their answer to that clarification and continue with the actual task instead of asking the same question again.\n\nPrevious tutor message:\n${lastTutorMessage}\n\nUser answer:\n${trimmed}`
@@ -1438,7 +1447,11 @@ export default function App({ externalHistory }: AppProps) {
                       imagePreviewUrl={imagePreviewUrl}
                       textInput={textInput}
                       onTextChange={updateDraftText}
-                      onSolve={handleSolve}
+                      onSolve={(mode) => {
+                        if (mode === "fast" || mode === "deep") {
+                          handleSolve(mode);
+                        }
+                      }}
                       onClear={resetAll}
                     />
                   </div>

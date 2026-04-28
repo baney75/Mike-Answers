@@ -16,10 +16,14 @@ export function useDarkMode() {
         return saved as ThemeMode;
       }
       
-      // Migrate old boolean
+      // Migrate old boolean and clean up
       const old = localStorage.getItem("aqs_dark_mode");
-      if (old === "true") return "dark";
-      if (old === "false") return "light";
+      if (old !== null) {
+        const migrated: ThemeMode = old === "true" ? "dark" : "light";
+        localStorage.setItem(STORAGE_KEY, migrated);
+        localStorage.removeItem("aqs_dark_mode");
+        return migrated;
+      }
     } catch {
       /* storage may be unavailable */
     }

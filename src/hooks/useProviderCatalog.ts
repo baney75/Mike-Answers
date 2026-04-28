@@ -29,9 +29,9 @@ export function useProviderCatalog(settings: RuntimeAISettings) {
     }
   }, [
     settings.selectedProviderId,
-    settings.providers.openrouter.models.deepModel,
-    settings.providers.openrouter.models.fastModel,
-    settings.providers.openrouter.options?.freeOnly,
+    settings.providers.openrouter?.models?.deepModel,
+    settings.providers.openrouter?.models?.fastModel,
+    settings.providers.openrouter?.options?.freeOnly,
   ]);
 
   useEffect(() => {

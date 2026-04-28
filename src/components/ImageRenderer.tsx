@@ -25,8 +25,13 @@ export function ImageRenderer({ src, alt, className = '', compact = false }: Ima
   const finalSrc = isRemote ? src : `${import.meta.env.BASE_URL || ''}${src}`;
 
   return (
-    <figure className={`my-4 relative group ${className}`}>
-      <div className={`overflow-hidden rounded-xl bg-white/80 dark:bg-slate-950/70 ${compact ? "max-h-[min(24dvh,13rem)]" : "max-h-[min(50dvh,32rem)]"}`}>
+    <figure className={`my-4 group ${className}`}>
+      <div className={`relative overflow-hidden rounded-xl bg-white/80 dark:bg-slate-950/70 ${compact ? "max-h-[min(24dvh,13rem)]" : "max-h-[min(50dvh,32rem)]"}`}>
+        {loading && (
+          <div className="absolute inset-0 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-xl flex items-center justify-center z-10">
+            <div className="text-gray-400 text-sm">Loading...</div>
+          </div>
+        )}
         <img 
         src={finalSrc} 
         alt={alt || 'Image'}
@@ -41,12 +46,6 @@ export function ImageRenderer({ src, alt, className = '', compact = false }: Ima
         onError={() => setError(true)}
         />
       </div>
-      
-      {loading && (
-        <div className="absolute inset-0 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-xl flex items-center justify-center">
-          <div className="text-gray-400 text-sm">Loading...</div>
-        </div>
-      )}
       
       {alt && (
         <figcaption className="mt-2 text-center text-xs italic text-gray-500 dark:text-gray-400">{alt}</figcaption>

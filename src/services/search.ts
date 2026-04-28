@@ -1,3 +1,8 @@
+/**
+ * Mike uses Google's Custom Search + YouTube Data APIs when `GOOGLE_API_KEY`/`GEMINI_API_KEY` are set at build time.
+ * Without those keys, `searchImages` and `searchVideos` still use free fallbacks (Openverse, Wikipedia thumbnails, Jina reader helpers).
+ * Venice.ai web search lives on the inference side (`venice_parameters` in chat) when that provider is selected, not in this module.
+ */
 const GOOGLE_API_KEY = import.meta.env.GOOGLE_API_KEY;
 const SEARCH_API_KEY = GOOGLE_API_KEY || import.meta.env.GEMINI_API_KEY;
 const SEARCH_ENGINE_ID = '017576662512468239146:2152321705'; // Public search engine ID

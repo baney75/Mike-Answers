@@ -146,7 +146,7 @@ export function ChartBlock({ json }: ChartBlockProps) {
             <XAxis {...sharedXAxisProps} domain={xDomain} />
             <YAxis {...sharedYAxisProps} domain={yDomain} />
             <Tooltip
-              formatter={(value: unknown, name: string) => [formatNumber(value), name]}
+              formatter={((value: unknown, name?: string) => [formatNumber(value), name ?? ""]) as any}
               contentStyle={{ borderRadius: 16, borderWidth: 2, borderColor: "#0f172a" }}
             />
             {renderLegend()}
@@ -167,7 +167,7 @@ export function ChartBlock({ json }: ChartBlockProps) {
             <XAxis {...sharedXAxisProps} domain={xDomain} />
             <YAxis {...sharedYAxisProps} domain={yDomain} />
             <Tooltip
-              formatter={(value: unknown, name: string) => [formatNumber(value), name]}
+              formatter={((value: unknown, name?: string) => [formatNumber(value), name ?? ""]) as any}
               contentStyle={{ borderRadius: 16, borderWidth: 2, borderColor: "#0f172a" }}
             />
             {renderLegend()}
@@ -191,7 +191,7 @@ export function ChartBlock({ json }: ChartBlockProps) {
             <XAxis {...sharedXAxisProps} domain={xDomain} />
             <YAxis {...sharedYAxisProps} domain={yDomain} />
             <Tooltip
-              formatter={(value: unknown, name: string) => [formatNumber(value), name]}
+              formatter={((value: unknown, name?: string) => [formatNumber(value), name ?? ""]) as any}
               contentStyle={{ borderRadius: 16, borderWidth: 2, borderColor: "#0f172a" }}
             />
             {renderLegend()}
@@ -212,7 +212,7 @@ export function ChartBlock({ json }: ChartBlockProps) {
             <XAxis {...sharedXAxisProps} domain={xDomain} />
             <YAxis {...sharedYAxisProps} domain={yDomain} />
             <Tooltip
-              formatter={(value: unknown, name: string) => [formatNumber(value), name]}
+              formatter={((value: unknown, name?: string) => [formatNumber(value), name ?? ""]) as any}
               contentStyle={{ borderRadius: 16, borderWidth: 2, borderColor: "#0f172a" }}
             />
             {renderLegend()}

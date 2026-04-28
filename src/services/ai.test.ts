@@ -30,7 +30,7 @@ describe("provider readiness", () => {
     settings.providers.openai_compatible.baseUrl = "http://localhost:11434/v1";
 
     expect(isRuntimeProviderReady(settings)).toBe(true);
-    expect(getProviderReadinessLabel(settings)).toBe("Provider catalog ready");
+    expect(getProviderReadinessLabel(settings)).toBe("Ollama ready");
   });
 
   test("allows no-key Ollama when its local base URL is configured", () => {
@@ -40,7 +40,7 @@ describe("provider readiness", () => {
     settings.providers.openai_compatible.models = { fastModel: "llama3.2", deepModel: "llama3.1" };
 
     expect(isRuntimeProviderReady(settings)).toBe(true);
-    expect(getProviderReadinessLabel(settings)).toBe("Provider catalog ready");
+    expect(getProviderReadinessLabel(settings)).toBe("Ollama ready");
   });
 
   test("requires a base URL for custom OpenAI-compatible providers", () => {

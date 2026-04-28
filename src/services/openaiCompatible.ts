@@ -81,23 +81,53 @@ function buildHeaders(options: OpenAICompatibleRequestOptions) {
   return headers;
 }
 
+/** Visible for tests: Venice adds built-in web search via `venice_parameters` (see https://docs.venice.ai/). */
+export function mergeOpenAICompatibleRequestBody(baseUrl: string, body: Record<string, unknown>): Record<string, unknown> {
+  let normalized: string;
+  try {
+    normalized = normalizeProviderBaseUrl(baseUrl).toLowerCase();
+  } catch {
+    return body;
+  }
+
+  if (!normalized.includes("api.venice.ai")) {
+    return body;
+  }
+
+  const existing = body.venice_parameters;
+  const merged =
+    typeof existing === "object" && existing !== null && !Array.isArray(existing)
+      ? (existing as Record<string, unknown>)
+      : {};
+
+  return {
+    ...body,
+    venice_parameters: {
+      enable_web_search: "auto",
+      enable_web_citations: true,
+      ...merged,
+    },
+  };
+}
+
 async function postChatCompletion(
   options: OpenAICompatibleRequestOptions,
   body: Record<string, unknown>,
 ) {
+  const requestBody = mergeOpenAICompatibleRequestBody(options.baseUrl, body);
   const response = await fetch(`${normalizeProviderBaseUrl(options.baseUrl)}/chat/completions`, {
     method: "POST",
     headers: buildHeaders(options),
-    body: JSON.stringify(body),
+    body: JSON.stringify(requestBody),
   });
 
-  const payload = (await response.json().catch(() => ({}))) as OpenAICompatibleChatResponse;
+  const responsePayload = (await response.json().catch(() => ({}))) as OpenAICompatibleChatResponse;
   if (!response.ok) {
-    const message = payload.error?.message ?? `${options.providerLabel ?? options.providerId} request failed (${response.status}).`;
+    const message = responsePayload.error?.message ?? `${options.providerLabel ?? options.providerId} request failed (${response.status}).`;
     throw new Error(message);
   }
 
-  const text = normalizeContent(payload.choices);
+  const text = normalizeContent(responsePayload.choices);
   if (!text) {
     throw new Error(`${options.providerLabel ?? options.providerId} returned an empty response.`);
   }

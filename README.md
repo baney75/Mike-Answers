@@ -1,7 +1,7 @@
 # Mike Answers
 
 Mike Answers is a React + Vite app for conservative Christian tutoring, fast broad-domain answers, research, and visual explanation with bring-your-own-key, gateway, and local provider routes.
-Users can start with `Gemini`, switch to `ChatGPT / OpenAI`, `Claude / Anthropic`, `xAI`, `OpenRouter`, `Vercel AI Gateway`, a searchable `Provider catalog`, or a `Custom OpenAI-compatible` endpoint. BYOK keys stay local to the browser by default.
+Users can start with `Gemini`, switch to `ChatGPT / OpenAI`, `Claude / Anthropic`, `Venice.ai`, `Ollama Cloud`, `xAI`, `OpenRouter`, `Vercel AI Gateway`, a searchable `Provider catalog`, or a `Custom OpenAI-compatible` endpoint. BYOK keys stay local to the browser by default.
 
 ## Current product shape
 
@@ -11,7 +11,7 @@ Users can start with `Gemini`, switch to `ChatGPT / OpenAI`, `Claude / Anthropic
 - The default student recommendation is `Gemini` because Google AI Studio documents a free Gemini API tier with free input/output tokens for getting started, plus native screenshot solving.
 - Settings are provider-registry driven rather than hard-coded to one or two providers.
 - OpenRouter supports a `free-only` model filter and the official `openrouter/free` router so users can stay on zero-cost models when possible.
-- The provider catalog highlights ChatGPT/OpenAI, Claude/Anthropic, xAI, Vercel AI Gateway, OpenRouter, hosted APIs, gateways, and local routes such as Ollama and LM Studio.
+- The provider catalog highlights ChatGPT/OpenAI, Claude/Anthropic, Venice.ai (OpenAI-compatible plus optional web-assisted answers when enabled by the API), Ollama Cloud (hosted `ollama.com/v1` vs local Ollama), xAI, Vercel AI Gateway, OpenRouter, other hosted APIs, gateways, and local routes such as localhost Ollama and LM Studio.
 - Custom OpenAI-compatible providers can define their own base URL, key, and model slots.
 - Cloudflare Workers deployment is configured with `wrangler.jsonc` and a GitHub Actions workflow.
 - The app now includes a stronger PWA shell with install, offline-ready prompts, update prompts, mascot asset pipeline, and an updated Mike Answers brand surface.
@@ -73,6 +73,22 @@ bun run dev
 1. Vercel model ids use `creator/model-name`, such as `openai/gpt-5.4`, `anthropic/claude-sonnet-4.6`, or `xai/grok-4.1-fast-non-reasoning`.
 1. Vercel exposes model discovery at `https://ai-gateway.vercel.sh/v1/models`; use the Vercel dashboard/models page for current availability and pricing.
 
+### Venice.ai
+
+1. Read [docs.venice.ai](https://docs.venice.ai/) and create an API key in the Venice dashboard.
+1. Pick the `Venice.ai` preset. Base URL stays `https://api.venice.ai/api/v1`.
+1. Venice documents optional web-assisted completions (`venice_parameters`). Mike merges defaults into each chat (`enable_web_search: auto`, `enable_web_citations: true`). Verify behavior, limits, and billing in Venice.
+1. Model ids come from the Venice catalog (for example `zai-org-glm-5`, `qwen3-4b`). Drop-down entries label economy-tier picks as lower-quality shortcuts for casual checking.
+1. Venice’s built-in retrieval is independent from Mike’s screenshot image search / YouTube helpers: without Google Custom Search keys, those helpers still degrade to Openverse, Wikipedia thumbnails, or Jina fallbacks rather than disappearing.
+
+### Ollama Cloud
+
+1. Read [Ollama Cloud](https://docs.ollama.com/cloud) and create an API key at [ollama.com/settings/keys](https://ollama.com/settings/keys).
+1. Pick `Ollama Cloud`: OpenAI-compat base URL is `https://ollama.com/v1`, not `http://localhost:11434/v1`.
+1. Run `GET https://ollama.com/v1/models` with `Authorization: Bearer <key>` to see live cloud-capable ids; names change with releases.
+1. Use a multimodal/cloud vision model tag for pasted screenshots; embeddings on Cloud remain limited elsewhere—keep to chat completions in Mike.
+1. Local Ollama (localhost preset) stays separate—no hosted key—and only answers when your machine is serving it.
+
 ### OpenRouter
 
 1. Create a key at [OpenRouter API keys](https://openrouter.ai/keys).
@@ -83,9 +99,9 @@ bun run dev
 
 ### Provider catalog and Ollama
 
-1. Search the setup catalog for ChatGPT/OpenAI, Claude/Anthropic, xAI, DeepSeek, Groq, Together, Fireworks, Mistral, Perplexity, Cerebras, SambaNova, Cloudflare AI Gateway, Vercel AI Gateway, LiteLLM, LM Studio, Ollama, and more.
-2. Pick a preset, paste that provider's key if required, and adjust the model ids if your account uses different names.
-3. Ollama uses `http://localhost:11434/v1` and does not require a key, but Ollama must already be running and reachable from the browser. CORS, localhost, and device network settings can still block it.
+1. Search the setup catalog for ChatGPT/OpenAI, Claude/Anthropic, Venice.ai, Ollama Cloud, xAI, DeepSeek, Groq, Together, Fireworks, Mistral, Perplexity, Cerebras, SambaNova, Cloudflare AI Gateway, Vercel AI Gateway, LiteLLM, LM Studio, localhost Ollama, and more.
+2. Pick a preset, paste that provider's key if required, and adjust the model ids if your account uses different names. Economy-tier and small-parameter models intentionally show **quality disclaimers** in the model dropdown notes.
+3. Local Ollama uses `http://localhost:11434/v1`, does not require a key, and only works when Ollama is running and reachable from the browser. **Ollama Cloud** is the HTTPS `ollama.com/v1` route with API key auth. CORS or network policies can block either depending on setup.
 4. Gateway presets often require editing the base URL to include your account, gateway, or proxy path.
 
 ### Custom OpenAI-compatible
