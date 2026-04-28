@@ -192,7 +192,7 @@ export function SetupGuide({
               <div className="space-y-2">
                 <h3 className="text-xl font-bold text-(--aqs-ink) dark:text-white">Pick the runtime path</h3>
                 <p className="text-sm leading-7 text-slate-600 dark:text-slate-300">
-                  Most students should start with Gemini because Google AI Studio offers a free Gemini API tier and Mike can use it for text, screenshots, grounding, and audio. ChatGPT, Claude, xAI, Vercel AI Gateway, OpenRouter, and local routes are one search away.
+                  Most students should start with Gemini because Google AI Studio offers a free Gemini API tier and Mike can use it for text, screenshots, grounding, and audio. ChatGPT, Claude, xAI, DeepInfra, Hugging Face, Cohere, and local routes are below — or search the full catalog for more.
                 </p>
               </div>
               <div className="rounded-[1.35rem] border border-(--aqs-accent)/16 bg-(--aqs-accent-soft)/75 px-4 py-4 text-sm leading-6 text-slate-700 dark:border-(--aqs-accent-dark)/20 dark:bg-[rgba(122,31,52,0.18)] dark:text-slate-200">
@@ -254,6 +254,71 @@ export function SetupGuide({
                   <p className="mt-1 text-sm font-semibold text-(--aqs-ink) dark:text-white">xAI / Grok</p>
                   <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
                     Use your xAI key for Grok fast and reasoning model choices.
+                  </p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => selectOpenAICompatiblePreset("deepinfra")}
+                  className="rounded-[1.2rem] border border-(--aqs-ink)/10 bg-white px-4 py-4 text-left transition hover:border-(--aqs-accent)/30 hover:bg-(--aqs-paper-strong) dark:border-white/10 dark:bg-slate-950 dark:hover:bg-slate-900"
+                >
+                  <div className="text-[11px] font-black uppercase tracking-[0.2em] text-(--aqs-accent-strong) dark:text-(--aqs-accent-dark)">
+                    Open-source hub
+                  </div>
+                  <p className="mt-1 text-sm font-semibold text-(--aqs-ink) dark:text-white">DeepInfra</p>
+                  <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                    Broad open-source catalog: DeepSeek, Llama, Qwen, Mistral, Kimi, and GLM models.
+                  </p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => selectOpenAICompatiblePreset("huggingface")}
+                  className="rounded-[1.2rem] border border-(--aqs-ink)/10 bg-white px-4 py-4 text-left transition hover:border-(--aqs-accent)/30 hover:bg-(--aqs-paper-strong) dark:border-white/10 dark:bg-slate-950 dark:hover:bg-slate-900"
+                >
+                  <div className="text-[11px] font-black uppercase tracking-[0.2em] text-(--aqs-accent-strong) dark:text-(--aqs-accent-dark)">
+                    Community catalog
+                  </div>
+                  <p className="mt-1 text-sm font-semibold text-(--aqs-ink) dark:text-white">Hugging Face Inference</p>
+                  <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                    Access 700K+ community and first-party models via OpenAI-compatible API.
+                  </p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => selectOpenAICompatiblePreset("cohere")}
+                  className="rounded-[1.2rem] border border-(--aqs-ink)/10 bg-white px-4 py-4 text-left transition hover:border-(--aqs-accent)/30 hover:bg-(--aqs-paper-strong) dark:border-white/10 dark:bg-slate-950 dark:hover:bg-slate-900"
+                >
+                  <div className="text-[11px] font-black uppercase tracking-[0.2em] text-(--aqs-accent-strong) dark:text-(--aqs-accent-dark)">
+                    Enterprise RAG
+                  </div>
+                  <p className="mt-1 text-sm font-semibold text-(--aqs-ink) dark:text-white">Cohere</p>
+                  <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                    Command A and R series models for reasoning, RAG, and tool use with trial credits.
+                  </p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => selectOpenAICompatiblePreset("bedrock")}
+                  className="rounded-[1.2rem] border border-(--aqs-ink)/10 bg-white px-4 py-4 text-left transition hover:border-(--aqs-accent)/30 hover:bg-(--aqs-paper-strong) dark:border-white/10 dark:bg-slate-950 dark:hover:bg-slate-900"
+                >
+                  <div className="text-[11px] font-black uppercase tracking-[0.2em] text-(--aqs-accent-strong) dark:text-(--aqs-accent-dark)">
+                    AWS enterprise
+                  </div>
+                  <p className="mt-1 text-sm font-semibold text-(--aqs-ink) dark:text-white">Amazon Bedrock</p>
+                  <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                    Claude, Llama, and Mistral through AWS with enterprise compliance.
+                  </p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => selectOpenAICompatiblePreset("hyperbolic")}
+                  className="rounded-[1.2rem] border border-(--aqs-ink)/10 bg-white px-4 py-4 text-left transition hover:border-(--aqs-accent)/30 hover:bg-(--aqs-paper-strong) dark:border-white/10 dark:bg-slate-950 dark:hover:bg-slate-900"
+                >
+                  <div className="text-[11px] font-black uppercase tracking-[0.2em] text-(--aqs-accent-strong) dark:text-(--aqs-accent-dark)">
+                    Privacy first
+                  </div>
+                  <p className="mt-1 text-sm font-semibold text-(--aqs-ink) dark:text-white">Hyperbolic</p>
+                  <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                    Zero data retention, free $10 credits, and open-source DeepSeek/Llama/Qwen models.
                   </p>
                 </button>
               </div>

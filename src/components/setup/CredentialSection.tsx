@@ -58,6 +58,18 @@ export function CredentialSection({
         </div>
       ) : null}
 
+      {preset?.id === "bedrock" ? (
+        <div className="rounded-[1.35rem] border border-orange-400/30 bg-orange-50/85 px-4 py-4 text-sm leading-6 text-orange-950 dark:border-orange-300/25 dark:bg-orange-950/20 dark:text-orange-100">
+          <strong>AWS Bedrock:</strong> requires an active AWS account with Bedrock access enabled. The base URL includes your AWS region (<code className="text-xs">us-east-1</code> shown). Authentication uses AWS IAM credentials (access key + secret key) passed as the API key. Model availability varies by region.
+        </div>
+      ) : null}
+
+      {preset?.id === "azure-openai" ? (
+        <div className="rounded-[1.35rem] border border-sky-400/30 bg-sky-50/85 px-4 py-4 text-sm leading-6 text-sky-950 dark:border-sky-300/25 dark:bg-sky-950/20 dark:text-sky-100">
+          <strong>Azure OpenAI:</strong> replace <code className="text-xs">YOUR_RESOURCE</code> in the base URL with your Azure OpenAI resource name. You can find the full endpoint URL (e.g. <code className="text-xs">https://my-resource.openai.azure.com</code>) in the Azure portal under "Keys and Endpoint".
+        </div>
+      ) : null}
+
       {preset?.id === "ollama-cloud" ? (
         <div className="rounded-[1.35rem] border border-cyan-400/26 bg-cyan-50/85 px-4 py-4 text-sm leading-6 text-cyan-950 dark:border-cyan-300/22 dark:bg-cyan-950/22 dark:text-cyan-100">
           <strong>Ollama Cloud:</strong> use base URL{" "}

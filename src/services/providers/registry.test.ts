@@ -45,6 +45,92 @@ describe("provider registry", () => {
     expect(ollamaCloud.capabilities.isLocalOnly).toBe(undefined);
   });
 
+  test("includes DeepInfra as a popular OpenAI-compatible preset with models", () => {
+    const preset = getOpenAICompatiblePreset("deepinfra");
+    expect(preset.defaultBaseUrl).toBe("https://api.deepinfra.com/v1/openai");
+    expect(preset.group).toBe("popular");
+    expect((preset.modelOptions?.length ?? 0) >= 5).toBe(true);
+    expect(preset.capabilities.supportsImageInputInBrowser).toBe(true);
+  });
+
+  test("includes Cohere as a popular OpenAI-compatible preset with models", () => {
+    const preset = getOpenAICompatiblePreset("cohere");
+    expect(preset.defaultBaseUrl).toBe("https://api.cohere.ai/compatibility/v1");
+    expect(preset.group).toBe("popular");
+    expect((preset.modelOptions?.length ?? 0) >= 3).toBe(true);
+    expect(preset.defaultModels.deepModel).toBe("command-a-03-2025");
+    expect(preset.modelOptions?.some((m) => m.id === "command-a-vision-07-2025")).toBe(true);
+  });
+
+  test("includes Novita AI as an OpenAI-compatible preset", () => {
+    const preset = getOpenAICompatiblePreset("novita");
+    expect(preset.defaultBaseUrl).toBe("https://api.novita.ai/v3/openai");
+    expect(preset.defaultModels.fastModel).toBe("llama-3.1-8b-instruct");
+    expect((preset.modelOptions?.length ?? 0) >= 4).toBe(true);
+  });
+
+  test("includes Hugging Face Inference as a popular preset", () => {
+    const preset = getOpenAICompatiblePreset("huggingface");
+    expect(preset.defaultBaseUrl).toBe("https://router.huggingface.co/hf-inference/v1");
+    expect(preset.group).toBe("popular");
+    expect((preset.modelOptions?.length ?? 0) >= 4).toBe(true);
+  });
+
+  test("includes NVIDIA NIM as an OpenAI-compatible preset", () => {
+    const preset = getOpenAICompatiblePreset("nvidia-nim");
+    expect(preset.defaultBaseUrl).toBe("https://integrate.api.nvidia.com/v1");
+    expect(preset.defaultModels.deepModel).toBe("nvidia/llama-3.1-nemotron-70b-instruct");
+    expect((preset.modelOptions?.length ?? 0) >= 3).toBe(true);
+  });
+
+  test("includes Google Vertex AI as an OpenAI-compatible preset", () => {
+    const preset = getOpenAICompatiblePreset("vertex-ai");
+    expect(preset.defaultBaseUrl).toBe("https://us-central1-aiplatform.googleapis.com/v1beta1");
+    expect(preset.capabilities.isUserPays).toBe(true);
+    expect(preset.defaultModels.fastModel).toBe("google/gemini-2.5-flash");
+  });
+
+  test("includes Amazon Bedrock as an OpenAI-compatible enterprise preset", () => {
+    const preset = getOpenAICompatiblePreset("bedrock");
+    expect(preset.defaultBaseUrl).toBe("https://bedrock-runtime.us-east-1.amazonaws.com/v1");
+    expect(preset.capabilities.isUserPays).toBe(true);
+    expect(preset.defaultModels.fastModel).toBe("anthropic.claude-haiku-4-5-v1");
+    expect((preset.modelOptions?.length ?? 0) >= 4).toBe(true);
+  });
+
+  test("includes Azure OpenAI as an enterprise preset", () => {
+    const preset = getOpenAICompatiblePreset("azure-openai");
+    expect(preset.defaultBaseUrl).toBe("https://YOUR_RESOURCE.openai.azure.com/v1");
+    expect(preset.capabilities.supportsCustomBaseUrl).toBe(true);
+    expect((preset.modelOptions?.length ?? 0) >= 3).toBe(true);
+  });
+
+  test("includes Hyperbolic as a privacy-first preset", () => {
+    const preset = getOpenAICompatiblePreset("hyperbolic");
+    expect(preset.defaultBaseUrl).toBe("https://api.hyperbolic.xyz/v1");
+    expect(preset.policy.trustTier).toBe("community_experimental");
+    expect((preset.modelOptions?.length ?? 0) >= 5).toBe(true);
+    expect(preset.defaultModels.deepModel).toBe("deepseek-ai/DeepSeek-R1-0528");
+  });
+
+  test("includes SiliconFlow as an OpenAI-compatible preset", () => {
+    const preset = getOpenAICompatiblePreset("siliconflow");
+    expect(preset.defaultBaseUrl).toBe("https://api.siliconflow.cn/v1");
+    expect(preset.defaultModels.deepModel).toBe("Qwen/Qwen3.5-397B-A17B");
+    expect((preset.modelOptions?.length ?? 0) >= 3).toBe(true);
+  });
+
+  test("all new Phase 3 presets have modelOptions with diverse model counts", () => {
+    const newPresetIds = [
+      "deepinfra", "cohere", "novita", "huggingface", "nvidia-nim", "vertex-ai",
+      "bedrock", "azure-openai", "hyperbolic", "siliconflow",
+    ];
+    for (const id of newPresetIds) {
+      const preset = getOpenAICompatiblePreset(id);
+      expect((preset.modelOptions?.length ?? 0) > 0).toBe(true);
+    }
+  });
+
   test("defaults API key storage to session only", () => {
     const defaults = createDefaultProviderRuntimeConfigs();
 
@@ -112,7 +198,9 @@ describe("provider registry", () => {
     const allPresets = [
       "openai", "anthropic", "deepseek", "groq", "together", "fireworks",
       "mistral", "xai", "venice", "ollama-cloud", "perplexity", "cerebras",
-      "sambanova", "cloudflare-ai-gateway", "vercel-ai-gateway", "litellm",
+      "sambanova", "deepinfra", "cohere", "novita", "huggingface", "nvidia-nim",
+      "vertex-ai", "bedrock", "azure-openai", "hyperbolic", "siliconflow",
+      "cloudflare-ai-gateway", "vercel-ai-gateway", "litellm",
       "lmstudio", "ollama",
     ];
     for (const id of allPresets) {

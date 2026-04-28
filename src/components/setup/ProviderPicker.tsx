@@ -34,7 +34,7 @@ const groupLabels: Record<OpenAICompatiblePreset["group"], string> = {
   gateway: "Gateways",
 };
 
-const leadingPresetIds = new Set(["openai", "anthropic", "xai", "vercel-ai-gateway", "venice", "ollama-cloud"]);
+const leadingPresetIds = new Set(["openai", "anthropic", "xai", "vercel-ai-gateway", "venice", "ollama-cloud", "deepinfra", "cohere", "huggingface", "bedrock", "hyperbolic"]);
 
 function matchesPreset(preset: OpenAICompatiblePreset, query: string) {
   const haystack = [
@@ -84,7 +84,7 @@ export function ProviderPicker({
         <input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search Gemini, ChatGPT, Claude, Venice, Ollama Cloud, xAI, gateways, local tools..."
+          placeholder="Search Gemini, ChatGPT, Claude, DeepInfra, Hugging Face, Cohere, Bedrock, xAI, Azure, Hyperbolic, gateways, local tools..."
           className="w-full rounded-2xl border border-(--aqs-ink)/10 bg-white py-3 pl-11 pr-4 text-sm text-(--aqs-ink) outline-none transition placeholder:text-slate-400 focus:border-(--aqs-accent) focus:ring-4 focus:ring-[rgba(122,31,52,0.12)] dark:border-white/10 dark:bg-slate-950 dark:text-white"
         />
       </label>

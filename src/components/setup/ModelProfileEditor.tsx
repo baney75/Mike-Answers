@@ -40,6 +40,11 @@ function ModelField({
 
   if (modelOptions && modelOptions.length > 0) {
     const selectedOption = modelOptions.find((model) => model.id === value) ?? modelOptions[0];
+    const sortedOptions = [...modelOptions].sort((a, b) => {
+      const aScore = (a.supportsImages ? 0 : 1) + (a.label.includes("Llama 3.3") ? 0 : 0.5);
+      const bScore = (b.supportsImages ? 0 : 1) + (b.label.includes("Llama 3.3") ? 0 : 0.5);
+      return aScore - bScore;
+    });
     return (
       <label className="block space-y-2">
         <span className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
@@ -50,12 +55,17 @@ function ModelField({
           onChange={(event) => onChange(event.target.value)}
           className="w-full rounded-2xl border border-(--aqs-ink)/12 bg-white px-4 py-3 text-sm text-(--aqs-ink) outline-none transition focus:border-(--aqs-accent) focus:ring-4 focus:ring-[rgba(122,31,52,0.12)] dark:border-white/10 dark:bg-slate-900 dark:text-white"
         >
-          {modelOptions.map((model) => (
-            <option key={model.id} value={model.id}>
-              {model.label}
-              {model.supportsImages ? " • image" : ""}
-            </option>
-          ))}
+          <option value="">Auto-pick recommended model</option>
+          {sortedOptions.map((model) => {
+            const badges = [
+              model.supportsImages ? "\uD83D\uDCF7" : "",
+            ].filter(Boolean).join(" ");
+            return (
+              <option key={model.id} value={model.id}>
+                {model.label}{badges ? ` ${badges}` : ""}
+              </option>
+            );
+          })}
         </select>
         {selectedOption?.note ? (
           <span className="block text-xs font-medium leading-5 text-slate-500 dark:text-slate-400">
