@@ -555,6 +555,7 @@ export default function App({ externalHistory }: AppProps) {
     }: SolveRequest) => {
       const trimmedText = nextTextInput?.trim() ?? null;
       const persistedImageBase64 = nextImageBase64?.trim() || null;
+      setShowSetup(false);
 
       if (!nextImageFile && !persistedImageBase64 && trimmedText) {
         if (isVerseOfTheDayRequest(trimmedText)) {
@@ -1274,7 +1275,6 @@ export default function App({ externalHistory }: AppProps) {
           }}
           onToggleSetup={() => setShowSetup((value) => !value)}
           setupOpen={showSetup}
-          emblemSrc={emblemAsset.webp}
           onInstallApp={handleInstallApp}
           canInstallApp={Boolean(installPromptEvent) && !standalonePwa}
           providerName={providerName}
@@ -1359,8 +1359,8 @@ export default function App({ externalHistory }: AppProps) {
           <div
             className={`flex min-h-0 flex-1 flex-col overflow-hidden ${
               showSetup && appState !== "NEWS" && appState !== "WOTD"
-                ? "pointer-events-none opacity-20 blur-sm grayscale transition duration-500"
-                : "transition duration-500"
+                ? "pointer-events-none opacity-20 blur-sm grayscale"
+                : ""
             }`}
             aria-hidden={showSetup && appState !== "NEWS" && appState !== "WOTD"}
           >

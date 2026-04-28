@@ -8,7 +8,6 @@ interface HeaderProps {
   onOpenHistory: () => void;
   onToggleSetup: () => void;
   setupOpen: boolean;
-  emblemSrc: string;
   onInstallApp?: () => void;
   canInstallApp?: boolean;
   providerName: string;
@@ -61,7 +60,6 @@ export function Header({
   onOpenHistory,
   onToggleSetup,
   setupOpen,
-  emblemSrc,
   onInstallApp,
   canInstallApp,
   providerName,
@@ -87,18 +85,12 @@ export function Header({
 
   return (
     <header className="no-print studio-panel mb-3 overflow-visible bg-white/88 px-2.5 py-2 backdrop-blur-xl dark:bg-slate-950/84 md:mb-4 md:px-4 md:py-3">
-      <div className="flex items-center justify-between gap-2.5 md:gap-3">
-        <div className="min-w-0 flex items-center gap-2.5 md:gap-3">
-          <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-linear-to-br from-(--aqs-accent)/8 to-(--aqs-gold)/12 ring-1 ring-(--aqs-accent)/10 md:h-12 md:w-12 md:rounded-[1.1rem]">
-            <img
-              src={emblemSrc}
-              alt="Mike Answers mascot"
-              className="h-[108%] w-[108%] object-contain object-center"
-            />
-          </div>
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="text-[9px] font-black uppercase tracking-[0.28em] text-(--aqs-accent-strong) dark:text-(--aqs-gold)">
+      <div className="flex items-center justify-between gap-3 md:gap-4">
+        <div className="min-w-0 flex items-center gap-3 md:gap-4">
+          <div className="hidden h-12 w-1.5 shrink-0 rounded-full bg-linear-to-b from-(--aqs-gold) via-(--aqs-accent) to-(--aqs-accent-strong) shadow-[0_0_22px_rgba(212,167,80,0.22)] sm:block" />
+          <div className="min-w-0 rounded-2xl border border-(--aqs-ink)/8 bg-white/55 px-3 py-2 dark:border-white/8 dark:bg-white/3">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <div className="text-[10px] font-black uppercase tracking-[0.32em] text-(--aqs-accent-strong) dark:text-(--aqs-gold) md:text-[11px]">
                 Mike Answers
               </div>
               <div className="hidden h-px w-5 bg-(--aqs-accent)/25 sm:block" />
@@ -106,11 +98,11 @@ export function Header({
                 Browser-first study desk
               </div>
             </div>
-            <div className="mt-1 flex flex-wrap gap-2">
-              <div className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-(--aqs-ink)/10 bg-white/92 px-2.5 py-1.5 text-[8px] font-black uppercase tracking-[0.14em] text-(--aqs-ink) dark:border-white/10 dark:bg-slate-950 dark:text-white sm:gap-2 sm:text-[9px] md:px-3 md:text-[10px]">
-                <div className={`h-1.5 w-1.5 rounded-full ${providerNeedsSetup ? "bg-rose-500" : "bg-emerald-500"}`} />
+            <div className="mt-1.5 flex flex-wrap gap-2">
+              <div className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-(--aqs-accent)/14 bg-slate-950/3 px-3 py-1.5 text-[8px] font-black uppercase tracking-[0.16em] text-(--aqs-ink) shadow-inner dark:border-white/10 dark:bg-slate-950/80 dark:text-white sm:gap-2 sm:text-[9px] md:text-[10px]">
+                <div className={`h-2 w-2 rounded-full shadow-[0_0_10px_currentColor] ${providerNeedsSetup ? "bg-rose-500 text-rose-500" : "bg-emerald-500 text-emerald-500"}`} />
                 <span className="truncate">{providerName}</span>
-                <span className="opacity-30">•</span>
+                <span className="h-1 w-1 rounded-full bg-(--aqs-accent)/35" aria-hidden="true" />
                 <span className="truncate sm:hidden">{compactProviderStatus}</span>
                 <span className="hidden truncate sm:inline">{providerStatus}</span>
                 {freeModeEnabled ? (
