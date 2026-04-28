@@ -18,7 +18,6 @@ import {
   solveImageQuestionWithOpenAICompatible,
   solveTextQuestionWithOpenAICompatible,
 } from "./openaiCompatible";
-import { chatWithPuterTutor, solveTextQuestionWithPuter } from "./puter";
 import {
   chooseRecommendedOpenRouterModel,
   fetchFreeOpenRouterModels,
@@ -241,23 +240,6 @@ export async function solveTextQuestionWithProvider(
     };
   }
 
-  if (providerId === "puter") {
-    const model = getConfiguredOpenAIModel(settings, providerId, mode);
-    return {
-      text: await solveTextQuestionWithPuter({
-        text,
-        model,
-        mode,
-        subject,
-        detailed,
-        preferredLocation: settings.preferredLocation,
-        promptContext,
-      }),
-      provider: providerId,
-      model,
-    };
-  }
-
   if (providerId === "openrouter") {
     const apiKey = requireProviderApiKey(settings, providerId);
     const models = await getCandidateOpenRouterModels(settings);
@@ -346,10 +328,6 @@ export async function solveImageQuestionWithProvider(
     };
   }
 
-  if (providerId === "puter") {
-    throw new Error("Puter setup is text and follow-up tutoring first. Use Gemini, OpenRouter, or an image-capable BYOK preset for screenshot solving.");
-  }
-
   if (providerId === "openrouter") {
     const apiKey = requireProviderApiKey(settings, providerId);
     const models = await getCandidateOpenRouterModels(settings);
@@ -431,19 +409,6 @@ export async function chatWithTutorWithProvider(
       subject,
       localDateTime: promptContext?.localDateTime,
       timeZone: promptContext?.timeZone,
-    });
-  }
-
-  if (providerId === "puter") {
-    const model = getConfiguredOpenAIModel(settings, providerId, "deep");
-    return chatWithPuterTutor({
-      history,
-      message,
-      followUpContext,
-      model,
-      preferredLocation: settings.preferredLocation,
-      subject,
-      promptContext,
     });
   }
 

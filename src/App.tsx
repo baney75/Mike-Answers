@@ -43,7 +43,7 @@ import {
   subscribeNetworkStatus,
   type InstallPromptEvent,
 } from "./services/pwa";
-import { getProviderDescriptor, getProviderLabel, getSelectedOpenAICompatiblePreset } from "./services/providers/registry";
+import { getProviderDescriptor, getProviderLabel, getSelectedOpenAICompatiblePreset, providerOrder } from "./services/providers/registry";
 import { SUBJECT_OPTIONS } from "./constants/subjects";
 
 
@@ -1110,7 +1110,9 @@ export default function App({ externalHistory }: AppProps) {
     setSolutionHideAnswerDefault(item.hideAnswerByDefault ?? false);
     setLastMode(item.mode ?? DEFAULT_SOLVE_MODE);
     setSubject(item.subject ?? "Auto-detect");
-    setLastResolvedProviderId(item.provider === "minimax" ? "puter" : item.provider ?? "puter");
+    setLastResolvedProviderId(
+      item.provider && providerOrder.includes(item.provider as ProviderId) ? (item.provider as ProviderId) : "gemini",
+    );
     setLastResolvedModel(item.model);
     setLastGeneratedAt(item.generatedAt ?? new Date(item.timestamp).toISOString());
     setAppState("SOLVED");

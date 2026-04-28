@@ -11,7 +11,6 @@ import {
 describe("provider registry", () => {
   test("keeps the supported provider order stable", () => {
     expect(providerOrder).toEqual([
-      "puter",
       "gemini",
       "openrouter",
       "openai_compatible",
@@ -19,13 +18,20 @@ describe("provider registry", () => {
     ]);
   });
 
-  test("creates Puter as the no-key default route", () => {
+  test("creates Gemini as the student default route", () => {
     const defaults = createDefaultProviderRuntimeConfigs();
 
-    expect(defaults.puter.models.fastModel).toBe("gpt-5-nano");
-    expect(defaults.puter.models.deepModel).toBe("gpt-5.4");
-    expect(getProviderDescriptor("puter").capabilities.requiresApiKey).toBe(false);
-    expect(getProviderDescriptor("puter").capabilities.isUserPays).toBe(true);
+    expect(defaults.gemini.models.fastModel).toBe("gemini-2.5-flash-lite");
+    expect(defaults.gemini.models.deepModel).toBe("gemini-2.5-pro");
+    expect(getProviderDescriptor("gemini").capabilities.supportsImageInputInBrowser).toBe(true);
+    expect(getProviderDescriptor("gemini").capabilities.requiresApiKey).toBe(true);
+  });
+
+  test("includes leading ChatGPT, Claude, xAI, and Vercel presets", () => {
+    expect(getOpenAICompatiblePreset("openai").label).toBe("ChatGPT / OpenAI");
+    expect(getOpenAICompatiblePreset("anthropic").defaultBaseUrl).toBe("https://api.anthropic.com/v1");
+    expect(getOpenAICompatiblePreset("xai").defaultBaseUrl).toBe("https://api.x.ai/v1");
+    expect(getOpenAICompatiblePreset("vercel-ai-gateway").defaultModels.deepModel).toBe("anthropic/claude-sonnet-4.6");
   });
 
   test("defaults API key storage to session only", () => {

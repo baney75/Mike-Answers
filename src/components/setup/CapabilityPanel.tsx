@@ -38,9 +38,7 @@ export function CapabilityPanel({
           ? "Enterprise-ready"
           : displayProvider.policy.trustTier === "local_first"
             ? "Local first"
-            : displayProvider.policy.trustTier === "user_pays"
-              ? "User pays"
-              : "Experimental";
+            : "Experimental";
 
   return (
     <div className="space-y-4 rounded-[1.5rem] border border-(--aqs-ink)/10 bg-white/84 p-5 dark:border-white/10 dark:bg-slate-950/55">
@@ -81,9 +79,7 @@ export function CapabilityPanel({
           <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
             {displayProvider.capabilities.isLocalOnly
               ? "This depends on a local server that the browser can reach."
-              : displayProvider.capabilities.isUserPays
-                ? "No key is stored by Mike Answers; Puter asks the user to authenticate when needed."
-                : "Everything shown here is available without adding an account or server sync layer."}
+              : "Everything shown here is available without adding an account or server sync layer."}
           </p>
         </div>
       </div>

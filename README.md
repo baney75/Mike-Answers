@@ -1,17 +1,17 @@
 # Mike Answers
 
-Mike Answers is a React + Vite app for conservative Christian tutoring, fast broad-domain answers, research, and visual explanation with no-key, bring-your-own-key, and local provider routes.
-Users can choose `Puter`, `Gemini`, `OpenRouter`, a searchable `Provider catalog`, or a `Custom OpenAI-compatible` endpoint, and BYOK keys stay local to the browser by default.
+Mike Answers is a React + Vite app for conservative Christian tutoring, fast broad-domain answers, research, and visual explanation with bring-your-own-key, gateway, and local provider routes.
+Users can start with `Gemini`, switch to `ChatGPT / OpenAI`, `Claude / Anthropic`, `xAI`, `OpenRouter`, `Vercel AI Gateway`, a searchable `Provider catalog`, or a `Custom OpenAI-compatible` endpoint. BYOK keys stay local to the browser by default.
 
 ## Current product shape
 
-- Mike Answers is browser-first, with Puter as the easiest no-key route and BYOK/local routes for more control.
+- Mike Answers is browser-first, with Gemini as the default student route and BYOK/local/gateway routes for more control.
 - The primary workspace supports direct text, screenshot paste, and voice capture.
 - Mike’s tutor posture is truth-first, method-first, and conservative Christian when worldview, moral, spiritual, or theological questions are involved.
-- The default student recommendation is `Puter` for no-key setup, with `Gemini` recommended when native screenshot solving matters.
+- The default student recommendation is `Gemini` because Google AI Studio documents a free Gemini API tier with free input/output tokens for getting started, plus native screenshot solving.
 - Settings are provider-registry driven rather than hard-coded to one or two providers.
 - OpenRouter supports a `free-only` model filter and the official `openrouter/free` router so users can stay on zero-cost models when possible.
-- The provider catalog includes OpenAI-compatible hosted APIs, gateways, and local routes such as Ollama and LM Studio.
+- The provider catalog highlights ChatGPT/OpenAI, Claude/Anthropic, xAI, Vercel AI Gateway, OpenRouter, hosted APIs, gateways, and local routes such as Ollama and LM Studio.
 - Custom OpenAI-compatible providers can define their own base URL, key, and model slots.
 - Cloudflare Workers deployment is configured with `wrangler.jsonc` and a GitHub Actions workflow.
 - The app now includes a stronger PWA shell with install, offline-ready prompts, update prompts, mascot asset pipeline, and an updated Mike Answers brand surface.
@@ -24,43 +24,66 @@ Users can choose `Puter`, `Gemini`, `OpenRouter`, a searchable `Provider catalog
 bun install
 ```
 
-2. Copy `.env.example` to `.env.local` and fill what you actually want to enable.
+1. Copy `.env.example` to `.env.local` and fill what you actually want to enable.
 
-3. Start the app:
+1. Start the app:
 
 ```bash
 bun run dev
 ```
 
-4. Open `http://localhost:3000` or the Vite fallback port shown in the terminal.
+1. Open `http://localhost:3000` or the Vite fallback port shown in the terminal.
 
 ## Provider onboarding
 
-### Puter
+### Gemini
 
-1. Pick `Puter` for the easiest no-key path.
-2. No Mike Answers API key is required; Puter asks the user to sign in when AI is used.
-3. Puter follows a user-pays model: auth, billing, provider access, and provider policy are controlled by the user's Puter account.
-4. Text solve and follow-up tutoring are enabled first, using Puter-supported defaults such as `gpt-5-nano` for Fast and `gpt-5.4` for Deep. Use Gemini or an image-capable BYOK route for screenshot solving.
+1. Create a key at [Google AI Studio](https://aistudio.google.com/app/apikey).
+1. Google’s pricing page documents a `Free` Gemini API tier for developers and small projects, including free input and output tokens for supported models: [Gemini API pricing](https://ai.google.dev/gemini-api/docs/pricing).
+1. Free tier is not the same as private unlimited usage. Google’s docs say free-tier content may be used to improve products; paid tier says content is not used to improve products.
+1. For students, keep `Fast` on `gemini-2.5-flash-lite`, use `gemini-2.5-flash` when grounding/current context matters, and reserve `gemini-2.5-pro` or preview Pro models for harder walkthroughs.
+1. Gemini is the cleanest default when the goal is one student-friendly key, native image support, audio transcription, and direct browser capability.
+
+### ChatGPT / OpenAI
+
+1. Create a key at [OpenAI API keys](https://platform.openai.com/api-keys).
+1. Choose `ChatGPT / OpenAI` in the provider catalog.
+1. Pick models from the dropdown. Use lower-cost mini/nano models for `Fast` and a stronger GPT model for `Deep`.
+1. OpenAI model availability changes by account and date; if a dropdown model is not enabled for your account, choose a compatibility fallback or type the model id manually through `Custom OpenAI-compatible`.
+
+### Claude / Anthropic
+
+1. Create a key at [Anthropic API keys](https://docs.anthropic.com/settings/keys).
+1. Choose `Claude / Anthropic` in the provider catalog.
+1. Mike uses Anthropic’s official OpenAI SDK compatibility layer at `https://api.anthropic.com/v1`.
+1. Anthropic says this compatibility layer is best for testing and comparison. For full Claude features such as PDF support, citations, prompt caching, and extended thinking, use Anthropic’s native API outside this browser-first OpenAI-compatible route.
+
+### xAI
+
+1. Create a key through the [xAI API docs](https://docs.x.ai/docs/api-reference).
+1. Choose `xAI` in the provider catalog.
+1. Use the model dropdown for current Grok routes such as `grok-4-1-fast-non-reasoning` and `grok-4-1-fast-reasoning`.
+1. xAI’s OpenAI-style chat endpoint supports text/image chat prompts on capable models.
+
+### Vercel AI Gateway
+
+1. Create or copy an AI Gateway key from Vercel.
+1. Choose `Vercel AI Gateway` in the provider catalog.
+1. The OpenAI-compatible base URL is `https://ai-gateway.vercel.sh/v1`.
+1. Vercel model ids use `creator/model-name`, such as `openai/gpt-5.4`, `anthropic/claude-sonnet-4.6`, or `xai/grok-4.1-fast-non-reasoning`.
+1. Vercel exposes model discovery at `https://ai-gateway.vercel.sh/v1/models`; use the Vercel dashboard/models page for current availability and pricing.
 
 ### OpenRouter
 
-1. Create a key at https://openrouter.ai/keys
-2. Keep `Free only` enabled in the app if the goal is equitable no-cost usage
-3. Leave model pickers on `Auto-pick recommended model` unless you need a specific `:free` model
-4. Auto-pick now favors OpenRouter's official free router for the lowest-maintenance free path
-5. Optional secure free mode can use a shared key if `VITE_OPENROUTER_FREE_API_KEY` is configured and the user explicitly enables free mode + accepts legal notice in setup
-
-### Gemini
-
-1. Create a key at https://aistudio.google.com/app/apikey
-2. Check Google’s pricing page before heavier use: https://ai.google.dev/gemini-api/docs/pricing
-3. For students, start with `Flash-Lite` for fast answers and keep `Flash` or `Pro` for the harder follow-ups that really need them
-4. Gemini is the cleanest default if the goal is one free key, native image support, and honest browser-first capability
+1. Create a key at [OpenRouter API keys](https://openrouter.ai/keys).
+1. Keep `Free only` enabled in the app if the goal is equitable no-cost usage.
+1. Leave model pickers on `Auto-pick recommended model` unless you need a specific `:free` model.
+1. Auto-pick favors OpenRouter’s official `openrouter/free` router for the lowest-maintenance free path.
+1. Optional secure free mode can use a shared key if `VITE_OPENROUTER_FREE_API_KEY` is configured and the user explicitly enables free mode + accepts legal notice in setup.
 
 ### Provider catalog and Ollama
 
-1. Search the setup catalog for OpenAI, DeepSeek, Groq, Together, Fireworks, Mistral, xAI, Perplexity, Cerebras, SambaNova, Cloudflare AI Gateway, Vercel AI Gateway, LiteLLM, LM Studio, Ollama, and more.
+1. Search the setup catalog for ChatGPT/OpenAI, Claude/Anthropic, xAI, DeepSeek, Groq, Together, Fireworks, Mistral, Perplexity, Cerebras, SambaNova, Cloudflare AI Gateway, Vercel AI Gateway, LiteLLM, LM Studio, Ollama, and more.
 2. Pick a preset, paste that provider's key if required, and adjust the model ids if your account uses different names.
 3. Ollama uses `http://localhost:11434/v1` and does not require a key, but Ollama must already be running and reachable from the browser. CORS, localhost, and device network settings can still block it.
 4. Gateway presets often require editing the base URL to include your account, gateway, or proxy path.
@@ -77,7 +100,7 @@ bun run dev
 - `Session only` is the safer default for shared or semi-shared devices.
 - `Remember on this device` is available only as an explicit user choice.
 - Remembered provider keys are encrypted locally at rest before storage, which protects at rest on the device but not from malicious browser extensions, compromised devices, or pasted keys.
-- Puter avoids Mike Answers managing provider keys, but it introduces Puter account/auth/provider-policy dependency.
+- Gemini’s free tier is useful for students, but provider privacy/training terms still matter. Use session-only keys on shared devices and avoid sensitive data unless you understand the provider’s data policy.
 - Cross-device movement is handled by encrypted transfer or live peer sync, not by a hosted account layer.
 
 ## Legal and safety

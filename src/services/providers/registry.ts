@@ -2,49 +2,59 @@ import type {
   OpenAICompatiblePreset,
   ProviderDescriptor,
   ProviderId,
+  ProviderModelOption,
   ProviderPreferenceConfig,
   ProviderRuntimeConfig,
 } from "../../types";
 
-const noProviderKeyPolicy = {
-  trustTier: "user_pays" as const,
-  privacySummary: "Mike Answers does not handle an API key; auth and billing run through the user's Puter account.",
-  retentionSummary: "Retention follows Puter and the selected upstream provider policy.",
-  trainingSummary: "Training policy depends on Puter's provider routing and the selected model.",
-  legalNotice: "Puter avoids Mike Answers storing a key, but it adds Puter account, auth, and provider-policy dependency.",
-};
-
 const browserByokNotice =
   "Browser BYOK keys are client-side by design. Local encrypted storage protects at rest on this device, not from malicious browser extensions, compromised devices, or pasted keys.";
 
+const geminiModelOptions: ProviderModelOption[] = [
+  { id: "gemini-2.5-flash-lite", label: "Gemini 2.5 Flash-Lite", note: "Best free-tier default for fast student tutoring.", supportsImages: true },
+  { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash", note: "Balanced multimodal work and grounded answers.", supportsImages: true },
+  { id: "gemini-2.5-pro", label: "Gemini 2.5 Pro", note: "Harder reasoning and long walkthroughs.", supportsImages: true },
+  { id: "gemini-3.1-flash-lite-preview", label: "Gemini 3.1 Flash-Lite Preview", note: "Preview model; availability can change.", supportsImages: true },
+  { id: "gemini-3.1-pro-preview", label: "Gemini 3.1 Pro Preview", note: "Preview Pro tier; check current quota before relying on it.", supportsImages: true },
+];
+
+const openAIModelOptions: ProviderModelOption[] = [
+  { id: "gpt-5.4-nano", label: "GPT-5.4 Nano", note: "Lowest-cost ChatGPT/OpenAI default for quick checks.", supportsImages: true },
+  { id: "gpt-5.4-mini", label: "GPT-5.4 Mini", note: "Balanced everyday tutoring.", supportsImages: true },
+  { id: "gpt-5.4", label: "GPT-5.4", note: "Stronger reasoning and writing.", supportsImages: true },
+  { id: "gpt-4.1-mini", label: "GPT-4.1 Mini", note: "Compatibility fallback for older OpenAI accounts.", supportsImages: true },
+  { id: "gpt-4.1", label: "GPT-4.1", note: "Compatibility fallback for older OpenAI accounts.", supportsImages: true },
+];
+
+const claudeModelOptions: ProviderModelOption[] = [
+  { id: "claude-haiku-4-5", label: "Claude Haiku 4.5", note: "Fast Claude option.", supportsImages: true },
+  { id: "claude-sonnet-4-6", label: "Claude Sonnet 4.6", note: "Best default Claude tutoring balance.", supportsImages: true },
+  { id: "claude-opus-4-7", label: "Claude Opus 4.7", note: "Premium Claude reasoning.", supportsImages: true },
+];
+
+const xAIModelOptions: ProviderModelOption[] = [
+  { id: "grok-4-1-fast-non-reasoning", label: "Grok 4.1 Fast", note: "Fast xAI route.", supportsImages: true },
+  { id: "grok-4-1-fast-reasoning", label: "Grok 4.1 Fast Reasoning", note: "Reasoning route.", supportsImages: true },
+  { id: "grok-4.20-non-reasoning", label: "Grok 4.20", note: "Current flagship non-reasoning route when available.", supportsImages: true },
+  { id: "grok-4.20-reasoning", label: "Grok 4.20 Reasoning", note: "Current flagship reasoning route when available.", supportsImages: true },
+  { id: "grok-3-mini", label: "Grok 3 Mini", note: "Compatibility fallback.", supportsImages: false },
+];
+
+const vercelGatewayModelOptions: ProviderModelOption[] = [
+  { id: "openai/gpt-5.4-nano", label: "OpenAI GPT-5.4 Nano", note: "Fast gateway default.", supportsImages: true },
+  { id: "openai/gpt-5.4", label: "OpenAI GPT-5.4", note: "Strong OpenAI route through Vercel.", supportsImages: true },
+  { id: "anthropic/claude-sonnet-4.6", label: "Claude Sonnet 4.6", note: "Claude through Vercel Gateway.", supportsImages: true },
+  { id: "anthropic/claude-opus-4.6", label: "Claude Opus 4.6", note: "Premium Claude through Vercel Gateway.", supportsImages: true },
+  { id: "xai/grok-4.1-fast-non-reasoning", label: "xAI Grok 4.1 Fast", note: "xAI through Vercel Gateway.", supportsImages: true },
+  { id: "google/gemini-3.1-pro-preview", label: "Google Gemini 3.1 Pro Preview", note: "Gemini via Vercel when enabled.", supportsImages: true },
+];
+
 export const providerDescriptors: Record<ProviderId, ProviderDescriptor> = {
-  puter: {
-    id: "puter",
-    kind: "puter_user_pays",
-    label: "Puter",
-    shortDescription: "Easiest no-key route: sign in with Puter and use user-pays AI access without pasting a Mike Answers key.",
-    docsUrl: "https://developer.puter.com/tutorials/free-unlimited-openai-api/",
-    apiKeyPlaceholder: "No Mike Answers API key needed",
-    defaultModels: {
-      fastModel: "gpt-5-nano",
-      deepModel: "gpt-5.4",
-    },
-    capabilities: {
-      supportsGrounding: false,
-      supportsImageInputInBrowser: false,
-      supportsAudioTranscription: false,
-      supportsCustomBaseUrl: false,
-      supportsModelCatalog: false,
-      requiresApiKey: false,
-      isUserPays: true,
-    },
-    policy: noProviderKeyPolicy,
-  },
   gemini: {
     id: "gemini",
     kind: "gemini_native",
     label: "Gemini",
-    shortDescription: "Best free student start: native image solve, grounding, and audio transcription.",
+    shortDescription: "Best student default: Google AI Studio has a free Gemini API tier, native image solving, grounding, and audio transcription.",
     docsUrl: "https://aistudio.google.com/app/apikey",
     apiKeyPlaceholder: "AIza...",
     defaultModels: {
@@ -53,6 +63,7 @@ export const providerDescriptors: Record<ProviderId, ProviderDescriptor> = {
       groundedModel: "gemini-2.5-flash",
       transcriptionModel: "gemini-2.5-flash-lite",
     },
+    modelOptions: geminiModelOptions,
     capabilities: {
       supportsGrounding: true,
       supportsImageInputInBrowser: true,
@@ -157,7 +168,6 @@ export const providerDescriptors: Record<ProviderId, ProviderDescriptor> = {
 };
 
 export const providerOrder: ProviderId[] = [
-  "puter",
   "gemini",
   "openrouter",
   "openai_compatible",
@@ -165,23 +175,23 @@ export const providerOrder: ProviderId[] = [
 ];
 
 export const recommendedProviderIds: ProviderId[] = [
-  "puter",
   "gemini",
-  "openrouter",
   "openai_compatible",
+  "openrouter",
   "custom_openai",
 ];
 
 export const openAICompatiblePresets: OpenAICompatiblePreset[] = [
   {
     id: "openai",
-    label: "OpenAI",
+    label: "ChatGPT / OpenAI",
     group: "popular",
-    shortDescription: "Official OpenAI Responses/chat-compatible endpoint for GPT models.",
+    shortDescription: "Official OpenAI endpoint for GPT models. This is the closest BYOK route to ChatGPT-style answers.",
     docsUrl: "https://platform.openai.com/api-keys",
     apiKeyPlaceholder: "sk-...",
     defaultBaseUrl: "https://api.openai.com/v1",
-    defaultModels: { fastModel: "gpt-4.1-mini", deepModel: "gpt-4.1" },
+    defaultModels: { fastModel: "gpt-5.4-nano", deepModel: "gpt-5.4" },
+    modelOptions: openAIModelOptions,
     capabilities: { ...providerDescriptors.openai_compatible.capabilities, supportsImageInputInBrowser: true },
     policy: {
       trustTier: "byok_recommended",
@@ -190,7 +200,27 @@ export const openAICompatiblePresets: OpenAICompatiblePreset[] = [
       trainingSummary: "Training usage follows OpenAI API terms and account settings.",
       legalNotice: browserByokNotice,
     },
-    aliases: ["chatgpt", "gpt"],
+    aliases: ["chatgpt", "gpt", "open ai"],
+  },
+  {
+    id: "anthropic",
+    label: "Claude / Anthropic",
+    group: "popular",
+    shortDescription: "Claude through Anthropic's official OpenAI-compatible testing layer. Native Claude API still has the fullest feature set.",
+    docsUrl: "https://docs.anthropic.com/en/api/openai-sdk",
+    apiKeyPlaceholder: "sk-ant-...",
+    defaultBaseUrl: "https://api.anthropic.com/v1",
+    defaultModels: { fastModel: "claude-haiku-4-5", deepModel: "claude-sonnet-4-6" },
+    modelOptions: claudeModelOptions,
+    capabilities: { ...providerDescriptors.openai_compatible.capabilities, supportsImageInputInBrowser: true },
+    policy: {
+      trustTier: "byok_recommended",
+      privacySummary: "Routes directly to Anthropic with your Claude API key.",
+      retentionSummary: "Retention follows Anthropic API policy and account settings.",
+      trainingSummary: "Training usage follows Anthropic API policy.",
+      legalNotice: `${browserByokNotice} Anthropic says the OpenAI compatibility layer is best for testing/comparison; use native Claude API for the full Claude feature set.`,
+    },
+    aliases: ["claude", "anthropic", "sonnet", "opus"],
   },
   {
     id: "deepseek",
@@ -288,12 +318,13 @@ export const openAICompatiblePresets: OpenAICompatiblePreset[] = [
   {
     id: "xai",
     label: "xAI",
-    group: "openai_compatible",
-    shortDescription: "OpenAI-compatible access to Grok models.",
-    docsUrl: "https://console.x.ai/",
+    group: "popular",
+    shortDescription: "OpenAI-compatible access to Grok models with text and image chat support on capable models.",
+    docsUrl: "https://docs.x.ai/docs/api-reference",
     apiKeyPlaceholder: "xai-...",
     defaultBaseUrl: "https://api.x.ai/v1",
-    defaultModels: { fastModel: "grok-3-mini", deepModel: "grok-3" },
+    defaultModels: { fastModel: "grok-4-1-fast-non-reasoning", deepModel: "grok-4-1-fast-reasoning" },
+    modelOptions: xAIModelOptions,
     capabilities: { ...providerDescriptors.openai_compatible.capabilities, supportsImageInputInBrowser: true },
     policy: {
       trustTier: "byok_recommended",
@@ -302,7 +333,7 @@ export const openAICompatiblePresets: OpenAICompatiblePreset[] = [
       trainingSummary: "Training usage follows xAI API policy.",
       legalNotice: browserByokNotice,
     },
-    aliases: ["grok"],
+    aliases: ["grok", "twitter", "x"],
   },
   {
     id: "perplexity",
@@ -386,7 +417,8 @@ export const openAICompatiblePresets: OpenAICompatiblePreset[] = [
     docsUrl: "https://vercel.com/docs/ai-gateway",
     apiKeyPlaceholder: "vck_...",
     defaultBaseUrl: "https://ai-gateway.vercel.sh/v1",
-    defaultModels: { fastModel: "openai/gpt-4.1-mini", deepModel: "openai/gpt-4.1" },
+    defaultModels: { fastModel: "openai/gpt-5.4-nano", deepModel: "anthropic/claude-sonnet-4.6" },
+    modelOptions: vercelGatewayModelOptions,
     capabilities: { ...providerDescriptors.openai_compatible.capabilities, isGateway: true },
     policy: {
       trustTier: "enterprise_ready",
@@ -395,7 +427,7 @@ export const openAICompatiblePresets: OpenAICompatiblePreset[] = [
       trainingSummary: "Training usage depends on the selected upstream provider.",
       legalNotice: browserByokNotice,
     },
-    aliases: ["vercel"],
+    aliases: ["vercel", "ai gateway", "gateway"],
   },
   {
     id: "litellm",

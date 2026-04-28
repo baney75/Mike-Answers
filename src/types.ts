@@ -5,12 +5,12 @@ export type AppState = 'IDLE' | 'PREVIEWING' | 'LOADING' | 'SOLVED' | 'ERROR' | 
 export type SolveMode = 'deep' | 'fast' | 'research';
 
 /** Supported inference provider routes. */
-export type ProviderId = 'gemini' | 'openrouter' | 'puter' | 'openai_compatible' | 'custom_openai';
+export type ProviderId = 'gemini' | 'openrouter' | 'openai_compatible' | 'custom_openai';
 export type LegacyProviderId = ProviderId | 'minimax';
 
 /** Families of provider integrations. */
-export type ProviderKind = 'gemini_native' | 'puter_user_pays' | 'openai_compatible';
-export type ProviderTrustTier = 'byok_recommended' | 'free_trial' | 'community_experimental' | 'enterprise_ready' | 'local_first' | 'user_pays';
+export type ProviderKind = 'gemini_native' | 'openai_compatible';
+export type ProviderTrustTier = 'byok_recommended' | 'free_trial' | 'community_experimental' | 'enterprise_ready' | 'local_first';
 
 export interface ProviderModelProfile {
   fastModel?: string;
@@ -18,6 +18,13 @@ export interface ProviderModelProfile {
   groundedModel?: string;
   imageModel?: string;
   transcriptionModel?: string;
+}
+
+export interface ProviderModelOption {
+  id: string;
+  label: string;
+  note?: string;
+  supportsImages?: boolean;
 }
 
 export interface ProviderOptions {
@@ -58,6 +65,7 @@ export interface OpenAICompatiblePreset {
   apiKeyPlaceholder: string;
   defaultBaseUrl: string;
   defaultModels: ProviderModelProfile;
+  modelOptions?: ProviderModelOption[];
   capabilities: ProviderCapabilities;
   policy: ProviderDescriptor["policy"];
   aliases?: string[];
@@ -72,6 +80,7 @@ export interface ProviderDescriptor {
   apiKeyPlaceholder: string;
   defaultBaseUrl?: string;
   defaultModels: ProviderModelProfile;
+  modelOptions?: ProviderModelOption[];
   capabilities: ProviderCapabilities;
   policy: {
     trustTier: ProviderTrustTier;

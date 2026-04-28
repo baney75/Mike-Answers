@@ -18,12 +18,6 @@ describe("workspaceTransfer", () => {
         preferredLocation: undefined,
         onboardingCompleted: true,
         providers: {
-          puter: {
-            rememberKey: false,
-            models: { fastModel: "gpt-5-nano", deepModel: "gpt-5.4" },
-            options: {},
-            apiKey: "",
-          },
           gemini: {
             rememberKey: true,
             models: {

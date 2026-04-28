@@ -4,7 +4,7 @@ Last updated: 2026-04-27
 
 ## Overview
 
-**Mike Answers** is a React + Vite SPA for conservative Christian tutoring, broad-domain answers, research, and visual explanation with no-key, bring-your-own-key, and local provider onboarding. Users can pick `Puter`, `Gemini`, `OpenRouter`, a searchable OpenAI-compatible provider catalog, or `Custom OpenAI-compatible`. The preferred deployment path is browser-local on Cloudflare Workers with encrypted local storage and optional peer-to-peer sync.
+**Mike Answers** is a React + Vite SPA for conservative Christian tutoring, broad-domain answers, research, and visual explanation with bring-your-own-key, gateway, and local provider onboarding. Users can pick `Gemini`, `OpenRouter`, a searchable OpenAI-compatible provider catalog (`ChatGPT / OpenAI`, `Claude / Anthropic`, `xAI`, `Vercel AI Gateway`, and more), or `Custom OpenAI-compatible`. The preferred deployment path is browser-local on Cloudflare Workers with encrypted local storage and optional peer-to-peer sync.
 
 ---
 
@@ -18,7 +18,7 @@ Last updated: 2026-04-27
 | Build | Vite 6 |
 | Runtime | Bun |
 | Styling | Tailwind CSS 4.1 + CSS variables |
-| AI | Puter.js user-pays route, Gemini (`@google/genai`), OpenRouter, OpenAI-compatible preset catalog, or custom OpenAI-compatible transport |
+| AI | Gemini (`@google/genai`), OpenRouter, OpenAI-compatible preset catalog, gateways, local routes, or custom OpenAI-compatible transport |
 | Auth | None required |
 | Sync | Encrypted transfer or live peer-to-peer WebRTC |
 | Deploy | Cloudflare Workers static assets + Wrangler |
@@ -41,11 +41,11 @@ Last updated: 2026-04-27
 
 ### Key Principle: **Browser-first inference with local encrypted storage and optional peer sync**
 
-- Guest inference can happen directly from the browser with Puter user-pays auth, user-provided keys, or reachable local OpenAI-compatible servers.
+- Guest inference can happen directly from the browser with user-provided keys, gateway keys, or reachable local OpenAI-compatible servers.
 - The default production posture is Cloudflare-hosted and browser-local: provider keys stay in memory or on the user's device.
 - Remembered provider keys are encrypted at rest in the browser using a non-extractable local Web Crypto key stored in IndexedDB.
 - Browser BYOK keys are client-side by design. Encrypted storage protects remembered keys at rest on the device, not from malicious browser extensions or compromised devices.
-- Puter avoids Mike Answers handling provider keys but adds Puter account, auth, billing, and provider-policy dependency.
+- Gemini is the default student path because Google AI Studio exposes a free Gemini API tier for getting started; the app still tells users that free-tier provider terms and data-use rules matter.
 - The onboarding flow defaults to `session-only` storage and offers encrypted on-device persistence explicitly.
 - Cloudflare Workers hosts the built SPA from `dist/`.
 - Production deploys now use an explicit repo-side preflight (`scripts/production-preflight.mjs`) before `wrangler deploy` so auth, account targeting, and obvious env mistakes fail fast.
@@ -184,7 +184,7 @@ Design intent:
 - reduce choice overload
 - keep advanced settings hidden until useful
 - make the security tradeoff visible before the user stores a secret on-device
-- make no-key, BYOK, local, and gateway routes searchable instead of forcing users through a fixed card list
+- make Gemini, BYOK, local, and gateway routes searchable instead of forcing users through a fixed card list
 - keep Settings reachable after onboarding instead of trapping users in a first-run-only wizard
 - keep provider capabilities explicit instead of implying unsupported browser features
 
@@ -196,7 +196,7 @@ Provider model slots:
 
 Provider storage shape:
 - runtime settings now use a normalized `providers: Record<ProviderId, ProviderRuntimeConfig>` map
-- legacy snapshots that reference removed providers migrate to the default no-key route
+- legacy snapshots that reference removed providers migrate to Gemini
 - Convex preferences mirror that normalized provider map to avoid new schema churn for every provider addition
 
 ### Subject Selection
@@ -241,7 +241,7 @@ The Daily Desk intentionally stays bounded:
 
 `src/services/ai.ts` is now the provider switchboard:
 
-- routes solve/chat/transcription calls to Puter, Gemini, OpenRouter, OpenAI-compatible presets, or a custom OpenAI-compatible provider
+- routes solve/chat/transcription calls to Gemini, OpenRouter, OpenAI-compatible presets, or a custom OpenAI-compatible provider
 - enforces provider readiness before solve
 - keeps OpenRouter model selection inside the `fast` and `deep` UX
 - blocks image solving on text-only OpenRouter models
@@ -289,13 +289,17 @@ The Daily Desk intentionally stays bounded:
 - image solve calls for browser-supported OpenAI-compatible providers
 - tutoring/chat calls across OpenRouter, OpenAI-compatible presets, and custom providers
 
-### puter.ts (Puter User-Pays Route)
+### OpenAI-Compatible Presets
 
-`src/services/puter.ts` owns:
+The searchable provider catalog now highlights leading student routes before the broader list:
 
-- lazy loading `https://js.puter.com/v2/` in the browser
-- text solve and follow-up tutoring through `puter.ai.chat()`
-- honest setup messaging that no Mike Answers API key is stored and Puter controls auth, billing, availability, and provider policy
+- `ChatGPT / OpenAI`
+- `Claude / Anthropic` through Anthropic's official OpenAI compatibility layer
+- `xAI`
+- `Vercel AI Gateway`
+- OpenRouter, DeepSeek, Groq, Together, Fireworks, Mistral, Perplexity, Cloudflare AI Gateway, LiteLLM, LM Studio, Ollama, and custom endpoints
+
+Preset descriptors define docs links, base URLs, model dropdown options, capability flags, and privacy/retention/training summaries. Gateway presets keep provider-prefixed model ids visible, for example `openai/gpt-5.4`, `anthropic/claude-sonnet-4.6`, and `xai/grok-4.1-fast-non-reasoning`.
 
 ### convex/ai.ts (Secure Provider Actions)
 
@@ -390,7 +394,7 @@ Browser verification expectations:
 - no relevant console errors, hydration warnings, failed requests, or missing assets introduced by the change
 - no accidental horizontal overflow or fallback to global body scrolling
 - settings remain usable at mobile widths
-- provider switching, provider search, Puter setup, and Ollama preset selection work
+- provider switching, provider search, leading provider shortcuts, and Ollama preset selection work
 - follow-up composer remains pinned while long content scrolls internally
 - `Escape` ownership stays local in follow-up, `NEWS`, and `WOTD`
 - no-key, BYOK, local, and gateway capability messaging stays honest

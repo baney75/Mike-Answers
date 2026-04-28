@@ -36,7 +36,7 @@ interface LegacyRuntimeAISettings {
 }
 
 const DEFAULT_SETTINGS: RuntimeAISettings = {
-  selectedProviderId: "puter",
+  selectedProviderId: "gemini",
   preferredSubject: undefined,
   preferredLocation: undefined,
   onboardingCompleted: false,
@@ -52,7 +52,7 @@ function getSecretStorageKey(providerId: ProviderId) {
 }
 
 function normalizeProviderId(providerId: LegacyProviderId | undefined): ProviderId {
-  return providerId && providerOrder.includes(providerId as ProviderId) ? (providerId as ProviderId) : "puter";
+  return providerId && providerOrder.includes(providerId as ProviderId) ? (providerId as ProviderId) : "gemini";
 }
 
 function mergeProviderPreference(
@@ -207,7 +207,7 @@ function migrateLegacySettings(legacy: Partial<LegacyRuntimeAISettings>): Runtim
   });
 
   return applySnapshot({
-    selectedProviderId: legacy.provider ?? "puter",
+    selectedProviderId: legacy.provider ?? "gemini",
     preferredSubject: legacy.preferredSubject,
     preferredLocation: legacy.preferredLocation,
     onboardingCompleted: legacy.onboardingCompleted ?? false,

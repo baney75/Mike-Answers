@@ -24,11 +24,13 @@ describe("provider readiness", () => {
     expect(getProviderReadinessLabel(settings)).toBe("Add Gemini key");
   });
 
-  test("treats Puter as ready without a Mike Answers API key", () => {
-    const settings = createSettings("puter");
+  test("defaults local Ollama style routes to no-key readiness when configured", () => {
+    const settings = createSettings("openai_compatible");
+    settings.providers.openai_compatible.options = { presetId: "ollama" };
+    settings.providers.openai_compatible.baseUrl = "http://localhost:11434/v1";
 
     expect(isRuntimeProviderReady(settings)).toBe(true);
-    expect(getProviderReadinessLabel(settings)).toBe("Puter ready");
+    expect(getProviderReadinessLabel(settings)).toBe("Provider catalog ready");
   });
 
   test("allows no-key Ollama when its local base URL is configured", () => {

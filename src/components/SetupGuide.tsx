@@ -14,6 +14,7 @@ import { ProviderPicker } from "./setup/ProviderPicker";
 import {
   getProviderDescriptor,
   getSelectedOpenAICompatiblePreset,
+  openAICompatiblePresets,
   providerOrder,
 } from "../services/providers/registry";
 
@@ -98,11 +99,25 @@ export function SetupGuide({
     Boolean(settings.legalAcceptedAt) &&
     sharedFreeModeAvailable;
   const openRouterFreeModeUnavailable = selectedProviderId === "openrouter" && !sharedFreeModeAvailable;
-  const canFinish = providerKeyPresent || usingOpenRouterFreeMode || selectedProviderId === "puter";
+  const canFinish = providerKeyPresent || usingOpenRouterFreeMode;
   const providers = useMemo(
     () => providerOrder.map((providerId) => getProviderDescriptor(providerId)),
     [],
   );
+
+  const selectOpenAICompatiblePreset = (presetId: string) => {
+    const preset = openAICompatiblePresets.find((entry) => entry.id === presetId);
+    if (!preset) {
+      return;
+    }
+    onUpdateSettings({ selectedProviderId: "openai_compatible" });
+    onUpdateProviderSettings("openai_compatible", {
+      baseUrl: preset.defaultBaseUrl,
+      models: { ...preset.defaultModels },
+      options: { ...settings.providers.openai_compatible.options, presetId: preset.id },
+    });
+    goToStep(2);
+  };
 
   const goToStep = (nextStep: Step) => {
     setStep(nextStep);
@@ -177,45 +192,68 @@ export function SetupGuide({
               <div className="space-y-2">
                 <h3 className="text-xl font-bold text-(--aqs-ink) dark:text-white">Pick the runtime path</h3>
                 <p className="text-sm leading-7 text-slate-600 dark:text-slate-300">
-                  Most students should start with Puter for no-key setup, Gemini for strongest browser image support, or the provider catalog when they already have a key.
+                  Most students should start with Gemini because Google AI Studio offers a free Gemini API tier and Mike can use it for text, screenshots, grounding, and audio. ChatGPT, Claude, xAI, Vercel AI Gateway, OpenRouter, and local routes are one search away.
                 </p>
               </div>
               <div className="rounded-[1.35rem] border border-(--aqs-accent)/16 bg-(--aqs-accent-soft)/75 px-4 py-4 text-sm leading-6 text-slate-700 dark:border-(--aqs-accent-dark)/20 dark:bg-[rgba(122,31,52,0.18)] dark:text-slate-200">
-                <strong className="text-(--aqs-ink) dark:text-white">Recommended for students:</strong> start with Puter when you want no key pasted into Mike Answers. Use Gemini for native screenshot solving, or the catalog when you already have a provider key.
+                <strong className="text-(--aqs-ink) dark:text-white">Recommended for students:</strong> Gemini is the easiest high-quality default now. The free tier has usage limits and Google says free-tier content may be used to improve products, so use paid BYOK or another provider for sensitive work.
               </div>
               <div className="grid gap-3 md:grid-cols-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    onUpdateSettings({ selectedProviderId: "puter" });
-                    goToStep(2);
-                  }}
-                  className="rounded-[1.2rem] border border-(--aqs-ink)/10 bg-white px-4 py-4 text-left transition hover:border-(--aqs-accent)/30 hover:bg-(--aqs-paper-strong) dark:border-white/10 dark:bg-slate-950 dark:hover:bg-slate-900"
-                >
-                  <div className="text-[11px] font-black uppercase tracking-[0.2em] text-(--aqs-accent-strong) dark:text-(--aqs-accent-dark)">
-                    Easiest start
-                  </div>
-                  <p className="mt-1 text-sm font-semibold text-(--aqs-ink) dark:text-white">
-                    Puter no-key route
-                  </p>
-                  <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                    No Mike Answers API key. Students sign in with Puter, and Puter handles auth, billing, and model availability.
-                  </p>
-                </button>
                 <button
                   type="button"
                   onClick={() => {
                     onUpdateSettings({ selectedProviderId: "gemini" });
                     goToStep(2);
                   }}
+                  className="rounded-[1.2rem] border border-emerald-500/28 bg-emerald-50/80 px-4 py-4 text-left transition hover:border-emerald-600/50 hover:bg-emerald-50 dark:border-emerald-400/20 dark:bg-emerald-950/20"
+                >
+                  <div className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-700 dark:text-emerald-200">
+                    Best free start
+                  </div>
+                  <p className="mt-1 text-sm font-semibold text-(--aqs-ink) dark:text-white">
+                    Gemini from Google AI Studio
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                    Get a Gemini key, start free with Flash-Lite, and keep image, audio, and grounded tutoring available.
+                  </p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => selectOpenAICompatiblePreset("openai")}
                   className="rounded-[1.2rem] border border-(--aqs-accent)/40 bg-(--aqs-accent-soft) px-4 py-4 text-left transition hover:border-(--aqs-accent) hover:bg-(--aqs-accent-soft-strong) dark:border-(--aqs-accent-dark)/30 dark:bg-[rgba(122,31,52,0.18)] dark:hover:bg-[rgba(122,31,52,0.24)]"
                 >
                   <div className="text-[11px] font-black uppercase tracking-[0.2em] text-(--aqs-accent-strong) dark:text-(--aqs-accent-dark)">
-                    Best quality
+                    ChatGPT route
                   </div>
-                  <p className="mt-1 text-sm font-semibold text-(--aqs-ink) dark:text-white">Bring your own key (Gemini first)</p>
+                  <p className="mt-1 text-sm font-semibold text-(--aqs-ink) dark:text-white">ChatGPT / OpenAI</p>
                   <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                    Recommended for reliable collegiate tutoring quality, image support, and better control over quota and privacy settings.
+                    Use your OpenAI key and pick GPT Fast and Deep models from a dropdown.
+                  </p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => selectOpenAICompatiblePreset("anthropic")}
+                  className="rounded-[1.2rem] border border-(--aqs-ink)/10 bg-white px-4 py-4 text-left transition hover:border-(--aqs-accent)/30 hover:bg-(--aqs-paper-strong) dark:border-white/10 dark:bg-slate-950 dark:hover:bg-slate-900"
+                >
+                  <div className="text-[11px] font-black uppercase tracking-[0.2em] text-(--aqs-accent-strong) dark:text-(--aqs-accent-dark)">
+                    Claude route
+                  </div>
+                  <p className="mt-1 text-sm font-semibold text-(--aqs-ink) dark:text-white">Claude / Anthropic</p>
+                  <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                    Use Anthropic's OpenAI-compatible layer for Claude models.
+                  </p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => selectOpenAICompatiblePreset("xai")}
+                  className="rounded-[1.2rem] border border-(--aqs-ink)/10 bg-white px-4 py-4 text-left transition hover:border-(--aqs-accent)/30 hover:bg-(--aqs-paper-strong) dark:border-white/10 dark:bg-slate-950 dark:hover:bg-slate-900"
+                >
+                  <div className="text-[11px] font-black uppercase tracking-[0.2em] text-(--aqs-accent-strong) dark:text-(--aqs-accent-dark)">
+                    xAI route
+                  </div>
+                  <p className="mt-1 text-sm font-semibold text-(--aqs-ink) dark:text-white">xAI / Grok</p>
+                  <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                    Use your xAI key for Grok fast and reasoning model choices.
                   </p>
                 </button>
               </div>
@@ -250,7 +288,7 @@ export function SetupGuide({
               <div className="space-y-2">
                 <h3 className="text-xl font-bold text-(--aqs-ink) dark:text-white">Set credentials</h3>
                 <p className="text-sm leading-7 text-slate-600 dark:text-slate-300">
-                  Paste a key when the selected provider needs one, or use a no-key route like Puter or local Ollama.
+                  Paste a key when the selected provider needs one, or use a local route like Ollama when it is already running on this device.
                 </p>
               </div>
               <CredentialSection
@@ -387,6 +425,7 @@ export function SetupGuide({
                     provider={selectedProvider}
                     models={selectedConfig.models}
                     openrouterModels={openrouterModels}
+                    modelOptions={selectedPreset?.modelOptions ?? selectedProvider.modelOptions}
                     onChange={(patch) =>
                       onUpdateProviderSettings(selectedProviderId, {
                         models: {
@@ -403,6 +442,7 @@ export function SetupGuide({
                     provider={selectedProvider}
                     models={selectedConfig.models}
                     openrouterModels={[]}
+                    modelOptions={selectedPreset?.modelOptions ?? selectedProvider.modelOptions}
                     onChange={(patch) =>
                       onUpdateProviderSettings(selectedProviderId, {
                         models: {
@@ -523,7 +563,9 @@ export function SetupGuide({
       <div className="fixed bottom-4 left-6 right-6 z-60 rounded-3xl border border-(--aqs-ink)/10 bg-white/94 px-4 py-4 shadow-[0_18px_50px_rgba(31,23,28,0.22)] backdrop-blur dark:border-white/10 dark:bg-slate-950/90 md:left-10 md:right-10 lg:hidden">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="text-xs font-semibold leading-5 text-slate-600 dark:text-slate-300">
-            {canFinish
+            {step === 1
+              ? "Choose a provider, or continue with Gemini to add a key."
+              : canFinish
               ? "Setup is ready. You can close this sheet and keep working."
               : openRouterFreeModeUnavailable
                 ? "Add your own OpenRouter key to continue on this deployment."

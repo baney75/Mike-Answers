@@ -13,8 +13,8 @@ Last updated: 2026-04-27
 - Runtime: client-side React 19 + TypeScript + Vite SPA
 - Package manager and scripts: Bun
 - Styling: Tailwind CSS 4 + project CSS variables in `src/index.css`
-- AI: provider-registry architecture with Puter, Gemini, OpenRouter, searchable OpenAI-compatible presets, Ollama/local routes, and custom OpenAI-compatible support
-- Primary runtime is browser-first. Puter is the no-key user-pays route; BYOK keys remain client-side by design.
+- AI: provider-registry architecture with Gemini, OpenRouter, searchable OpenAI-compatible presets, gateways, Ollama/local routes, and custom OpenAI-compatible support
+- Primary runtime is browser-first. Gemini is the default student route; BYOK keys remain client-side by design.
 
 ## Research Order For This Repo
 
@@ -60,7 +60,7 @@ Last updated: 2026-04-27
 
 - Do not reintroduce global body scrolling.
 - Do not let long content push the follow-up composer off-screen.
-- Do not make provider capabilities sound broader than they are, especially for Puter, local Ollama/LM Studio, gateway, image, or audio support.
+- Do not make provider capabilities sound broader than they are, especially for Gemini free tier, local Ollama/LM Studio, gateway, image, or audio support.
 - Do not add generic card-grid SaaS styling that fights the existing Mike Answers visual language.
 - Do not duplicate state that already exists elsewhere in the app flow; prefer deriving data over syncing parallel flags.
 - Do not add a new library when the repo already has a workable pattern with the current stack.

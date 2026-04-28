@@ -22,19 +22,19 @@ function getTrustTierLabel(tier: ProviderDescriptor["policy"]["trustTier"]) {
       return "Enterprise ready";
     case "local_first":
       return "Local first";
-    case "user_pays":
-      return "No key";
     default:
       return "Experimental";
   }
 }
 
 const groupLabels: Record<OpenAICompatiblePreset["group"], string> = {
-  popular: "Best student BYOK",
+  popular: "Leading providers",
   openai_compatible: "OpenAI-compatible APIs",
   local: "Local",
   gateway: "Gateways",
 };
+
+const leadingPresetIds = new Set(["openai", "anthropic", "xai", "vercel-ai-gateway"]);
 
 function matchesPreset(preset: OpenAICompatiblePreset, query: string) {
   const haystack = [
@@ -84,7 +84,7 @@ export function ProviderPicker({
         <input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search OpenAI-compatible providers, gateways, or local tools..."
+        placeholder="Search Gemini, ChatGPT, Claude, xAI, gateways, or local tools..."
           className="w-full rounded-2xl border border-(--aqs-ink)/10 bg-white py-3 pl-11 pr-4 text-sm text-(--aqs-ink) outline-none transition placeholder:text-slate-400 focus:border-(--aqs-accent) focus:ring-4 focus:ring-[rgba(122,31,52,0.12)] dark:border-white/10 dark:bg-slate-950 dark:text-white"
         />
       </label>
@@ -129,7 +129,7 @@ export function ProviderPicker({
       {providers.filter((provider) => provider.id !== "openai_compatible").map((provider) => {
         const active = provider.id === selectedProviderId;
           const badges = [
-            provider.capabilities.isUserPays ? "No key" : provider.capabilities.requiresApiKey ? "BYOK" : "No key",
+            provider.capabilities.requiresApiKey ? "BYOK" : "No key",
             provider.capabilities.supportsImageInputInBrowser ? "Image" : "Text",
             provider.capabilities.supportsAudioTranscription ? "Voice" : "Manual",
             provider.capabilities.isLocalOnly ? "Local" : provider.capabilities.isGateway ? "Gateway" : "Browser-first",
@@ -171,9 +171,52 @@ export function ProviderPicker({
       </div>
 
       <div className="space-y-4">
+        {query.trim() === "" ? (
+          <section className="space-y-3">
+            <div className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+              Leading providers
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              {openAICompatiblePresets.filter((preset) => leadingPresetIds.has(preset.id)).map((preset) => {
+                const active = selectedProviderId === "openai_compatible" && selectedPresetId === preset.id;
+                return (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => onSelectPreset(preset)}
+                    aria-pressed={active}
+                    className={`w-full rounded-3xl border px-5 py-4 text-left transition ${
+                      active
+                        ? "border-(--aqs-accent) bg-(--aqs-accent-soft) shadow-[0_18px_36px_rgba(122,31,52,0.14)] dark:bg-[rgba(122,31,52,0.24)]"
+                        : "border-(--aqs-ink)/10 bg-white/90 hover:-translate-y-0.5 hover:border-(--aqs-accent)/35 dark:border-white/10 dark:bg-slate-950/65"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="text-base font-bold text-(--aqs-ink) dark:text-white">{preset.label}</div>
+                        <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                          {preset.shortDescription}
+                        </p>
+                      </div>
+                      {active ? <BadgeCheck className="h-5 w-5 shrink-0 text-(--aqs-accent)" /> : null}
+                    </div>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <CapabilityBadge label="BYOK" />
+                      <CapabilityBadge label={preset.capabilities.supportsImageInputInBrowser ? "Image" : "Text"} />
+                      <CapabilityBadge label={preset.capabilities.isGateway ? "Gateway" : "API"} />
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        ) : null}
         {Object.entries(groupLabels).map(([group, label]) => {
           const presets = groupedPresets[group as OpenAICompatiblePreset["group"]];
           if (presets.length === 0) {
+            return null;
+          }
+          if (query.trim() === "" && group === "popular") {
             return null;
           }
           return (

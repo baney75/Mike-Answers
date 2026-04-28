@@ -27,7 +27,7 @@ export function CredentialSection({
     <div className="space-y-5">
       {provider.id === "gemini" ? (
         <div className="rounded-[1.35rem] border border-emerald-500/18 bg-emerald-50/85 px-4 py-4 text-sm leading-6 text-emerald-900 dark:border-emerald-400/20 dark:bg-emerald-950/20 dark:text-emerald-100">
-          <strong>Student-friendly free path:</strong> create a Gemini key in Google AI Studio, keep Fast on <code>gemini-2.5-flash-lite</code>, and use Deep only when you actually need a slower walkthrough.
+          <strong>Student-friendly free path:</strong> Google documents a Gemini API Free tier with free input and output tokens for getting started. Create a key in Google AI Studio, keep Fast on <code>gemini-2.5-flash-lite</code>, and use Deep only when you need a harder walkthrough. Free-tier content may be used to improve Google products; use paid BYOK or another provider for sensitive work.
         </div>
       ) : null}
 
@@ -37,15 +37,15 @@ export function CredentialSection({
         </div>
       ) : null}
 
-      {provider.id === "puter" ? (
-        <div className="rounded-[1.35rem] border border-emerald-500/18 bg-emerald-50/85 px-4 py-4 text-sm leading-6 text-emerald-900 dark:border-emerald-400/20 dark:bg-emerald-950/20 dark:text-emerald-100">
-          <strong>No Mike Answers key needed:</strong> Puter loads in the browser and prompts the student to sign in when AI is used. Puter handles permissions, billing, model availability, and provider policy through that account.
-        </div>
-      ) : null}
-
       {preset?.capabilities.isLocalOnly ? (
         <div className="rounded-[1.35rem] border border-sky-400/30 bg-sky-50/85 px-4 py-4 text-sm leading-6 text-sky-950 dark:border-sky-300/25 dark:bg-sky-950/20 dark:text-sky-100">
           <strong>Local route:</strong> {preset.label} must already be running and reachable from this browser. Browser CORS, localhost, or device network settings can still block local calls.
+        </div>
+      ) : null}
+
+      {preset?.capabilities.isGateway ? (
+        <div className="rounded-[1.35rem] border border-violet-400/25 bg-violet-50/85 px-4 py-4 text-sm leading-6 text-violet-950 dark:border-violet-300/20 dark:bg-violet-950/20 dark:text-violet-100">
+          <strong>Gateway route:</strong> model ids usually include a provider prefix, such as <code>openai/gpt-5.4</code>, <code>anthropic/claude-sonnet-4.6</code>, or <code>xai/grok-4.1-fast-non-reasoning</code>. Check the gateway dashboard for enabled models and billing.
         </div>
       ) : null}
 
