@@ -339,6 +339,11 @@ export default function App({ externalHistory }: AppProps) {
   const { theme, setTheme } = useDarkMode();
   const localHistory = useHistory();
   const history = externalHistory ?? localHistory;
+  const historyViewedAtRef = useRef<number>(Date.now());
+  const unreadHistoryCount = useMemo(
+    () => history.items.filter((item) => item.timestamp > historyViewedAtRef.current).length,
+    [history.items],
+  );
   const appStateRef = useRef<AppState>("IDLE");
   const { settings, updateSettings, updateProviderSettings, replaceSettings, resetSettings } = useAISettings();
   const selectedProviderId = settings.selectedProviderId;
@@ -1281,6 +1286,7 @@ export default function App({ externalHistory }: AppProps) {
           setTheme={setTheme}
           onOpenHistory={() => {
             if (history.items.length > 0) {
+              historyViewedAtRef.current = Date.now();
               setShowHistory(true);
             }
           }}
@@ -1292,6 +1298,7 @@ export default function App({ externalHistory }: AppProps) {
           providerStatus={providerStatus}
           freeModeEnabled={Boolean(settings.freeModeEnabled && selectedProviderId === "openrouter")}
           historyCount={history.items.length}
+          unreadHistoryCount={unreadHistoryCount}
           hideDonateButton={Boolean(settings.hideDonateButton)}
         />
 

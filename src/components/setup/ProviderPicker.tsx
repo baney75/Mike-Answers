@@ -123,6 +123,23 @@ export function ProviderPicker({
         >
           Ollama
         </button>
+        <button
+          type="button"
+          onClick={() => {
+            const preset = openAICompatiblePresets.find((p) => p.id === "ollama-cloud");
+            if (preset) {
+              onSelectPreset(preset);
+            }
+          }}
+          aria-pressed={selectedProviderId === "openai_compatible" && selectedPresetId === "ollama-cloud"}
+          className={`rounded-full border px-4 py-2 text-xs font-black uppercase tracking-[0.14em] transition ${
+            selectedProviderId === "openai_compatible" && selectedPresetId === "ollama-cloud"
+              ? "border-(--aqs-accent) bg-(--aqs-accent) text-white"
+              : "border-(--aqs-ink)/10 bg-white text-(--aqs-ink) hover:border-(--aqs-accent)/35 dark:border-white/10 dark:bg-slate-950 dark:text-white"
+          }`}
+        >
+          Ollama Cloud
+        </button>
       </fieldset>
 
       <div className="grid gap-4 lg:grid-cols-2">

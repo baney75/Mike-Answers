@@ -14,6 +14,7 @@ interface HeaderProps {
   providerStatus: string;
   freeModeEnabled?: boolean;
   historyCount: number;
+  unreadHistoryCount: number;
   hideDonateButton?: boolean;
 }
 
@@ -66,6 +67,7 @@ export function Header({
   providerStatus,
   freeModeEnabled = false,
   historyCount,
+  unreadHistoryCount,
   hideDonateButton = false,
 }: HeaderProps) {
   const providerNeedsSetup = providerStatus === "key needed" || providerStatus.startsWith("Add ");
@@ -129,7 +131,7 @@ export function Header({
             title={historyCount > 0 ? "Open history" : "History is empty"}
             onClick={onOpenHistory}
             disabled={historyCount === 0}
-            badge={historyCount > 0 ? historyCount : undefined}
+            badge={unreadHistoryCount}
           >
             <History className="h-4.5 w-4.5 text-(--aqs-accent)" />
           </IconButton>
