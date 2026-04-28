@@ -8,6 +8,8 @@ interface HomeComposerCardProps {
   onSubjectChange: (subject: string) => void;
   providerName: string;
   providerReady: boolean;
+  canAcceptImages?: boolean;
+  imageUnavailableMessage?: string;
   onOpenSetup: () => void;
   onImageSelected: (file: File) => void;
   onTextPasted: (text: string) => void;
@@ -55,6 +57,8 @@ export function HomeComposerCard({
   onSubjectChange,
   providerName,
   providerReady,
+  canAcceptImages = true,
+  imageUnavailableMessage,
   onOpenSetup,
   onImageSelected,
   onTextPasted,
@@ -70,7 +74,7 @@ export function HomeComposerCard({
         <button
           type="button"
           onClick={onOpenSetup}
-          className="flex items-center gap-2 rounded-[1rem] border border-(--aqs-accent)/14 bg-(--aqs-accent-soft) px-3 py-2 text-left transition hover:bg-(--aqs-accent-soft-strong) dark:border-(--aqs-accent-dark)/20 dark:bg-[#1a0b12] dark:hover:bg-[#250f18]"
+          className="flex items-center gap-2 rounded-2xl border border-(--aqs-accent)/14 bg-(--aqs-accent-soft) px-3 py-2 text-left transition hover:bg-(--aqs-accent-soft-strong) dark:border-(--aqs-accent-dark)/20 dark:bg-[#1a0b12] dark:hover:bg-[#250f18]"
         >
           <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-rose-500" />
           <p className="flex-1 text-xs font-semibold text-(--aqs-ink) dark:text-white">
@@ -84,6 +88,8 @@ export function HomeComposerCard({
 
       <Dropzone
         subjectControl={<SubjectSelect subject={subject} onSubjectChange={onSubjectChange} />}
+        canAcceptImages={canAcceptImages}
+        imageUnavailableMessage={imageUnavailableMessage}
         onImageSelected={onImageSelected}
         onTextPasted={onTextPasted}
         onQuickSubmit={onQuickSubmit}

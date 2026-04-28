@@ -9,6 +9,10 @@ interface HomeWorkspaceProps {
   providerName: string;
   providerStatus: string;
   providerReady: boolean;
+  hideMikeNotes?: boolean;
+  inputSummary?: string;
+  canAcceptImages?: boolean;
+  imageUnavailableMessage?: string;
   freeModeEnabled: boolean;
   legalAccepted: boolean;
   starterPrompts: string[];
@@ -31,6 +35,10 @@ export function HomeWorkspace({
   providerName,
   providerStatus,
   providerReady,
+  hideMikeNotes = false,
+  inputSummary,
+  canAcceptImages = true,
+  imageUnavailableMessage,
   freeModeEnabled,
   legalAccepted,
   starterPrompts,
@@ -49,12 +57,19 @@ export function HomeWorkspace({
     <div className="flex h-full min-h-0 flex-1 flex-col animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex min-h-0 flex-1 flex-col gap-2.5 xl:grid xl:grid-cols-12 xl:gap-3">
         <section className="flex min-h-0 flex-col gap-2.5 xl:col-span-8 xl:flex-1 xl:gap-3">
-          <HomeIdentityBlock heroSrc={heroSrc} providerReady={providerReady} />
+          <HomeIdentityBlock
+            heroSrc={heroSrc}
+            providerReady={providerReady}
+            hideMikeNotes={hideMikeNotes}
+            inputSummary={inputSummary}
+          />
           <HomeComposerCard
             subject={subject}
             onSubjectChange={onSubjectChange}
             providerName={providerName}
             providerReady={providerReady}
+            canAcceptImages={canAcceptImages}
+            imageUnavailableMessage={imageUnavailableMessage}
             onOpenSetup={onOpenSetup}
             onImageSelected={onImageSelected}
             onTextPasted={onTextPasted}

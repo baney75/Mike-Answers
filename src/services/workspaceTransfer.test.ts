@@ -18,6 +18,12 @@ describe("workspaceTransfer", () => {
         preferredLocation: undefined,
         onboardingCompleted: true,
         providers: {
+          puter: {
+            rememberKey: false,
+            models: { fastModel: "gpt-5-nano", deepModel: "gpt-5.4" },
+            options: {},
+            apiKey: "",
+          },
           gemini: {
             rememberKey: true,
             models: {
@@ -36,11 +42,11 @@ describe("workspaceTransfer", () => {
             options: { freeOnly: true },
             apiKey: "sk-or-test",
           },
-          minimax: {
+          openai_compatible: {
             rememberKey: false,
-            baseUrl: "https://api.minimax.io/v1",
-            models: { fastModel: "MiniMax-M2.7-highspeed", deepModel: "MiniMax-M2.7" },
-            options: {},
+            baseUrl: "https://api.openai.com/v1",
+            models: { fastModel: "gpt-4.1-mini", deepModel: "gpt-4.1" },
+            options: { presetId: "openai" },
             apiKey: "",
           },
           custom_openai: {

@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback, type ReactNode } from "react";
-import { BrainCircuit, Mic, Square, UploadCloud, Zap } from "lucide-react";
+import { BrainCircuit, ClipboardPaste, Mic, Square, UploadCloud, X, Zap } from "lucide-react";
 import { shouldSubmitTextShortcut } from "../utils/input";
 
 interface DropzoneProps {
   subjectControl?: ReactNode;
+  canAcceptImages?: boolean;
+  imageUnavailableMessage?: string;
   onImageSelected: (file: File) => void;
   onTextPasted: (text: string) => void;
   onQuickSubmit?: (text: string) => void;
@@ -25,6 +27,8 @@ function isEditableTarget(target: EventTarget | null) {
 
 export function Dropzone({
   subjectControl,
+  canAcceptImages = true,
+  imageUnavailableMessage = "This provider is text-only here. Switch providers before adding a screenshot.",
   onImageSelected,
   onTextPasted,
   onQuickSubmit,
@@ -69,14 +73,22 @@ export function Dropzone({
 
       const editableTarget = isEditableTarget(e.target);
       let foundImage = false;
+      let foundUnsupportedFile = false;
       for (let i = 0; i < items.length; i++) {
         if (items[i].type.startsWith("image/")) {
+          if (!canAcceptImages) {
+            onError(imageUnavailableMessage);
+            foundImage = true;
+            break;
+          }
           const file = items[i].getAsFile();
           if (file) {
             onImageSelected(file);
             foundImage = true;
             break;
           }
+        } else if (items[i].kind === "file") {
+          foundUnsupportedFile = true;
         }
       }
 
@@ -89,6 +101,8 @@ export function Dropzone({
         if (textData) {
           setTextInput(textData);
           onTextPasted(textData);
+        } else if (foundUnsupportedFile) {
+          onError("That pasted file is not an image Mike can read yet. Use a screenshot or image file.");
         } else {
           onError(
             "No image found. Try Cmd+Shift+4 (Mac) or Win+Shift+S (Windows) to screenshot.",
@@ -96,8 +110,52 @@ export function Dropzone({
         }
       }
     },
-    [onImageSelected, onTextPasted, onError],
+    [canAcceptImages, imageUnavailableMessage, onImageSelected, onTextPasted, onError],
   );
+
+  const handleManualPaste = useCallback(async () => {
+    if (!navigator.clipboard) {
+      onError("Clipboard access is not available in this browser. Use the system paste command instead.");
+      return;
+    }
+
+    try {
+      if (typeof navigator.clipboard.read === "function") {
+        const clipboardItems = await navigator.clipboard.read();
+        for (const item of clipboardItems) {
+          const imageType = item.types.find((type) => type.startsWith("image/"));
+          if (imageType) {
+            if (!canAcceptImages) {
+              onError(imageUnavailableMessage);
+              return;
+            }
+            const blob = await item.getType(imageType);
+            const extension = imageType.split("/")[1] || "png";
+            onImageSelected(new File([blob], `clipboard-image.${extension}`, { type: imageType }));
+            return;
+          }
+        }
+      }
+
+      if (typeof navigator.clipboard.readText === "function") {
+        const text = (await navigator.clipboard.readText()).trim();
+        if (text) {
+          setTextInput(text);
+          textareaRef.current?.focus();
+          return;
+        }
+      }
+
+      onError("Clipboard was empty or did not include readable text or an image.");
+    } catch (error) {
+      const name = error instanceof DOMException ? error.name : "";
+      onError(
+        name === "NotAllowedError"
+          ? "Clipboard permission was blocked. Use the browser paste command or allow clipboard access."
+          : "Mike could not read the clipboard in this browser. Try the system paste command.",
+      );
+    }
+  }, [canAcceptImages, imageUnavailableMessage, onError, onImageSelected]);
 
   useEffect(() => {
     document.addEventListener("paste", handlePaste);
@@ -122,6 +180,10 @@ export function Dropzone({
     if (files.length > 0) {
       const file = files[0];
       if (file.type.startsWith("image/")) {
+        if (!canAcceptImages) {
+          onError(imageUnavailableMessage);
+          return;
+        }
         onImageSelected(file);
       } else {
         onError(
@@ -134,7 +196,11 @@ export function Dropzone({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      onImageSelected(files[0]);
+      if (!canAcceptImages) {
+        onError(imageUnavailableMessage);
+      } else {
+        onImageSelected(files[0]);
+      }
     }
     e.target.value = "";
   };
@@ -501,7 +567,7 @@ export function Dropzone({
         aria-label="Question input panel"
         className={`flex flex-col overflow-hidden rounded-[1.4rem] border border-(--aqs-ink)/10 bg-white/62 backdrop-blur-sm dark:border-white/10 dark:bg-slate-900/50 md:rounded-[1.6rem] ${
           isDragging
-            ? "border-(--aqs-accent) ring-4 ring-[color:rgba(139,30,63,0.1)]"
+            ? "border-(--aqs-accent) ring-4 ring-[rgba(139,30,63,0.1)]"
             : ""
         }`}
       >
@@ -510,11 +576,22 @@ export function Dropzone({
           <button
             type="button"
             onClick={triggerFilePicker}
+            disabled={!canAcceptImages}
             aria-controls="file-input"
-            className="inline-flex items-center gap-1.5 rounded-full border border-(--aqs-ink)/10 bg-white px-2.5 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-(--aqs-ink) transition hover:border-(--aqs-accent)/25 hover:bg-slate-50 dark:border-white/10 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800 md:px-3 md:text-xs"
+            title={canAcceptImages ? "Add an image" : imageUnavailableMessage}
+            className="inline-flex items-center gap-1.5 rounded-full border border-(--aqs-ink)/10 bg-white px-2.5 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-(--aqs-ink) transition hover:border-(--aqs-accent)/25 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-45 dark:border-white/10 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800 md:px-3 md:text-xs"
           >
             <UploadCloud className="h-3.5 w-3.5 text-(--aqs-accent)" />
             Image
+          </button>
+
+          <button
+            type="button"
+            onClick={() => void handleManualPaste()}
+            className="inline-flex items-center gap-1.5 rounded-full border border-(--aqs-accent)/20 bg-(--aqs-accent-soft) px-2.5 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-(--aqs-accent-strong) transition hover:border-(--aqs-accent)/35 hover:bg-(--aqs-accent-soft-strong) dark:border-(--aqs-accent-dark)/25 dark:bg-[rgba(122,31,52,0.18)] dark:text-(--aqs-accent-dark) md:hidden"
+          >
+            <ClipboardPaste className="h-3.5 w-3.5" />
+            Paste
           </button>
 
           {onVoiceInput ? (
@@ -528,7 +605,7 @@ export function Dropzone({
               disabled={isTranscribing}
               className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] transition disabled:opacity-50 md:px-3 md:text-xs ${
                 isListening
-                  ? "border-(--aqs-accent) bg-[var(--aqs-accent)] text-white"
+                  ? "border-(--aqs-accent) bg-(--aqs-accent) text-white"
                   : "border-(--aqs-ink)/10 bg-white text-(--aqs-ink) dark:border-white/10 dark:bg-slate-900 dark:text-white"
               }`}
             >
@@ -554,6 +631,19 @@ export function Dropzone({
           <label htmlFor="question-input" className="sr-only">
             Type or paste your question
           </label>
+          {textInput.trim() ? (
+            <button
+              type="button"
+              onClick={() => {
+                setTextInput("");
+                textareaRef.current?.focus();
+              }}
+              aria-label="Clear question draft"
+              className="absolute right-3 top-3 z-10 inline-flex h-8 w-8 items-center justify-center rounded-full border border-(--aqs-ink)/10 bg-white/92 text-slate-500 shadow-sm transition hover:border-(--aqs-accent)/25 hover:text-(--aqs-accent-strong) focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[rgba(139,30,63,0.12)] dark:border-white/10 dark:bg-slate-950 dark:text-slate-300 dark:hover:text-white md:right-4 md:top-4"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          ) : null}
           <textarea
             id="question-input"
             ref={textareaRef}
@@ -561,7 +651,7 @@ export function Dropzone({
             onChange={(e) => setTextInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Type or paste your question..."
-            className="block w-full resize-none bg-transparent text-[0.95rem] font-medium leading-snug text-(--aqs-ink) outline-none placeholder:text-slate-400 dark:text-white min-h-[3rem] max-h-[28dvh] min-[380px]:min-h-[3.5rem] md:max-h-[32dvh] md:min-h-[7rem] md:text-base md:leading-relaxed"
+            className="block w-full resize-none bg-transparent pr-10 text-[0.95rem] font-medium leading-snug text-(--aqs-ink) outline-none placeholder:text-slate-400 dark:text-white min-h-12 max-h-[28dvh] min-[380px]:min-h-14 md:max-h-[32dvh] md:min-h-28 md:text-base md:leading-relaxed"
           />
 
           {/* Clickable focus overlay when textarea is empty */}
@@ -580,7 +670,7 @@ export function Dropzone({
             type="button"
             onClick={() => handleTextSubmit("fast")}
             disabled={!textInput.trim()}
-            className="flex items-center justify-center gap-2 rounded-[1rem] bg-[var(--aqs-accent)] px-3 py-2.5 text-sm font-black text-white transition-all hover:bg-(--aqs-accent-strong) disabled:bg-[rgba(139,30,63,0.34)] disabled:text-white/90 md:rounded-[1.1rem] md:py-3 md:text-base"
+            className="flex items-center justify-center gap-2 rounded-2xl bg-(--aqs-accent) px-3 py-2.5 text-sm font-black text-white transition-all hover:bg-(--aqs-accent-strong) disabled:bg-[rgba(139,30,63,0.34)] disabled:text-white/90 md:rounded-[1.1rem] md:py-3 md:text-base"
           >
             <Zap className="h-3.5 w-3.5 text-white md:h-4 md:w-4" />
             Fast
@@ -589,7 +679,7 @@ export function Dropzone({
             type="button"
             onClick={() => handleTextSubmit("deep")}
             disabled={!textInput.trim()}
-            className="flex items-center justify-center rounded-[1rem] border border-(--aqs-ink)/10 bg-white px-3 py-2.5 text-sm font-black text-(--aqs-ink) transition-all hover:bg-slate-50 disabled:bg-slate-100 disabled:text-slate-400 dark:border-white/10 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-950 dark:disabled:bg-slate-900 dark:disabled:text-slate-500 md:rounded-[1.1rem] md:py-3 md:text-base"
+            className="flex items-center justify-center rounded-2xl border border-(--aqs-ink)/10 bg-white px-3 py-2.5 text-sm font-black text-(--aqs-ink) transition-all hover:bg-slate-50 disabled:bg-slate-100 disabled:text-slate-400 dark:border-white/10 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-950 dark:disabled:bg-slate-900 dark:disabled:text-slate-500 md:rounded-[1.1rem] md:py-3 md:text-base"
           >
             <BrainCircuit className="h-3.5 w-3.5 text-(--aqs-accent) md:h-4 md:w-4" />
             Deep

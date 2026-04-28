@@ -68,7 +68,7 @@ Provider-registry pattern is well-implemented:
 
 **Strengths:**
 - Clear separation between provider descriptors and runtime configs
-- Honest capability messaging (especially for MiniMax limitations)
+- Honest capability messaging for no-key, BYOK, local, gateway, image, and audio routes
 - Fallback system for model failures
 
 **Concerns:**

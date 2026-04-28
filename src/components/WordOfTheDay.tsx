@@ -425,33 +425,37 @@ export function WordOfTheDay({
   const promptSuggestions = useMemo(() => {
     if (activeView === "word" && word) {
       return [
-        `Use "${word.word}" in a sentence.`,
-        "Explain the nuance.",
-        "Give me a memory trick.",
+        `Use "${word.word}" in a college-level sentence.`,
+        "Compare it with a similar word.",
+        "Give me a 30-second memory trick.",
+        "Quiz me once, then grade my answer.",
       ];
     }
 
     if (activeView === "verse" && verse) {
       return [
-        "Explain the verse plainly.",
-        "Show the main theme.",
-        "Give one practical application.",
+        "Explain the verse plainly and faithfully.",
+        "What is the main theme in context?",
+        "Give one practical application for today.",
+        "Turn this into a short prayer.",
       ];
     }
 
     if (activeView === "news" && leadArticle) {
       return [
-        "Summarize the lead story.",
+        "Give me the 5-sentence briefing.",
+        "Separate confirmed facts from claims.",
         "What evidence matters most?",
-        "What is still uncertain?",
+        "What should I watch next?",
       ];
     }
 
     if (word && !verse && !leadArticle) {
       return [
         `Explain "${word.word}" simply.`,
+        "Make a tiny flashcard for it.",
         "Give me one sentence to remember it.",
-        "How should I use this word today?",
+        "Ask me to use it.",
       ];
     }
 
@@ -460,6 +464,7 @@ export function WordOfTheDay({
         "Explain the verse plainly.",
         "What truth should I carry today?",
         "Give me one prayer from this verse.",
+        "Show the context in one paragraph.",
       ];
     }
 
@@ -468,14 +473,16 @@ export function WordOfTheDay({
         "Give me a quick briefing.",
         "What is the main claim here?",
         "What still needs confirmation?",
+        "Why should a student care?",
       ];
     }
 
     if (canAskDesk) {
       return [
         "Connect the word, verse, and headline.",
+        "Build me a 5-minute morning study plan.",
         "What matters most today?",
-        "Give me one useful action.",
+        "Give me one useful action before class.",
       ];
     }
 
@@ -1187,10 +1194,10 @@ Answer directly. Stay anchored to the supplied Daily Desk content. If the user a
     </div>
   );
 
-  const visiblePromptSuggestions = promptSuggestions.slice(0, 2);
+  const visiblePromptSuggestions = promptSuggestions.slice(0, 4);
 
   const askMikePanel = (
-    <div className="studio-card flex min-h-0 flex-col bg-white p-3 dark:bg-slate-900 lg:max-h-[min(28rem,62dvh)]">
+    <div className="studio-card flex max-h-[34dvh] min-h-0 flex-col bg-white p-2.5 dark:bg-slate-900 sm:max-h-[36dvh] lg:max-h-[min(28rem,62dvh)] lg:p-3">
       <div className="flex shrink-0 items-center gap-2">
         <Sparkles className="h-4 w-4 text-(--aqs-accent)" />
         <p className="text-[10px] font-black uppercase tracking-[0.32em] text-(--aqs-accent-strong) dark:text-(--aqs-accent-dark)">
@@ -1199,7 +1206,7 @@ Answer directly. Stay anchored to the supplied Daily Desk content. If the user a
       </div>
 
       {chatMessages.length > 0 ? (
-        <div className="scroll-studio mt-3 min-h-0 flex-1 space-y-3 overflow-y-auto rounded-[1.4rem] bg-slate-50/80 p-3.5 dark:bg-slate-950/60">
+        <div className="scroll-studio mt-2 min-h-0 flex-1 space-y-3 overflow-y-auto rounded-[1.4rem] bg-slate-50/80 p-3 dark:bg-slate-950/60 lg:mt-3 lg:p-3.5">
           {chatMessages.map((message, index) => (
             <div key={`${message.role}-${index}`} className={message.role === "user" ? "flex justify-end" : "flex justify-start"}>
               <div
@@ -1231,20 +1238,20 @@ Answer directly. Stay anchored to the supplied Daily Desk content. If the user a
           <div ref={chatEndRef} />
         </div>
       ) : (
-        <div className="mt-2 rounded-[1.2rem] bg-slate-50/70 p-3 dark:bg-slate-950/60">
+        <div className="mt-2 hidden rounded-[1.2rem] bg-slate-50/70 p-3 dark:bg-slate-950/60 sm:block">
           <p className="text-sm font-medium leading-relaxed text-slate-600 dark:text-slate-300">
             {askMikeIntro}
           </p>
         </div>
       )}
 
-      <div className="mt-2 shrink-0 grid gap-2">
+      <div className="mt-2 shrink-0 grid gap-2 sm:grid-cols-2">
         {visiblePromptSuggestions.map((suggestion) => (
           <button
             key={suggestion}
             type="button"
             onClick={() => setChatInput(suggestion)}
-            className="studio-card bg-white px-3 py-2 text-left text-[10px] leading-snug font-black text-slate-500 hover:bg-slate-50 dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-slate-800"
+            className="studio-card bg-white px-3 py-2 text-left text-[10px] font-black leading-snug text-slate-600 hover:bg-slate-50 dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-slate-800"
           >
             {suggestion}
           </button>
@@ -1268,7 +1275,7 @@ Answer directly. Stay anchored to the supplied Daily Desk content. If the user a
             autoComplete="off"
             disabled={isChatLoading || !canAskDesk}
             rows={1}
-            className="min-h-12 w-full resize-none bg-transparent px-4 py-3 text-sm font-medium leading-relaxed text-(--aqs-ink) outline-none dark:text-white lg:min-h-15"
+            className="min-h-10 w-full resize-none bg-transparent px-4 py-2.5 text-sm font-medium leading-relaxed text-(--aqs-ink) outline-none dark:text-white lg:min-h-15 lg:py-3"
           />
         </div>
         {!canAskCurrentScene && canAskDesk ? (
@@ -1284,7 +1291,7 @@ Answer directly. Stay anchored to the supplied Daily Desk content. If the user a
         <button
           type="submit"
           disabled={!chatInput.trim() || isChatLoading || !canAskDesk}
-          className="neo-border neo-shadow flex items-center justify-center gap-3 rounded-2xl bg-(--aqs-accent) px-6 py-2.5 text-sm font-black text-white transition-all hover:bg-(--aqs-accent-strong) disabled:opacity-50"
+          className="neo-border neo-shadow flex items-center justify-center gap-3 rounded-2xl bg-(--aqs-accent) px-6 py-2 text-sm font-black text-white transition-all hover:bg-(--aqs-accent-strong) disabled:opacity-50 lg:py-2.5"
         >
           <Send className="h-4 w-4" />
           Ask
@@ -1423,27 +1430,6 @@ Answer directly. Stay anchored to the supplied Daily Desk content. If the user a
                       <span className="hidden sm:inline">{scene.label}</span>
                     </button>
                   ))}
-                </div>
-
-                <div className="flex justify-end">
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => cycleScene(-1)}
-                      className="studio-card h-10 w-10 bg-white hover:bg-slate-50 dark:bg-slate-950 dark:hover:bg-slate-800"
-                      aria-label="Previous Daily Desk scene"
-                    >
-                      <ArrowLeft className="mx-auto h-4 w-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => cycleScene(1)}
-                      className="studio-card h-10 w-10 bg-white hover:bg-slate-50 dark:bg-slate-950 dark:hover:bg-slate-800"
-                      aria-label="Next Daily Desk scene"
-                    >
-                      <ArrowRight className="mx-auto h-4 w-4" />
-                    </button>
-                  </div>
                 </div>
 
                 {sceneContent}

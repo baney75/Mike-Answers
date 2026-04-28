@@ -40,9 +40,10 @@ interface OpenAICompatibleChatResponse {
 
 interface OpenAICompatibleRequestOptions {
   providerId: ProviderId;
-  apiKey: string;
+  apiKey?: string;
   baseUrl: string;
   model: string;
+  providerLabel?: string;
 }
 
 function normalizeContent(value: OpenAICompatibleChatResponse["choices"]) {
@@ -63,9 +64,11 @@ function normalizeContent(value: OpenAICompatibleChatResponse["choices"]) {
 
 function buildHeaders(options: OpenAICompatibleRequestOptions) {
   const headers: Record<string, string> = {
-    Authorization: `Bearer ${options.apiKey}`,
     "Content-Type": "application/json",
   };
+  if (options.apiKey?.trim()) {
+    headers.Authorization = `Bearer ${options.apiKey.trim()}`;
+  }
 
   if (options.providerId === "openrouter") {
     const referer = typeof window !== "undefined" ? window.location.origin : "";
@@ -90,13 +93,13 @@ async function postChatCompletion(
 
   const payload = (await response.json().catch(() => ({}))) as OpenAICompatibleChatResponse;
   if (!response.ok) {
-    const message = payload.error?.message ?? `${options.providerId} request failed (${response.status}).`;
+    const message = payload.error?.message ?? `${options.providerLabel ?? options.providerId} request failed (${response.status}).`;
     throw new Error(message);
   }
 
   const text = normalizeContent(payload.choices);
   if (!text) {
-    throw new Error(`${options.providerId} returned an empty response.`);
+    throw new Error(`${options.providerLabel ?? options.providerId} returned an empty response.`);
   }
 
   return text;
@@ -152,9 +155,10 @@ export function buildOpenAICompatibleTutorConversation(
 
 export async function solveTextQuestionWithOpenAICompatible(options: {
   providerId: ProviderId;
-  apiKey: string;
+  apiKey?: string;
   baseUrl: string;
   model: string;
+  providerLabel?: string;
   text: string;
   mode: Exclude<SolveMode, "research">;
   subject?: string;
@@ -168,6 +172,7 @@ export async function solveTextQuestionWithOpenAICompatible(options: {
     apiKey,
     baseUrl,
     model,
+    providerLabel,
     text,
     mode,
     subject = "Auto-detect",
@@ -186,7 +191,7 @@ export async function solveTextQuestionWithOpenAICompatible(options: {
     providerSupportsGrounding: false,
     includeGroundingWarning: requestPlan.useGrounding,
     currentModel: model,
-    providerLabel: providerId === "openrouter" ? "OpenRouter" : providerId === "custom_openai" ? "Custom OpenAI-Compatible" : "MiniMax",
+    providerLabel: providerLabel ?? (providerId === "openrouter" ? "OpenRouter" : providerId === "custom_openai" ? "Custom OpenAI-Compatible" : "OpenAI-Compatible"),
     mode,
     preferredLocation,
     localDateTime,
@@ -196,7 +201,7 @@ export async function solveTextQuestionWithOpenAICompatible(options: {
   });
 
   return postChatCompletion(
-    { providerId, apiKey, baseUrl, model },
+    { providerId, apiKey, baseUrl, model, providerLabel },
     {
       model,
       temperature: mode === "deep" ? 0.2 : 0.45,
@@ -213,9 +218,10 @@ export async function solveTextQuestionWithOpenAICompatible(options: {
 
 export async function solveImageQuestionWithOpenAICompatible(options: {
   providerId: ProviderId;
-  apiKey: string;
+  apiKey?: string;
   baseUrl: string;
   model: string;
+  providerLabel?: string;
   base64Image: string;
   mode: Exclude<SolveMode, "research">;
   subject?: string;
@@ -229,6 +235,7 @@ export async function solveImageQuestionWithOpenAICompatible(options: {
     apiKey,
     baseUrl,
     model,
+    providerLabel,
     base64Image,
     mode,
     subject = "Auto-detect",
@@ -244,7 +251,7 @@ export async function solveImageQuestionWithOpenAICompatible(options: {
     providerSupportsGrounding: false,
     includeGroundingWarning: false,
     currentModel: model,
-    providerLabel: providerId === "openrouter" ? "OpenRouter" : providerId === "custom_openai" ? "Custom OpenAI-Compatible" : "MiniMax",
+    providerLabel: providerLabel ?? (providerId === "openrouter" ? "OpenRouter" : providerId === "custom_openai" ? "Custom OpenAI-Compatible" : "OpenAI-Compatible"),
     mode,
     preferredLocation,
     localDateTime,
@@ -254,7 +261,7 @@ export async function solveImageQuestionWithOpenAICompatible(options: {
   });
 
   return postChatCompletion(
-    { providerId, apiKey, baseUrl, model },
+    { providerId, apiKey, baseUrl, model, providerLabel },
     {
       model,
       temperature: mode === "deep" ? 0.2 : 0.45,
@@ -282,9 +289,10 @@ export async function solveImageQuestionWithOpenAICompatible(options: {
 
 export async function chatWithOpenAICompatible(options: {
   providerId: ProviderId;
-  apiKey: string;
+  apiKey?: string;
   baseUrl: string;
   model: string;
+  providerLabel?: string;
   history: { role: string; text: string }[];
   message: string;
   followUpContext?: FollowUpContextPayload;
@@ -298,6 +306,7 @@ export async function chatWithOpenAICompatible(options: {
     apiKey,
     baseUrl,
     model,
+    providerLabel,
     history,
     message,
     followUpContext,
@@ -316,7 +325,7 @@ export async function chatWithOpenAICompatible(options: {
       role: "system",
       content: buildTutorSystemInstruction(false, {
         currentModel: model,
-        providerLabel: providerId === "openrouter" ? "OpenRouter" : providerId === "custom_openai" ? "Custom OpenAI-Compatible" : "MiniMax",
+        providerLabel: providerLabel ?? (providerId === "openrouter" ? "OpenRouter" : providerId === "custom_openai" ? "Custom OpenAI-Compatible" : "OpenAI-Compatible"),
         preferredLocation,
         localDateTime,
         timeZone,
@@ -330,7 +339,7 @@ export async function chatWithOpenAICompatible(options: {
   messages.push(...buildOpenAICompatibleTutorConversation(history, message, followUpContext));
 
   return postChatCompletion(
-    { providerId, apiKey, baseUrl, model },
+    { providerId, apiKey, baseUrl, model, providerLabel },
     {
       model,
       temperature: 0.35,

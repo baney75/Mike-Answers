@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import {
   createDefaultProviderRuntimeConfigs,
+  getOpenAICompatiblePreset,
   getProviderDescriptor,
   providerDescriptors,
   providerOrder,
@@ -10,19 +11,21 @@ import {
 describe("provider registry", () => {
   test("keeps the supported provider order stable", () => {
     expect(providerOrder).toEqual([
+      "puter",
       "gemini",
       "openrouter",
-      "minimax",
+      "openai_compatible",
       "custom_openai",
     ]);
   });
 
-  test("creates MiniMax defaults with its official OpenAI-compatible endpoint", () => {
+  test("creates Puter as the no-key default route", () => {
     const defaults = createDefaultProviderRuntimeConfigs();
 
-    expect(defaults.minimax.baseUrl).toBe("https://api.minimax.io/v1");
-    expect(defaults.minimax.models.fastModel).toBe("MiniMax-M2.7-highspeed");
-    expect(defaults.minimax.models.deepModel).toBe("MiniMax-M2.7");
+    expect(defaults.puter.models.fastModel).toBe("gpt-5-nano");
+    expect(defaults.puter.models.deepModel).toBe("gpt-5.4");
+    expect(getProviderDescriptor("puter").capabilities.requiresApiKey).toBe(false);
+    expect(getProviderDescriptor("puter").capabilities.isUserPays).toBe(true);
   });
 
   test("defaults API key storage to session only", () => {
@@ -30,13 +33,15 @@ describe("provider registry", () => {
 
     expect(defaults.gemini.rememberKey).toBe(false);
     expect(defaults.openrouter.rememberKey).toBe(false);
+    expect(defaults.openai_compatible.rememberKey).toBe(false);
   });
 
-  test("marks MiniMax browser limitations honestly", () => {
-    const minimax = getProviderDescriptor("minimax");
+  test("includes Ollama as a local OpenAI-compatible preset", () => {
+    const ollama = getOpenAICompatiblePreset("ollama");
 
-    expect(minimax.capabilities.supportsImageInputInBrowser).toBe(false);
-    expect(minimax.capabilities.supportsAudioTranscription).toBe(false);
+    expect(ollama?.defaultBaseUrl).toBe("http://localhost:11434/v1");
+    expect(ollama?.capabilities.requiresApiKey).toBe(false);
+    expect(ollama?.capabilities.isLocalOnly).toBe(true);
   });
 
   test("marks the custom provider as manual and base-url configurable", () => {

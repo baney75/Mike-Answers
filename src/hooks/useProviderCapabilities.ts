@@ -24,6 +24,7 @@ export function useProviderCapabilities() {
         supportsAudioTranscription: false,
         supportsCustomBaseUrl: false,
         supportsModelCatalog: false,
+        requiresApiKey: true,
       };
     }
     return descriptor.capabilities;
@@ -66,8 +67,7 @@ export function useProviderCapabilities() {
 
     const config = getProviderConfig(providerId);
     
-    // Some providers don't require API keys (free models)
-    if (descriptor.id === "openrouter") {
+    if (!descriptor.capabilities.requiresApiKey || descriptor.id === "openrouter") {
       return { ready: true };
     }
 

@@ -15,6 +15,7 @@ interface HeaderProps {
   providerStatus: string;
   freeModeEnabled?: boolean;
   historyCount: number;
+  hideDonateButton?: boolean;
 }
 
 function IconButton({
@@ -67,6 +68,7 @@ export function Header({
   providerStatus,
   freeModeEnabled = false,
   historyCount,
+  hideDonateButton = false,
 }: HeaderProps) {
   const providerNeedsSetup = providerStatus === "key needed" || providerStatus.startsWith("Add ");
   const compactProviderStatus = providerNeedsSetup
@@ -90,7 +92,7 @@ export function Header({
           <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-linear-to-br from-(--aqs-accent)/8 to-(--aqs-gold)/12 ring-1 ring-(--aqs-accent)/10 md:h-12 md:w-12 md:rounded-[1.1rem]">
             <img
               src={emblemSrc}
-              alt="Mike Answers mark"
+              alt="Mike Answers mascot"
               className="h-[108%] w-[108%] object-contain object-center"
             />
           </div>
@@ -145,17 +147,19 @@ export function Header({
           >
             {themeIcon}
           </IconButton>
-          <a
-            href="https://buymeacoffee.com/baneydonovan"
-            target="_blank"
-            rel="noreferrer"
-            aria-label="Support Mike Answers"
-            title="Support Mike Answers"
-            className="inline-flex h-9 items-center justify-center rounded-full border border-transparent px-2.5 text-slate-500 transition hover:border-(--aqs-accent)/20 hover:bg-white/80 hover:text-(--aqs-accent-strong) dark:text-slate-300 dark:hover:bg-slate-800 md:h-10 md:px-3"
-          >
-            <HandCoins className="h-4.5 w-4.5 text-(--aqs-gold)" />
-            <span className="hidden xl:ml-2 xl:inline text-xs font-semibold">Support</span>
-          </a>
+          {!hideDonateButton ? (
+            <a
+              href="https://buymeacoffee.com/baneydonovan"
+              target="_blank"
+              rel="noreferrer"
+              aria-label="Support Mike Answers"
+              title="Support Mike Answers"
+              className="inline-flex h-9 items-center justify-center rounded-full border border-transparent px-2.5 text-slate-500 transition hover:border-(--aqs-accent)/20 hover:bg-white/80 hover:text-(--aqs-accent-strong) dark:text-slate-300 dark:hover:bg-slate-800 md:h-10 md:px-3"
+            >
+              <HandCoins className="h-4.5 w-4.5 text-(--aqs-gold)" />
+              <span className="hidden xl:ml-2 xl:inline text-xs font-semibold">Support</span>
+            </a>
+          ) : null}
         </div>
       </div>
     </header>

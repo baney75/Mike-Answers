@@ -4,12 +4,13 @@ export type AppState = 'IDLE' | 'PREVIEWING' | 'LOADING' | 'SOLVED' | 'ERROR' | 
 /** Which Gemini model tier to use when solving a question. */
 export type SolveMode = 'deep' | 'fast' | 'research';
 
-/** Supported inference providers. */
-export type ProviderId = 'gemini' | 'openrouter' | 'minimax' | 'custom_openai';
+/** Supported inference provider routes. */
+export type ProviderId = 'gemini' | 'openrouter' | 'puter' | 'openai_compatible' | 'custom_openai';
+export type LegacyProviderId = ProviderId | 'minimax';
 
 /** Families of provider integrations. */
-export type ProviderKind = 'gemini_native' | 'openai_compatible';
-export type ProviderTrustTier = 'byok_recommended' | 'free_trial' | 'community_experimental' | 'enterprise_ready';
+export type ProviderKind = 'gemini_native' | 'puter_user_pays' | 'openai_compatible';
+export type ProviderTrustTier = 'byok_recommended' | 'free_trial' | 'community_experimental' | 'enterprise_ready' | 'local_first' | 'user_pays';
 
 export interface ProviderModelProfile {
   fastModel?: string;
@@ -22,6 +23,7 @@ export interface ProviderModelProfile {
 export interface ProviderOptions {
   freeOnly?: boolean;
   customLabel?: string;
+  presetId?: string;
 }
 
 export interface ProviderPreferenceConfig {
@@ -41,6 +43,24 @@ export interface ProviderCapabilities {
   supportsAudioTranscription: boolean;
   supportsCustomBaseUrl: boolean;
   supportsModelCatalog: boolean;
+  requiresApiKey: boolean;
+  isLocalOnly?: boolean;
+  isGateway?: boolean;
+  isUserPays?: boolean;
+}
+
+export interface OpenAICompatiblePreset {
+  id: string;
+  label: string;
+  group: "popular" | "openai_compatible" | "local" | "gateway";
+  shortDescription: string;
+  docsUrl: string;
+  apiKeyPlaceholder: string;
+  defaultBaseUrl: string;
+  defaultModels: ProviderModelProfile;
+  capabilities: ProviderCapabilities;
+  policy: ProviderDescriptor["policy"];
+  aliases?: string[];
 }
 
 export interface ProviderDescriptor {
@@ -95,7 +115,7 @@ export interface HistoryItem {
   originalContext?: OriginalQuestionContext;
   subject?: string;
   mode?: Exclude<SolveMode, 'research'>;
-  provider?: ProviderId;
+  provider?: LegacyProviderId;
   model?: string;
 }
 
@@ -166,17 +186,20 @@ export interface OpenRouterModelSummary {
 }
 
 export interface UserPreferencesSnapshot {
-  selectedProviderId: ProviderId;
+  selectedProviderId: LegacyProviderId;
   preferredSubject?: string;
   preferredLocation?: string;
   onboardingCompleted?: boolean;
   freeModeEnabled?: boolean;
+  hideMikeNotes?: boolean;
+  hideDonateButton?: boolean;
   legalAcceptedAt?: number;
-  providers: Record<ProviderId, ProviderPreferenceConfig>;
+  providers: Partial<Record<LegacyProviderId, ProviderPreferenceConfig>>;
   updatedAt?: number;
 }
 
 export interface RuntimeAISettings extends UserPreferencesSnapshot {
+  selectedProviderId: ProviderId;
   providers: Record<ProviderId, ProviderRuntimeConfig>;
 }
 

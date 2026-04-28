@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import type {
+  LegacyProviderId,
   ProviderId,
   ProviderPreferenceConfig,
   ProviderRuntimeConfig,
@@ -10,6 +11,7 @@ import type {
 import {
   createDefaultProviderPreferences,
   createDefaultProviderRuntimeConfigs,
+  providerOrder,
 } from "../services/providers/registry";
 import { decryptSecretFromStorage, encryptSecretForStorage } from "../services/localVault";
 
@@ -34,17 +36,23 @@ interface LegacyRuntimeAISettings {
 }
 
 const DEFAULT_SETTINGS: RuntimeAISettings = {
-  selectedProviderId: "gemini",
+  selectedProviderId: "puter",
   preferredSubject: undefined,
   preferredLocation: undefined,
   onboardingCompleted: false,
   freeModeEnabled: false,
+  hideMikeNotes: false,
+  hideDonateButton: false,
   legalAcceptedAt: undefined,
   providers: createDefaultProviderRuntimeConfigs(),
 };
 
 function getSecretStorageKey(providerId: ProviderId) {
   return `aqs_secret_provider_${providerId}_v1`;
+}
+
+function normalizeProviderId(providerId: LegacyProviderId | undefined): ProviderId {
+  return providerId && providerOrder.includes(providerId as ProviderId) ? (providerId as ProviderId) : "puter";
 }
 
 function mergeProviderPreference(
@@ -76,34 +84,39 @@ function mergeProviderRuntime(
 }
 
 function sanitizeForStorage(settings: RuntimeAISettings): UserPreferencesSnapshot {
+  const defaults = createDefaultProviderPreferences();
   return {
     selectedProviderId: settings.selectedProviderId,
     preferredSubject: settings.preferredSubject,
     preferredLocation: settings.preferredLocation,
     onboardingCompleted: settings.onboardingCompleted,
     freeModeEnabled: settings.freeModeEnabled,
+    hideMikeNotes: settings.hideMikeNotes,
+    hideDonateButton: settings.hideDonateButton,
     legalAcceptedAt: settings.legalAcceptedAt,
-    providers: {
-      gemini: mergeProviderPreference(createDefaultProviderPreferences().gemini, settings.providers.gemini),
-      openrouter: mergeProviderPreference(createDefaultProviderPreferences().openrouter, settings.providers.openrouter),
-      minimax: mergeProviderPreference(createDefaultProviderPreferences().minimax, settings.providers.minimax),
-      custom_openai: mergeProviderPreference(createDefaultProviderPreferences().custom_openai, settings.providers.custom_openai),
-    },
+    providers: Object.fromEntries(
+      providerOrder.map((providerId) => [
+        providerId,
+        mergeProviderPreference(defaults[providerId], settings.providers[providerId]),
+      ]),
+    ) as Record<ProviderId, ProviderPreferenceConfig>,
   };
 }
 
 function applySnapshot(snapshot: UserPreferencesSnapshot): RuntimeAISettings {
   const providers = createDefaultProviderRuntimeConfigs();
+  const selectedProviderId = normalizeProviderId(snapshot.selectedProviderId);
 
   return {
     ...DEFAULT_SETTINGS,
     ...snapshot,
-    providers: {
-      gemini: mergeProviderRuntime(providers.gemini, snapshot.providers.gemini),
-      openrouter: mergeProviderRuntime(providers.openrouter, snapshot.providers.openrouter),
-      minimax: mergeProviderRuntime(providers.minimax, snapshot.providers.minimax),
-      custom_openai: mergeProviderRuntime(providers.custom_openai, snapshot.providers.custom_openai),
-    },
+    selectedProviderId,
+    providers: Object.fromEntries(
+      providerOrder.map((providerId) => [
+        providerId,
+        mergeProviderRuntime(providers[providerId], snapshot.providers?.[providerId]),
+      ]),
+    ) as Record<ProviderId, ProviderRuntimeConfig>,
   };
 }
 
@@ -194,7 +207,7 @@ function migrateLegacySettings(legacy: Partial<LegacyRuntimeAISettings>): Runtim
   });
 
   return applySnapshot({
-    selectedProviderId: legacy.provider ?? "gemini",
+    selectedProviderId: legacy.provider ?? "puter",
     preferredSubject: legacy.preferredSubject,
     preferredLocation: legacy.preferredLocation,
     onboardingCompleted: legacy.onboardingCompleted ?? false,
@@ -217,10 +230,12 @@ function readStoredSettings(): RuntimeAISettings {
         providers: {
           ...createDefaultProviderPreferences(),
           ...parsed.providers,
-          gemini: mergeProviderPreference(createDefaultProviderPreferences().gemini, parsed.providers?.gemini),
-          openrouter: mergeProviderPreference(createDefaultProviderPreferences().openrouter, parsed.providers?.openrouter),
-          minimax: mergeProviderPreference(createDefaultProviderPreferences().minimax, parsed.providers?.minimax),
-          custom_openai: mergeProviderPreference(createDefaultProviderPreferences().custom_openai, parsed.providers?.custom_openai),
+          ...Object.fromEntries(
+            providerOrder.map((providerId) => {
+              const defaults = createDefaultProviderPreferences();
+              return [providerId, mergeProviderPreference(defaults[providerId], parsed.providers?.[providerId])];
+            }),
+          ),
         },
       });
     }
@@ -252,12 +267,12 @@ function mergeRemoteSnapshot(
   return {
     ...current,
     ...next,
-    providers: {
-      gemini: { ...next.providers.gemini, apiKey: current.providers.gemini.apiKey },
-      openrouter: { ...next.providers.openrouter, apiKey: current.providers.openrouter.apiKey },
-      minimax: { ...next.providers.minimax, apiKey: current.providers.minimax.apiKey },
-      custom_openai: { ...next.providers.custom_openai, apiKey: current.providers.custom_openai.apiKey },
-    },
+    providers: Object.fromEntries(
+      providerOrder.map((providerId) => [
+        providerId,
+        { ...next.providers[providerId], apiKey: current.providers[providerId].apiKey },
+      ]),
+    ) as Record<ProviderId, ProviderRuntimeConfig>,
   };
 }
 
@@ -274,7 +289,7 @@ export function useAISettings(options: UseAISettingsOptions = {}) {
     let cancelled = false;
 
     void (async () => {
-      const providerIds = Object.keys(createDefaultProviderRuntimeConfigs()) as ProviderId[];
+      const providerIds = providerOrder;
       const secrets = await Promise.all(providerIds.map(async (providerId) => [providerId, await loadStoredSecret(providerId)] as const));
 
       if (cancelled) {

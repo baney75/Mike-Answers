@@ -12,12 +12,14 @@ from PIL import Image, ImageChops, ImageDraw, ImageFilter
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE_DIR = ROOT / "mike assets"
+CANONICAL_MASCOT_SOURCE = SOURCE_DIR / "mikelogo.png"
 PROCESSED_DIR = ROOT / "src" / "assets" / "mike" / "processed"
 HERO_DIR = PROCESSED_DIR / "hero"
 EMBLEM_DIR = PROCESSED_DIR / "emblem"
 ICON_DIR = PROCESSED_DIR / "icon"
 PUBLIC_DIR = ROOT / "public"
 MANIFEST_PATH = ROOT / "src" / "assets" / "mike" / "manifest.ts"
+ASSET_VERSION = "7"
 
 TARGETS = {
     "generic": "general",
@@ -144,61 +146,45 @@ def contain_on_canvas(image: Image.Image, size: tuple[int, int], padding: float 
     return canvas
 
 
+def create_icon_canvas(source: Image.Image, size: int = 1024, maskable: bool = False) -> Image.Image:
+    canvas = Image.new("RGBA", (size, size), (18, 28, 52, 255))
+    draw = ImageDraw.Draw(canvas)
+    radius = max(4, size // 5)
+    mask = Image.new("L", (size, size), 0)
+    mask_draw = ImageDraw.Draw(mask)
+    safe_inset = 0 if not maskable else size // 16
+    mask_draw.rounded_rectangle(
+        (safe_inset, safe_inset, size - safe_inset, size - safe_inset),
+        radius=radius,
+        fill=255,
+    )
+
+    rounded = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    rounded.paste(canvas, (0, 0), mask=mask)
+    border_inset = max(1, size // 28)
+    draw = ImageDraw.Draw(rounded)
+    draw.rounded_rectangle(
+        (border_inset, border_inset, size - border_inset, size - border_inset),
+        radius=max(4, radius - border_inset),
+        outline=(52, 68, 104, 255),
+        width=max(2, size // 96),
+    )
+
+    mascot = contain_on_canvas(crop_to_content(source, 0.0), (size, size), padding=0.11 if maskable else 0.07)
+    rounded.alpha_composite(mascot)
+    return rounded
+
+
 def create_emblem(source: Image.Image) -> Image.Image:
-    # Use the minimalist geometric logo for the emblem
-    return create_micro_icon(1024)
+    return create_icon_canvas(source, 1024)
 
 
 def create_app_icon(maskable: bool = False) -> Image.Image:
-    icon = create_micro_icon(1024)
-    if not maskable:
-        return icon
-
-    canvas = Image.new("RGBA", (1024, 1024), (0, 0, 0, 0))
-    padded = contain_on_canvas(icon, (880, 880), padding=0.0)
-    canvas.alpha_composite(padded, ((1024 - padded.width) // 2, (1024 - padded.height) // 2))
-    return canvas
+    return create_icon_canvas(load_canonical_mascot(), 1024, maskable=maskable)
 
 
 def create_micro_icon(size: int) -> Image.Image:
-    logo_path = SOURCE_DIR / "logo.png"
-    if not logo_path.exists():
-        # Fallback if logo not provided
-        canvas = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-        draw = ImageDraw.Draw(canvas)
-        inset = max(1, size // 16)
-        radius = max(4, size // 4)
-        draw.rounded_rectangle(
-            (inset, inset, size - inset, size - inset),
-            radius=radius,
-            fill=(122, 31, 52, 255),
-            outline=(51, 38, 32, 255),
-            width=max(1, size // 18),
-        )
-        return canvas
-
-    icon = Image.open(logo_path).convert("RGBA")
-    # Identify magenta and key it out
-    pixels = icon.load()
-    for y in range(icon.height):
-        for x in range(icon.width):
-            r, g, b, a = pixels[x, y]
-            if r > 220 and b > 220 and g < 50:
-                pixels[x, y] = (r, g, b, 0)
-    
-    # Resize to padded size inside the square
-    icon = crop_to_content(icon, 0.0)
-    canvas = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    resized = icon.resize((size, size), Image.Resampling.LANCZOS)
-    
-    # We round the corners to make it an app icon
-    mask = Image.new("L", (size, size), 0)
-    draw = ImageDraw.Draw(mask)
-    draw.rounded_rectangle((0, 0, size, size), radius=max(4, size // 5), fill=255)
-    
-    output = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    output.paste(resized, (0, 0), mask=mask)
-    return output
+    return create_icon_canvas(load_canonical_mascot(), size)
 
 
 def save_image(image: Image.Image, path: Path) -> None:
@@ -219,33 +205,40 @@ def export_png_and_webp(base_path: Path, image: Image.Image) -> dict[str, str]:
 
 def process_sources() -> dict[str, dict[str, str]]:
     outputs: dict[str, dict[str, str]] = {}
+    canonical = load_canonical_mascot()
     for source_name, alias in TARGETS.items():
-        source = Image.open(SOURCE_DIR / f"{source_name}.png")
-        keyed = key_green(source)
-        hero = contain_on_canvas(crop_to_content(keyed, 0.04), (1280, 960), padding=0.08)
+        source_path = SOURCE_DIR / f"{source_name}.png"
+        source = canonical if CANONICAL_MASCOT_SOURCE.exists() else key_green(Image.open(source_path))
+        hero = contain_on_canvas(crop_to_content(source.convert("RGBA"), 0.0), (1280, 960), padding=0.08)
         outputs[alias] = export_png_and_webp(HERO_DIR / alias, hero)
     return outputs
 
 
+def load_canonical_mascot() -> Image.Image:
+    source_path = CANONICAL_MASCOT_SOURCE if CANONICAL_MASCOT_SOURCE.exists() else SOURCE_DIR / "generic.png"
+    return crop_to_content(key_green(Image.open(source_path)), 0.02)
+
+
 def write_manifest(hero_outputs: dict[str, dict[str, str]], emblem_outputs: dict[str, str]) -> None:
+    version = f"?v={ASSET_VERSION}"
     content = f"""export const mikeAssetManifest = {{
   emblem: {{
-    png: new URL("./processed/emblem/{emblem_outputs['png']}", import.meta.url).href,
-    webp: new URL("./processed/emblem/{emblem_outputs['webp']}", import.meta.url).href,
+    png: new URL("./processed/emblem/{emblem_outputs['png']}{version}", import.meta.url).href,
+    webp: new URL("./processed/emblem/{emblem_outputs['webp']}{version}", import.meta.url).href,
   }},
   icon: {{
-    app192: "/android-chrome-192x192.png",
-    app512: "/android-chrome-512x512.png",
-    maskable512: "/android-chrome-maskable-512x512.png",
-    favicon16: "/favicon-16x16.png",
-    favicon32: "/favicon-32x32.png",
+    app192: "/android-chrome-192x192.png{version}",
+    app512: "/android-chrome-512x512.png{version}",
+    maskable512: "/android-chrome-maskable-512x512.png{version}",
+    favicon16: "/favicon-16x16.png{version}",
+    favicon32: "/favicon-32x32.png{version}",
   }},
   heroes: {{
 """
     for alias, paths in hero_outputs.items():
         content += f"""    {alias}: {{
-      png: new URL("./processed/hero/{paths['png']}", import.meta.url).href,
-      webp: new URL("./processed/hero/{paths['webp']}", import.meta.url).href,
+      png: new URL("./processed/hero/{paths['png']}{version}", import.meta.url).href,
+      webp: new URL("./processed/hero/{paths['webp']}{version}", import.meta.url).href,
     }},
 """
     content += """  },
@@ -265,8 +258,7 @@ def main() -> None:
     ensure_dirs()
     hero_outputs = process_sources()
 
-    keyed_logo = crop_to_content(remove_corner_star(key_green(Image.open(SOURCE_DIR / "mikelogo.png"))), 0.02)
-    emblem = create_emblem(keyed_logo)
+    emblem = create_emblem(load_canonical_mascot())
     emblem_outputs = export_png_and_webp(EMBLEM_DIR / "mike-emblem", emblem)
 
     app_icon = create_app_icon()

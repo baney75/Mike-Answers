@@ -11,6 +11,7 @@ import type {
   HistoryController,
   OriginalQuestionContext,
   ProviderId,
+  RuntimeAISettings,
 } from "./types";
 import { useDarkMode } from "./hooks/useDarkMode";
 import { useHistory } from "./hooks/useHistory";
@@ -32,7 +33,7 @@ import {
   solveTextQuestionWithProvider,
   transcribeAudioWithProvider,
 } from "./services/ai";
-import { getMikeEmblemAsset } from "./services/assets";
+import { getMikeEmblemAsset, getMikeHeroAsset } from "./services/assets";
 
 import { deriveNewsQuery } from "./services/news";
 import {
@@ -42,7 +43,7 @@ import {
   subscribeNetworkStatus,
   type InstallPromptEvent,
 } from "./services/pwa";
-import { getProviderLabel } from "./services/providers/registry";
+import { getProviderDescriptor, getProviderLabel, getSelectedOpenAICompatiblePreset } from "./services/providers/registry";
 import { SUBJECT_OPTIONS } from "./constants/subjects";
 
 
@@ -176,6 +177,14 @@ function buildFollowUpStarters(solution: string, hideAnswerByDefault: boolean) {
   }
 
   return [...new Set(starters)].slice(0, 4);
+}
+
+function getSelectedProviderCapabilities(settings: RuntimeAISettings) {
+  if (settings.selectedProviderId === "openai_compatible") {
+    return getSelectedOpenAICompatiblePreset(settings.providers.openai_compatible).capabilities;
+  }
+
+  return getProviderDescriptor(settings.selectedProviderId).capabilities;
 }
 
 function buildIdlePrompts(subject: string) {
@@ -502,6 +511,18 @@ export default function App({ externalHistory }: AppProps) {
   // ── Input handlers ──────────────────────────────────────────────────
 
   const handleImageSelected = useCallback((file: File) => {
+    const capabilities = getSelectedProviderCapabilities(settings);
+    const sharedFreeModeTextOnly =
+      settings.selectedProviderId === "openrouter" &&
+      !settings.providers.openrouter.apiKey?.trim() &&
+      Boolean(settings.freeModeEnabled && settings.legalAcceptedAt && isSharedFreeModeAvailable());
+    if (!capabilities.supportsImageInputInBrowser || sharedFreeModeTextOnly) {
+      setErrorMsg(`${getProviderLabel(settings.selectedProviderId)} is set up for text tutoring here. Switch to Gemini, OpenRouter with an image model, or an image-capable catalog preset before adding a screenshot.`);
+      setShowSetup(true);
+      setAppState("ERROR");
+      return;
+    }
+
     if (file.size > MAX_FILE_SIZE_BYTES) {
       setErrorMsg("Image is too large (max 10 MB). Try a cropped screenshot.");
       setAppState("ERROR");
@@ -511,7 +532,7 @@ export default function App({ externalHistory }: AppProps) {
     setTextInput(null);
     setAppState("PREVIEWING");
     setErrorMsg(null);
-  }, []);
+  }, [settings]);
 
   const handleTextPasted = useCallback((text: string) => {
     setTextInput(text);
@@ -1088,7 +1109,7 @@ export default function App({ externalHistory }: AppProps) {
     setSolutionHideAnswerDefault(item.hideAnswerByDefault ?? false);
     setLastMode(item.mode ?? DEFAULT_SOLVE_MODE);
     setSubject(item.subject ?? "Auto-detect");
-    setLastResolvedProviderId(item.provider ?? "gemini");
+    setLastResolvedProviderId(item.provider === "minimax" ? "puter" : item.provider ?? "puter");
     setLastResolvedModel(item.model);
     setLastGeneratedAt(item.generatedAt ?? new Date(item.timestamp).toISOString());
     setAppState("SOLVED");
@@ -1180,6 +1201,7 @@ export default function App({ externalHistory }: AppProps) {
     settings.providers.openrouter.options?.freeOnly
       ? providerCatalog.models.filter((model) => model.free)
       : providerCatalog.models;
+  const heroAsset = getMikeHeroAsset(subject);
   const emblemAsset = getMikeEmblemAsset();
   const idlePrompts = useMemo(() => buildIdlePrompts(subject), [subject]);
   const transferBundle = useMemo(() => buildWorkspaceTransferBundle(settings, history.items), [history.items, settings]);
@@ -1190,6 +1212,21 @@ export default function App({ externalHistory }: AppProps) {
       loadHistoryItem(bundle.history[0]);
     }
   });
+
+  const selectedCapabilities = getSelectedProviderCapabilities(settings);
+  const sharedFreeModeTextOnly =
+    selectedProviderId === "openrouter" &&
+    !selectedProviderKey &&
+    Boolean(settings.freeModeEnabled && settings.legalAcceptedAt && sharedFreeModeAvailable);
+  const providerCanSolveImages = selectedCapabilities.supportsImageInputInBrowser && !sharedFreeModeTextOnly;
+  const providerCanTranscribeAudio = selectedCapabilities.supportsAudioTranscription;
+  const providerInputSummary = providerCanSolveImages
+    ? providerCanTranscribeAudio
+      ? "Screenshot, text, or voice. Method before final answer."
+      : "Screenshot or text. Method before final answer."
+    : "Text first for this provider. Switch providers when you need screenshots or voice.";
+  const imageUnavailableMessage = `${providerName} is text-only in this browser setup. Switch to Gemini, OpenRouter with an image model, or an image-capable catalog preset for screenshots.`;
+
   const transferControls = (
     <div className="rounded-[1.7rem] border border-(--aqs-ink)/10 bg-white/82 p-4 dark:border-white/10 dark:bg-slate-950/58">
       <div className="text-sm font-semibold text-(--aqs-ink) dark:text-white">Encrypted device transfer</div>
@@ -1244,6 +1281,7 @@ export default function App({ externalHistory }: AppProps) {
           providerStatus={providerStatus}
           freeModeEnabled={Boolean(settings.freeModeEnabled && selectedProviderId === "openrouter")}
           historyCount={history.items.length}
+          hideDonateButton={Boolean(settings.hideDonateButton)}
         />
 
         {showSetup && appState !== "NEWS" && appState !== "WOTD" ? (
@@ -1331,10 +1369,14 @@ export default function App({ externalHistory }: AppProps) {
               <HomeWorkspace
                 subject={subject}
                 onSubjectChange={setSubject}
-                heroSrc={emblemAsset.webp}
+                heroSrc={heroAsset.webp}
                 providerName={providerName}
                 providerStatus={providerStatus}
                 providerReady={runtimeProviderReady}
+                hideMikeNotes={Boolean(settings.hideMikeNotes)}
+                inputSummary={providerInputSummary}
+                canAcceptImages={providerCanSolveImages}
+                imageUnavailableMessage={imageUnavailableMessage}
                 freeModeEnabled={Boolean(settings.freeModeEnabled && selectedProviderId === "openrouter")}
                 legalAccepted={Boolean(settings.legalAcceptedAt)}
                 starterPrompts={idlePrompts}
@@ -1350,8 +1392,8 @@ export default function App({ externalHistory }: AppProps) {
                   setErrorMsg(msg);
                   setAppState("ERROR");
                 }}
-                onVoiceInput={handleTextPasted}
-                onAudioTranscribe={async (audioBlob) => await transcribeAudioWithProvider(audioBlob, settings)}
+                onVoiceInput={providerCanTranscribeAudio ? handleTextPasted : undefined}
+                onAudioTranscribe={providerCanTranscribeAudio ? async (audioBlob) => await transcribeAudioWithProvider(audioBlob, settings) : undefined}
               />
             )}
 

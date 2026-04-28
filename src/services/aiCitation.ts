@@ -1,7 +1,7 @@
-import type { ProviderId } from "../types";
+import type { LegacyProviderId } from "../types";
 
 export interface AiCitationInput {
-  providerId: ProviderId;
+  providerId: LegacyProviderId;
   providerLabel: string;
   model?: string;
   prompt?: string;
@@ -25,6 +25,9 @@ function getProviderCitationMeta(input: AiCitationInput) {
   }
   if (input.providerId === "openrouter") {
     return { company: "OpenRouter", tool: "OpenRouter", url: "https://openrouter.ai/" };
+  }
+  if (input.providerId === "puter") {
+    return { company: "Puter", tool: "Puter", url: "https://puter.com/" };
   }
   if (input.providerId === "minimax") {
     return { company: "MiniMax", tool: "MiniMax", url: "https://www.minimax.io/" };

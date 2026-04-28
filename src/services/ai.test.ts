@@ -24,12 +24,21 @@ describe("provider readiness", () => {
     expect(getProviderReadinessLabel(settings)).toBe("Add Gemini key");
   });
 
-  test("treats MiniMax as ready when its key is present because the preset base URL already exists", () => {
-    const settings = createSettings("minimax");
-    settings.providers.minimax.apiKey = "minimax-test-key";
+  test("treats Puter as ready without a Mike Answers API key", () => {
+    const settings = createSettings("puter");
 
     expect(isRuntimeProviderReady(settings)).toBe(true);
-    expect(getProviderReadinessLabel(settings)).toBe("MiniMax ready");
+    expect(getProviderReadinessLabel(settings)).toBe("Puter ready");
+  });
+
+  test("allows no-key Ollama when its local base URL is configured", () => {
+    const settings = createSettings("openai_compatible");
+    settings.providers.openai_compatible.options = { presetId: "ollama" };
+    settings.providers.openai_compatible.baseUrl = "http://localhost:11434/v1";
+    settings.providers.openai_compatible.models = { fastModel: "llama3.2", deepModel: "llama3.1" };
+
+    expect(isRuntimeProviderReady(settings)).toBe(true);
+    expect(getProviderReadinessLabel(settings)).toBe("Provider catalog ready");
   });
 
   test("requires a base URL for custom OpenAI-compatible providers", () => {

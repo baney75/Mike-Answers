@@ -13,19 +13,19 @@ import {
   solveTextQuestion as solveGeminiTextQuestion,
   transcribeAudio as transcribeWithGemini,
 } from "./gemini";
-import { getMiniMaxBrowserImageSupportMessage } from "./minimax";
 import {
   chatWithOpenAICompatible,
   solveImageQuestionWithOpenAICompatible,
   solveTextQuestionWithOpenAICompatible,
 } from "./openaiCompatible";
+import { chatWithPuterTutor, solveTextQuestionWithPuter } from "./puter";
 import {
   chooseRecommendedOpenRouterModel,
   fetchFreeOpenRouterModels,
   fetchOpenRouterModels,
   isFreeOpenRouterModel,
 } from "./openrouter";
-import { getProviderDescriptor, getProviderLabel } from "./providers/registry";
+import { getProviderDescriptor, getProviderLabel, getSelectedOpenAICompatiblePreset } from "./providers/registry";
 import { normalizeProviderBaseUrl } from "../utils/urlSafety";
 
 const OPENROUTER_FREE_ROUTER_MODEL = "openrouter/free";
@@ -69,6 +69,14 @@ function getProviderApiKey(settings: RuntimeAISettings, providerId = getSelected
   return config.apiKey?.trim() ?? "";
 }
 
+function providerRequiresApiKey(settings: RuntimeAISettings, providerId = getSelectedProviderId(settings)) {
+  if (providerId === "openai_compatible") {
+    const preset = getSelectedOpenAICompatiblePreset(settings.providers.openai_compatible);
+    return preset.capabilities.requiresApiKey;
+  }
+  return getProviderDescriptor(providerId).capabilities.requiresApiKey;
+}
+
 function enforceFreeModeRateLimit(settings: RuntimeAISettings) {
   const providerId = getSelectedProviderId(settings);
   if (providerId !== "openrouter") {
@@ -104,7 +112,7 @@ function isSharedFreeMode(settings: RuntimeAISettings) {
 
 function requireProviderApiKey(settings: RuntimeAISettings, providerId = getSelectedProviderId(settings)) {
   const apiKey = getProviderApiKey(settings, providerId);
-  if (!apiKey) {
+  if (!apiKey && providerRequiresApiKey(settings, providerId)) {
     throw new Error(`Add your ${getProviderLabel(providerId)} API key in Setup before using it.`);
   }
 
@@ -114,7 +122,18 @@ function requireProviderApiKey(settings: RuntimeAISettings, providerId = getSele
 function getProviderBaseUrl(settings: RuntimeAISettings, providerId = getSelectedProviderId(settings)) {
   const descriptor = getProviderDescriptor(providerId);
   const configured = settings.providers[providerId].baseUrl?.trim();
+  if (providerId === "openai_compatible") {
+    const preset = getSelectedOpenAICompatiblePreset(settings.providers.openai_compatible);
+    return configured || preset.defaultBaseUrl || descriptor.defaultBaseUrl || "";
+  }
   return configured || descriptor.defaultBaseUrl || "";
+}
+
+function getEffectiveOpenAICompatibleLabel(settings: RuntimeAISettings, providerId: ProviderId) {
+  if (providerId === "openai_compatible") {
+    return getSelectedOpenAICompatiblePreset(settings.providers.openai_compatible).label;
+  }
+  return getProviderLabel(providerId);
 }
 
 function requireOpenAICompatibleBaseUrl(settings: RuntimeAISettings, providerId: ProviderId) {
@@ -222,6 +241,23 @@ export async function solveTextQuestionWithProvider(
     };
   }
 
+  if (providerId === "puter") {
+    const model = getConfiguredOpenAIModel(settings, providerId, mode);
+    return {
+      text: await solveTextQuestionWithPuter({
+        text,
+        model,
+        mode,
+        subject,
+        detailed,
+        preferredLocation: settings.preferredLocation,
+        promptContext,
+      }),
+      provider: providerId,
+      model,
+    };
+  }
+
   if (providerId === "openrouter") {
     const apiKey = requireProviderApiKey(settings, providerId);
     const models = await getCandidateOpenRouterModels(settings);
@@ -249,8 +285,9 @@ export async function solveTextQuestionWithProvider(
   const apiKey = requireProviderApiKey(settings, providerId);
   const baseUrl = requireOpenAICompatibleBaseUrl(settings, providerId);
   const model = getConfiguredOpenAIModel(settings, providerId, mode);
+  const providerLabel = getEffectiveOpenAICompatibleLabel(settings, providerId);
   if (!model) {
-    throw new Error(`Choose a ${mode} model for ${getProviderLabel(providerId)} in Setup first.`);
+    throw new Error(`Choose a ${mode} model for ${providerLabel} in Setup first.`);
   }
 
   return {
@@ -259,6 +296,7 @@ export async function solveTextQuestionWithProvider(
       apiKey,
       baseUrl,
       model,
+      providerLabel,
       text,
       mode,
       subject,
@@ -308,6 +346,10 @@ export async function solveImageQuestionWithProvider(
     };
   }
 
+  if (providerId === "puter") {
+    throw new Error("Puter setup is text and follow-up tutoring first. Use Gemini, OpenRouter, or an image-capable BYOK preset for screenshot solving.");
+  }
+
   if (providerId === "openrouter") {
     const apiKey = requireProviderApiKey(settings, providerId);
     const models = await getCandidateOpenRouterModels(settings);
@@ -337,8 +379,35 @@ export async function solveImageQuestionWithProvider(
     };
   }
 
-  if (providerId === "minimax") {
-    throw new Error(getMiniMaxBrowserImageSupportMessage());
+  if (providerId === "openai_compatible") {
+    const preset = getSelectedOpenAICompatiblePreset(settings.providers.openai_compatible);
+    if (!preset.capabilities.supportsImageInputInBrowser) {
+      throw new Error(`${preset.label} is configured for text tutoring here. Choose an image-capable preset, OpenRouter image model, or Gemini for direct screenshot solving.`);
+    }
+    const apiKey = requireProviderApiKey(settings, providerId);
+    const baseUrl = requireOpenAICompatibleBaseUrl(settings, providerId);
+    const model = getConfiguredOpenAIModel(settings, providerId, mode);
+    if (!model) {
+      throw new Error(`Choose a ${mode} model for ${preset.label} in Setup first.`);
+    }
+    return {
+      text: await solveImageQuestionWithOpenAICompatible({
+        providerId,
+        apiKey,
+        baseUrl,
+        model,
+        providerLabel: preset.label,
+        base64Image,
+        mode,
+        subject,
+        detailed,
+        preferredLocation: settings.preferredLocation,
+        localDateTime: promptContext?.localDateTime,
+        timeZone: promptContext?.timeZone,
+      }),
+      provider: providerId,
+      model,
+    };
   }
 
   throw new Error("Custom OpenAI-compatible browser mode is configured for text and chat. Use Gemini or OpenRouter for direct browser image solves.");
@@ -365,6 +434,19 @@ export async function chatWithTutorWithProvider(
     });
   }
 
+  if (providerId === "puter") {
+    const model = getConfiguredOpenAIModel(settings, providerId, "deep");
+    return chatWithPuterTutor({
+      history,
+      message,
+      followUpContext,
+      model,
+      preferredLocation: settings.preferredLocation,
+      subject,
+      promptContext,
+    });
+  }
+
   if (providerId === "openrouter") {
     const apiKey = requireProviderApiKey(settings, providerId);
     const models = await getCandidateOpenRouterModels(settings);
@@ -387,8 +469,9 @@ export async function chatWithTutorWithProvider(
   const apiKey = requireProviderApiKey(settings, providerId);
   const baseUrl = requireOpenAICompatibleBaseUrl(settings, providerId);
   const model = getConfiguredOpenAIModel(settings, providerId, "deep");
+  const providerLabel = getEffectiveOpenAICompatibleLabel(settings, providerId);
   if (!model) {
-    throw new Error(`Choose a deep model for ${getProviderLabel(providerId)} in Setup first.`);
+    throw new Error(`Choose a deep model for ${providerLabel} in Setup first.`);
   }
 
   return chatWithOpenAICompatible({
@@ -396,6 +479,7 @@ export async function chatWithTutorWithProvider(
     apiKey,
     baseUrl,
     model,
+    providerLabel,
     history,
     message,
     followUpContext,
@@ -434,7 +518,7 @@ export function isRuntimeProviderReady(settings: RuntimeAISettings) {
     return true;
   }
 
-  if (!hasApiKey) {
+  if (!hasApiKey && providerRequiresApiKey(settings, providerId)) {
     return false;
   }
 
@@ -454,7 +538,7 @@ export function getProviderReadinessLabel(settings: RuntimeAISettings) {
   const descriptor = getProviderDescriptor(providerId);
   const hasApiKey = Boolean(getProviderApiKey(settings, providerId));
 
-  if (!hasApiKey) {
+  if (!hasApiKey && providerRequiresApiKey(settings, providerId)) {
     if (
       providerId === "openrouter" &&
       settings.freeModeEnabled &&

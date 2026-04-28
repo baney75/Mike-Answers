@@ -11,7 +11,11 @@ import { CapabilityPanel } from "./setup/CapabilityPanel";
 import { CredentialSection } from "./setup/CredentialSection";
 import { ModelProfileEditor } from "./setup/ModelProfileEditor";
 import { ProviderPicker } from "./setup/ProviderPicker";
-import { getProviderDescriptor, providerOrder } from "../services/providers/registry";
+import {
+  getProviderDescriptor,
+  getSelectedOpenAICompatiblePreset,
+  providerOrder,
+} from "../services/providers/registry";
 
 interface SetupGuideProps {
   settings: RuntimeAISettings;
@@ -84,7 +88,9 @@ export function SetupGuide({
   const selectedProviderId = settings.selectedProviderId;
   const selectedProvider = getProviderDescriptor(selectedProviderId);
   const selectedConfig = settings.providers[selectedProviderId];
-  const providerKeyPresent = Boolean(selectedConfig.apiKey?.trim());
+  const selectedPreset = selectedProviderId === "openai_compatible" ? getSelectedOpenAICompatiblePreset(selectedConfig) : null;
+  const selectedRequiresKey = selectedPreset?.capabilities.requiresApiKey ?? selectedProvider.capabilities.requiresApiKey;
+  const providerKeyPresent = !selectedRequiresKey || Boolean(selectedConfig.apiKey?.trim());
   const [step, setStep] = useState<Step>(settings.onboardingCompleted && providerKeyPresent ? 3 : 1);
   const usingOpenRouterFreeMode =
     selectedProviderId === "openrouter" &&
@@ -92,7 +98,7 @@ export function SetupGuide({
     Boolean(settings.legalAcceptedAt) &&
     sharedFreeModeAvailable;
   const openRouterFreeModeUnavailable = selectedProviderId === "openrouter" && !sharedFreeModeAvailable;
-  const canFinish = providerKeyPresent || usingOpenRouterFreeMode;
+  const canFinish = providerKeyPresent || usingOpenRouterFreeMode || selectedProviderId === "puter";
   const providers = useMemo(
     () => providerOrder.map((providerId) => getProviderDescriptor(providerId)),
     [],
@@ -140,7 +146,7 @@ export function SetupGuide({
           <div className="max-w-3xl">
             <div className="flex items-center gap-4">
               <div className="neo-border-thin h-14 w-14 overflow-hidden rounded-[1.35rem] bg-white dark:bg-slate-900">
-                <img src={emblemSrc} alt="Mike Answers mark" className="h-full w-full object-cover" />
+                <img src={emblemSrc} alt="Mike Answers mascot" className="h-full w-full object-cover" />
               </div>
               <div>
                 <div className="text-[11px] font-bold uppercase tracking-[0.24em] text-(--aqs-accent-strong) dark:text-(--aqs-accent-dark)">
@@ -171,31 +177,29 @@ export function SetupGuide({
               <div className="space-y-2">
                 <h3 className="text-xl font-bold text-(--aqs-ink) dark:text-white">Pick the runtime path</h3>
                 <p className="text-sm leading-7 text-slate-600 dark:text-slate-300">
-                  Most students should use Gemini. OpenRouter is useful when you have a key, or when this deployment has shared free mode enabled.
+                  Most students should start with Puter for no-key setup, Gemini for strongest browser image support, or the provider catalog when they already have a key.
                 </p>
               </div>
               <div className="rounded-[1.35rem] border border-(--aqs-accent)/16 bg-(--aqs-accent-soft)/75 px-4 py-4 text-sm leading-6 text-slate-700 dark:border-(--aqs-accent-dark)/20 dark:bg-[rgba(122,31,52,0.18)] dark:text-slate-200">
-                <strong className="text-(--aqs-ink) dark:text-white">Recommended for students:</strong> start with Gemini for the cleanest free setup and native screenshot support. Use OpenRouter when you have an OpenRouter key or a working shared free route.
+                <strong className="text-(--aqs-ink) dark:text-white">Recommended for students:</strong> start with Puter when you want no key pasted into Mike Answers. Use Gemini for native screenshot solving, or the catalog when you already have a provider key.
               </div>
               <div className="grid gap-3 md:grid-cols-2">
                 <button
                   type="button"
                   onClick={() => {
-                    onUpdateSettings({ selectedProviderId: "openrouter" });
+                    onUpdateSettings({ selectedProviderId: "puter" });
                     goToStep(2);
                   }}
                   className="rounded-[1.2rem] border border-(--aqs-ink)/10 bg-white px-4 py-4 text-left transition hover:border-(--aqs-accent)/30 hover:bg-(--aqs-paper-strong) dark:border-white/10 dark:bg-slate-950 dark:hover:bg-slate-900"
                 >
                   <div className="text-[11px] font-black uppercase tracking-[0.2em] text-(--aqs-accent-strong) dark:text-(--aqs-accent-dark)">
-                    {sharedFreeModeAvailable ? "Quick free start" : "Backup route"}
+                    Easiest start
                   </div>
                   <p className="mt-1 text-sm font-semibold text-(--aqs-ink) dark:text-white">
-                    {sharedFreeModeAvailable ? "OpenRouter (Free only)" : "OpenRouter"}
+                    Puter no-key route
                   </p>
                   <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                    {sharedFreeModeAvailable
-                      ? "Fastest no-key trial path. Great for testing, but quality and limits vary by free model availability."
-                      : "Use your own OpenRouter key for broad model choice. Shared free mode is not enabled here."}
+                    No Mike Answers API key. Students sign in with Puter, and Puter handles auth, billing, and model availability.
                   </p>
                 </button>
                 <button
@@ -217,13 +221,23 @@ export function SetupGuide({
               </div>
               <div className="space-y-3">
                 <div className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-                  All providers
+                  Search providers
                 </div>
               <ProviderPicker
                 providers={providers}
                 selectedProviderId={selectedProviderId}
+                selectedPresetId={settings.providers.openai_compatible.options?.presetId}
                 onSelect={(providerId) => {
                   onUpdateSettings({ selectedProviderId: providerId });
+                  goToStep(2);
+                }}
+                onSelectPreset={(preset) => {
+                  onUpdateSettings({ selectedProviderId: "openai_compatible" });
+                  onUpdateProviderSettings("openai_compatible", {
+                    baseUrl: preset.defaultBaseUrl,
+                    models: { ...preset.defaultModels },
+                    options: { ...settings.providers.openai_compatible.options, presetId: preset.id },
+                  });
                   goToStep(2);
                 }}
               />
@@ -236,7 +250,7 @@ export function SetupGuide({
               <div className="space-y-2">
                 <h3 className="text-xl font-bold text-(--aqs-ink) dark:text-white">Set credentials</h3>
                 <p className="text-sm leading-7 text-slate-600 dark:text-slate-300">
-                  Paste a key for best quality, or use OpenRouter free mode when this deployment supports it.
+                  Paste a key when the selected provider needs one, or use a no-key route like Puter or local Ollama.
                 </p>
               </div>
               <CredentialSection
@@ -403,6 +417,49 @@ export function SetupGuide({
 
               <CapabilityPanel provider={selectedProvider} config={selectedConfig} />
 
+              <div className="space-y-4 rounded-3xl border border-(--aqs-ink)/10 bg-white/84 p-5 dark:border-white/10 dark:bg-slate-950/55">
+                <div>
+                  <h4 className="text-sm font-black uppercase tracking-[0.2em] text-(--aqs-accent-strong) dark:text-(--aqs-accent-dark)">
+                    Home screen
+                  </h4>
+                  <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                    Keep the tutoring surface focused. Hide these when you want a cleaner class or presentation view.
+                  </p>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    aria-pressed={!settings.hideMikeNotes}
+                    onClick={() => onUpdateSettings({ hideMikeNotes: !settings.hideMikeNotes })}
+                    className={`rounded-2xl border px-4 py-3 text-left transition ${
+                      settings.hideMikeNotes
+                        ? "border-(--aqs-ink)/10 bg-white text-slate-600 dark:border-white/10 dark:bg-slate-950 dark:text-slate-300"
+                        : "border-(--aqs-accent)/35 bg-(--aqs-accent-soft) text-(--aqs-ink) dark:border-(--aqs-accent-dark)/30 dark:bg-[rgba(122,31,52,0.2)] dark:text-white"
+                    }`}
+                  >
+                    <div className="text-sm font-black">Mike's Notes</div>
+                    <p className="mt-1 text-xs leading-5 opacity-75">
+                      {settings.hideMikeNotes ? "Hidden on the home screen." : "Shown above the question box."}
+                    </p>
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={!settings.hideDonateButton}
+                    onClick={() => onUpdateSettings({ hideDonateButton: !settings.hideDonateButton })}
+                    className={`rounded-2xl border px-4 py-3 text-left transition ${
+                      settings.hideDonateButton
+                        ? "border-(--aqs-ink)/10 bg-white text-slate-600 dark:border-white/10 dark:bg-slate-950 dark:text-slate-300"
+                        : "border-(--aqs-accent)/35 bg-(--aqs-accent-soft) text-(--aqs-ink) dark:border-(--aqs-accent-dark)/30 dark:bg-[rgba(122,31,52,0.2)] dark:text-white"
+                    }`}
+                  >
+                    <div className="text-sm font-black">Support button</div>
+                    <p className="mt-1 text-xs leading-5 opacity-75">
+                      {settings.hideDonateButton ? "Hidden from the header." : "Shown in the header."}
+                    </p>
+                  </button>
+                </div>
+              </div>
+
               <div className="hidden flex-wrap gap-3 lg:flex">
                 <button
                   type="button"
@@ -430,14 +487,16 @@ export function SetupGuide({
         <aside className="space-y-4">
           <div className="rounded-[1.7rem] border border-(--aqs-ink)/10 bg-white/82 p-4 dark:border-white/10 dark:bg-slate-950/58">
             <div className="text-sm font-semibold text-(--aqs-ink) dark:text-white">Selected provider</div>
-            <div className="mt-2 text-lg font-black text-(--aqs-accent)">{selectedProvider.label}</div>
+                <div className="mt-2 text-lg font-black text-(--aqs-accent)">
+                  {selectedPreset ? selectedPreset.label : selectedProvider.label}
+                </div>
             <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-              {selectedProvider.shortDescription}
+              {selectedPreset ? selectedPreset.shortDescription : selectedProvider.shortDescription}
             </p>
             <div className="mt-3 rounded-2xl border border-(--aqs-ink)/10 bg-(--aqs-paper-strong) px-3 py-3 text-xs leading-5 text-slate-600 dark:border-white/10 dark:bg-slate-900/70 dark:text-slate-300">
-              <div><strong>Privacy:</strong> {selectedProvider.policy.privacySummary}</div>
-              <div><strong>Retention:</strong> {selectedProvider.policy.retentionSummary}</div>
-              <div><strong>Training:</strong> {selectedProvider.policy.trainingSummary}</div>
+              <div><strong>Privacy:</strong> {(selectedPreset ?? selectedProvider).policy.privacySummary}</div>
+              <div><strong>Retention:</strong> {(selectedPreset ?? selectedProvider).policy.retentionSummary}</div>
+              <div><strong>Training:</strong> {(selectedPreset ?? selectedProvider).policy.trainingSummary}</div>
             </div>
           </div>
 
@@ -470,7 +529,9 @@ export function SetupGuide({
                 ? "Add your own OpenRouter key to continue on this deployment."
                 : selectedProviderId === "openrouter"
                 ? "Add a key, or enable free mode and accept the notice to continue."
-                : `Add a ${selectedProvider.label} key to continue.`}
+                : selectedRequiresKey
+                  ? `Add a ${(selectedPreset ?? selectedProvider).label} key to continue.`
+                  : `${(selectedPreset ?? selectedProvider).label} does not require a key here.`}
           </div>
           <div className="flex shrink-0 gap-2">
             {secondaryAction ? (

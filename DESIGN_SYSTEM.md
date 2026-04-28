@@ -29,7 +29,7 @@ Protect working memory aggressively:
 - Pair words with diagrams (dual coding)
 
 ### 5. Honest Capabilities
-Provider capabilities are stated clearly. No implied features that don't exist (especially for MiniMax browser image/audio).
+Provider capabilities are stated clearly. No implied features that do not exist, especially for no-key, local, gateway, image, and audio routes.
 
 ---
 

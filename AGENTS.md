@@ -1,6 +1,6 @@
 # AGENTS.md - AnyQuestionSolver
 
-Last updated: 2026-04-03
+Last updated: 2026-04-27
 
 ## Scope
 
@@ -13,8 +13,8 @@ Last updated: 2026-04-03
 - Runtime: client-side React 19 + TypeScript + Vite SPA
 - Package manager and scripts: Bun
 - Styling: Tailwind CSS 4 + project CSS variables in `src/index.css`
-- AI: provider-registry architecture with Gemini, OpenRouter, MiniMax, and custom OpenAI-compatible support
-- Primary runtime is still browser-first, but signed-in Convex flows can provide sync, encrypted provider-key storage, and the MiniMax secure advanced image bridge when configured
+- AI: provider-registry architecture with Puter, Gemini, OpenRouter, searchable OpenAI-compatible presets, Ollama/local routes, and custom OpenAI-compatible support
+- Primary runtime is browser-first. Puter is the no-key user-pays route; BYOK keys remain client-side by design.
 
 ## Research Order For This Repo
 
@@ -45,7 +45,7 @@ Last updated: 2026-04-03
 ## Core Product Rules
 
 - Keep the app browser-first. API keys are client-exposed by design for guest/local usage.
-- The only intentional secure backend inference exception is MiniMax advanced image understanding; do not imply generic MCP or desktop-local tool support in the browser.
+- Do not imply generic MCP, desktop-local tool support, or hidden server-side provider magic in the browser.
 - Preserve the main state flow in `src/App.tsx`: `IDLE` -> `PREVIEWING` -> `LOADING` -> `SOLVED` or `ERROR`, plus the `NEWS` and `WOTD` branches.
 - `fast` and `deep` are the only solve modes the UI should expose. Grounding/research routing is automatic.
 - Follow-up tutoring must stay context-aware: original question, original image, prior answer, and recent follow-up turns all matter.
@@ -60,7 +60,7 @@ Last updated: 2026-04-03
 
 - Do not reintroduce global body scrolling.
 - Do not let long content push the follow-up composer off-screen.
-- Do not make provider capabilities sound broader than they are, especially for MiniMax browser image/audio support.
+- Do not make provider capabilities sound broader than they are, especially for Puter, local Ollama/LM Studio, gateway, image, or audio support.
 - Do not add generic card-grid SaaS styling that fights the existing Mike Answers visual language.
 - Do not duplicate state that already exists elsewhere in the app flow; prefer deriving data over syncing parallel flags.
 - Do not add a new library when the repo already has a workable pattern with the current stack.
@@ -90,7 +90,7 @@ Last updated: 2026-04-03
 - `src/hooks/useAISettings.ts`
   Normalized provider settings, local secret storage, and remote preference reconciliation.
 - `convex/ai.ts`
-  Secure provider routing and MiniMax advanced image bridge integration.
+  Secure provider routing for signed-in flows when configured.
 - `src/components/ChatPanel.tsx`
   Follow-up usability, keyboard interactions, local `Escape` behavior, empty/error states.
 - `src/components/RichResponse.tsx`
