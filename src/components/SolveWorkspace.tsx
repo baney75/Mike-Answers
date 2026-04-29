@@ -8,7 +8,7 @@ interface SolveWorkspaceProps {
   hideAnswerByDefault: boolean;
   chatHistory: ChatMessage[];
   isChatLoading: boolean;
-  onSendChat: (text: string, options?: { retryLast?: boolean }) => Promise<boolean>;
+  onSendChat: (text: string, imageBase64?: string, options?: { retryLast?: boolean }) => Promise<boolean>;
   onRetryChat: () => Promise<boolean>;
   lastFollowUpQuestion: string | null;
   lastMode: Exclude<SolveMode, "research">;

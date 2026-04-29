@@ -139,6 +139,7 @@ export function buildOpenAICompatibleTutorConversation(
   history: { role: string; text: string }[],
   message: string,
   followUpContext?: FollowUpContextPayload,
+  followUpImageBase64?: string,
 ) {
   const messages: OpenAICompatibleMessage[] = [];
 
@@ -169,15 +170,41 @@ export function buildOpenAICompatibleTutorConversation(
   }
 
   for (const item of history) {
+    const content: OpenAICompatibleMessage["content"] = [];
+    if ("imageBase64" in item && (item as { imageBase64?: string }).imageBase64) {
+      content.push({
+        type: "image_url",
+        image_url: {
+          url: `data:image/jpeg;base64,${(item as { imageBase64: string }).imageBase64}`,
+        },
+      });
+    }
+    content.push({ type: "text", text: item.text });
     messages.push({
       role: item.role === "user" ? "user" : "assistant",
-      content: item.text,
+      content,
     });
+  }
+
+  const currentContent: OpenAICompatibleMessage["content"] = [];
+  if (followUpImageBase64) {
+    currentContent.push({
+      type: "image_url",
+      image_url: {
+        url: `data:image/jpeg;base64,${followUpImageBase64}`,
+      },
+    });
+  }
+  if (message) {
+    currentContent.push({ type: "text", text: message });
+  }
+  if (currentContent.length === 0) {
+    currentContent.push({ type: "text", text: "(user attached an image)" });
   }
 
   messages.push({
     role: "user",
-    content: message,
+    content: currentContent,
   });
 
   return messages;
@@ -326,6 +353,7 @@ export async function chatWithOpenAICompatible(options: {
   history: { role: string; text: string }[];
   message: string;
   followUpContext?: FollowUpContextPayload;
+  followUpImageBase64?: string;
   preferredLocation?: string;
   subject?: string;
   localDateTime?: string;
@@ -340,15 +368,14 @@ export async function chatWithOpenAICompatible(options: {
     history,
     message,
     followUpContext,
+    followUpImageBase64,
     preferredLocation,
     subject,
     localDateTime,
     timeZone,
   } = options;
 
-  if (!message.trim()) {
-    throw new Error("Message must not be empty.");
-  }
+  const hasImage = Boolean(followUpContext?.originalImageBase64) || Boolean(followUpImageBase64);
 
   const messages: OpenAICompatibleMessage[] = [
     {
@@ -360,13 +387,13 @@ export async function chatWithOpenAICompatible(options: {
         localDateTime,
         timeZone,
         routeLabel: "browser-local",
-        hasImageInput: Boolean(followUpContext?.originalImageBase64),
+        hasImageInput: hasImage,
         subject,
       }),
     },
   ];
 
-  messages.push(...buildOpenAICompatibleTutorConversation(history, message, followUpContext));
+  messages.push(...buildOpenAICompatibleTutorConversation(history, message, followUpContext, followUpImageBase64));
 
   return postChatCompletion(
     { providerId, apiKey, baseUrl, model, providerLabel },

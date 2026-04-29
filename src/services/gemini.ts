@@ -802,6 +802,7 @@ export function buildGeminiTutorContents(
   history: { role: string; text: string }[],
   message: string,
   followUpContext?: FollowUpContextPayload,
+  followUpImageBase64?: string,
 ) {
   const contents: Array<{
     role: "user" | "model";
@@ -835,13 +836,33 @@ export function buildGeminiTutorContents(
   }
 
   for (const item of history) {
+    const parts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }> = [];
+    if ("imageBase64" in item && (item as { imageBase64?: string }).imageBase64) {
+      parts.push({
+        inlineData: { mimeType: "image/jpeg", data: (item as { imageBase64: string }).imageBase64 },
+      });
+    }
+    parts.push({ text: item.text });
     contents.push({
       role: item.role === "user" ? "user" : "model",
-      parts: [{ text: item.text }],
+      parts,
     });
   }
 
-  contents.push({ role: "user", parts: [{ text: message }] });
+  const currentUserParts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }> = [];
+  if (followUpImageBase64) {
+    currentUserParts.push({
+      inlineData: { mimeType: "image/jpeg", data: followUpImageBase64 },
+    });
+  }
+  if (message) {
+    currentUserParts.push({ text: message });
+  }
+  if (currentUserParts.length === 0) {
+    currentUserParts.push({ text: "(user attached an image)" });
+  }
+
+  contents.push({ role: "user", parts: currentUserParts });
   return contents;
 }
 
@@ -967,11 +988,9 @@ export async function chatWithTutor(
   message: string,
   followUpContext?: FollowUpContextPayload,
   apiKeyOverride?: string,
-  options: Partial<BuildSystemInstructionOptions> = {},
+  options: Partial<BuildSystemInstructionOptions> & { followUpImageBase64?: string } = {},
 ): Promise<string> {
-  if (!message.trim()) throw new Error("Message must not be empty.");
-
-  const contents = buildGeminiTutorContents(history, message, followUpContext);
+  const contents = buildGeminiTutorContents(history, message, followUpContext, options.followUpImageBase64);
 
   for (let i = 0; i < contents.length; i++) {
     const expected = i % 2 === 0 ? "user" : "model";
@@ -993,7 +1012,7 @@ export async function chatWithTutor(
         localDateTime: options.localDateTime,
         timeZone: options.timeZone,
         routeLabel: options.routeLabel ?? "browser-local",
-        hasImageInput: Boolean(followUpContext?.originalImageBase64),
+        hasImageInput: Boolean(followUpContext?.originalImageBase64) || Boolean(options.followUpImageBase64),
         subject: options.subject,
       }),
       ...(plan.useGrounding ? { tools: [{ googleSearch: {} }] } : {}),

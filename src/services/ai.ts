@@ -393,14 +393,16 @@ export async function solveImageQuestionWithProvider(
   throw new Error("Custom OpenAI-compatible browser mode is configured for text and chat. Use Gemini or OpenRouter for direct browser image solves.");
 }
 
-export async function chatWithTutorWithProvider(
-  history: { role: string; text: string }[],
-  message: string,
-  followUpContext: FollowUpContextPayload | undefined,
-  settings: RuntimeAISettings,
-  subject?: string,
-  promptContext?: PromptRuntimeContext,
-) {
+export async function chatWithTutorWithProvider(options: {
+  history: { role: string; text: string }[];
+  message: string;
+  followUpContext: FollowUpContextPayload | undefined;
+  settings: RuntimeAISettings;
+  subject?: string;
+  promptContext?: PromptRuntimeContext;
+  followUpImageBase64?: string;
+}) {
+  const { history, message, followUpContext, settings, subject, promptContext, followUpImageBase64 } = options;
   const providerId = getSelectedProviderId(settings);
   enforceFreeModeRateLimit(settings);
 
@@ -411,6 +413,7 @@ export async function chatWithTutorWithProvider(
       subject,
       localDateTime: promptContext?.localDateTime,
       timeZone: promptContext?.timeZone,
+      followUpImageBase64,
     });
   }
 
@@ -426,6 +429,7 @@ export async function chatWithTutorWithProvider(
       history,
       message,
       followUpContext,
+      followUpImageBase64,
       preferredLocation: settings.preferredLocation,
       subject,
       localDateTime: promptContext?.localDateTime,
@@ -450,6 +454,7 @@ export async function chatWithTutorWithProvider(
     history,
     message,
     followUpContext,
+    followUpImageBase64,
     preferredLocation: settings.preferredLocation,
     subject,
     localDateTime: promptContext?.localDateTime,

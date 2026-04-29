@@ -1,13 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { PencilLine, RefreshCw, Send } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ImagePlus, PencilLine, RefreshCw, Send, X } from "lucide-react";
 
 import type { ChatMessage } from "../types";
 import { RichResponse } from "./RichResponse";
+import { resizeImage } from "../utils/image";
 
 interface FollowUpPanelProps {
   messages: ChatMessage[];
   isLoading: boolean;
-  onSend: (text: string) => Promise<boolean>;
+  onSend: (text: string, imageBase64?: string) => Promise<boolean>;
   onRetryLast: () => Promise<boolean>;
   lastUserMessage: string | null;
   contextText?: string;
@@ -134,9 +135,31 @@ export function FollowUpTranscript({ messages, isLoading }: FollowUpTranscriptPr
                     {message.role === "user" ? "You" : isTutorFailureMessage(message.text) ? "System" : "Tutor"}
                   </p>
                   {message.role === "user" ? (
-                    <p className="wrap-break-word whitespace-pre-wrap text-[14px] font-medium leading-relaxed md:text-[15px]">
-                      {message.text}
-                    </p>
+                    <div className="space-y-2">
+                      <p className="wrap-break-word whitespace-pre-wrap text-[14px] font-medium leading-relaxed md:text-[15px]">
+                        {message.text}
+                      </p>
+                      {message.imageBase64 ? (
+                        <div className="max-w-[260px] overflow-hidden rounded-xl border border-(--aqs-ink)/10 bg-white/60 dark:border-white/10 dark:bg-slate-950/60">
+                          <img
+                            src={`data:image/jpeg;base64,${message.imageBase64}`}
+                            alt="Attached image"
+                            className="h-auto w-full cursor-pointer object-contain transition hover:scale-[1.02] active:scale-[0.98]"
+                            loading="lazy"
+                            onClick={() => {
+                              const img = document.createElement("img");
+                              img.src = `data:image/jpeg;base64,${message.imageBase64}`;
+                              const overlay = document.createElement("div");
+                              overlay.className = "fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 p-4 cursor-pointer";
+                              overlay.onclick = () => overlay.remove();
+                              img.className = "max-h-[90dvh] max-w-[90vw] rounded-2xl shadow-2xl object-contain";
+                              overlay.appendChild(img);
+                              document.body.appendChild(overlay);
+                            }}
+                          />
+                        </div>
+                      ) : null}
+                    </div>
                   ) : isTutorFailureMessage(message.text) ? (
                     <p className="text-[14px] font-medium leading-relaxed md:text-[15px]">{message.text}</p>
                   ) : (
@@ -176,6 +199,9 @@ export function FollowUpDock({
   onEscape,
 }: FollowUpDockProps) {
   const [input, setInput] = useState("");
+  const [attachedImage, setAttachedImage] = useState<string | null>(null);
+  const [attaching, setAttaching] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const internalInputRef = useRef<HTMLTextAreaElement>(null);
   const effectiveInputRef = inputRef ?? internalInputRef;
@@ -197,15 +223,45 @@ export function FollowUpDock({
     effectiveInputRef.current?.focus();
   };
 
-  const handleSubmit = async () => {
-    const trimmed = input.trim();
-    if (!trimmed || isLoading) {
+  const handleAttachImage = useCallback(async (file: File) => {
+    if (file.size > 10 * 1024 * 1024) {
       return;
     }
 
-    const success = await onSend(trimmed);
+    setAttaching(true);
+    try {
+      const base64 = await resizeImage(file, { maxDimension: 1200, quality: 0.8 });
+      setAttachedImage(base64);
+    } finally {
+      setAttaching(false);
+    }
+  }, []);
+
+  const handleFileChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (file) {
+        void handleAttachImage(file);
+      }
+      event.target.value = "";
+    },
+    [handleAttachImage],
+  );
+
+  const removeAttachedImage = useCallback(() => {
+    setAttachedImage(null);
+  }, []);
+
+  const handleSubmit = async () => {
+    const trimmed = input.trim();
+    if ((!trimmed && !attachedImage) || isLoading) {
+      return;
+    }
+
+    const success = await onSend(trimmed, attachedImage ?? undefined);
     if (success) {
       setInput("");
+      setAttachedImage(null);
     }
   };
 
@@ -266,6 +322,24 @@ export function FollowUpDock({
       ) : null}
 
       <div className="rounded-[1.35rem] border border-(--aqs-ink)/10 bg-white p-2.5 dark:border-white/10 dark:bg-slate-900">
+        {attachedImage ? (
+          <div className="relative mb-2 inline-block max-w-[140px] rounded-xl border border-(--aqs-ink)/10 bg-slate-50/80 p-1 dark:border-white/10 dark:bg-slate-950/60">
+            <img
+              src={`data:image/jpeg;base64,${attachedImage}`}
+              alt="Attached preview"
+              className="h-auto w-full max-h-20 rounded-lg object-contain"
+            />
+            <button
+              type="button"
+              onClick={removeAttachedImage}
+              className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-(--aqs-accent) text-white shadow-sm transition hover:bg-(--aqs-accent-strong)"
+              aria-label="Remove attached image"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+        ) : null}
+
         <div className="flex items-end gap-2">
           <textarea
             id="follow-up-input"
@@ -287,12 +361,28 @@ export function FollowUpDock({
                 : "Ask for the next step, a work check, or a clearer explanation..."
             }
           />
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleFileChange}
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isLoading || attaching}
+            aria-label="Attach image"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-(--aqs-ink)/10 bg-white text-(--aqs-ink) transition-all hover:bg-slate-50 disabled:opacity-40 dark:border-white/10 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800"
+          >
+            <ImagePlus className="h-4.5 w-4.5" />
+          </button>
           <button
             type="button"
             onClick={() => {
               void handleSubmit();
             }}
-            disabled={!input.trim() || isLoading}
+            disabled={(!input.trim() && !attachedImage) || isLoading || attaching}
             aria-label="Send follow-up"
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-(--aqs-accent) text-white transition-all hover:bg-(--aqs-accent-strong) disabled:opacity-40"
           >

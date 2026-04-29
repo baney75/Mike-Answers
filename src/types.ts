@@ -104,6 +104,8 @@ export interface SolutionSource {
 export interface ChatMessage {
   role: 'user' | 'tutor';
   text: string;
+  /** Base64-encoded image attached by the user in a follow-up message. */
+  imageBase64?: string;
 }
 
 export interface OriginalQuestionContext {

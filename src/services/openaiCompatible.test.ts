@@ -45,9 +45,9 @@ describe("buildOpenAICompatibleTutorConversation", () => {
     );
 
     expect(messages.length).toBe(3);
-    expect(messages[0]).toEqual({ role: "user", content: "What is 2+2?" });
-    expect(messages[1]).toEqual({ role: "assistant", content: "2+2 is 4." });
-    expect(messages[2]).toEqual({ role: "user", content: "Explain subtraction too." });
+    expect(messages[0]).toEqual({ role: "user", content: [{ type: "text", text: "What is 2+2?" }] });
+    expect(messages[1]).toEqual({ role: "assistant", content: [{ type: "text", text: "2+2 is 4." }] });
+    expect(messages[2]).toEqual({ role: "user", content: [{ type: "text", text: "Explain subtraction too." }] });
   });
 
   test("includes follow-up context with original question text", () => {
@@ -88,6 +88,6 @@ describe("buildOpenAICompatibleTutorConversation", () => {
   test("empty history still produces the user message", () => {
     const messages = buildOpenAICompatibleTutorConversation([], "Hello.");
     expect(messages.length).toBe(1);
-    expect(messages[0]).toEqual({ role: "user", content: "Hello." });
+    expect(messages[0]).toEqual({ role: "user", content: [{ type: "text", text: "Hello." }] });
   });
 });

@@ -1008,11 +1008,19 @@ export default function App({ externalHistory }: AppProps) {
   // ── Chat handler ────────────────────────────────────────────────────
 
   const handleSendChat = useCallback(
-    async (text: string, options?: { retryLast?: boolean }) => {
+    async (text: string, imageBase64?: string, options?: { retryLast?: boolean }) => {
       if (!solution) return false;
 
       const trimmed = text.trim();
-      if (!trimmed) return false;
+
+      // Allow sending just an image without text
+      if (!trimmed && !imageBase64) return false;
+
+      const userMessage: ChatMessage = {
+        role: "user",
+        text: trimmed,
+        ...(imageBase64 ? { imageBase64 } : {}),
+      };
 
       let historyBeforeCurrentTurn = chatHistory;
       let nextHistory: ChatMessage[];
@@ -1024,9 +1032,9 @@ export default function App({ externalHistory }: AppProps) {
         }
 
         historyBeforeCurrentTurn = chatHistory.slice(0, lastUserIndex);
-        nextHistory = [...historyBeforeCurrentTurn, { role: "user", text: trimmed }];
+        nextHistory = [...historyBeforeCurrentTurn, userMessage];
       } else {
-        nextHistory = [...chatHistory, { role: "user", text: trimmed }];
+        nextHistory = [...chatHistory, userMessage];
       }
 
       setChatHistory(nextHistory);
@@ -1060,25 +1068,20 @@ export default function App({ externalHistory }: AppProps) {
             : trimmed;
 
         let reply: string;
+        const callOpts = {
+          history: historyBeforeCurrentTurn,
+          message: effectiveMessage,
+          followUpContext,
+          settings,
+          subject,
+          promptContext: buildPromptContext(),
+          followUpImageBase64: imageBase64,
+        };
         try {
-          reply = await chatWithTutorWithProvider(
-            historyBeforeCurrentTurn,
-            effectiveMessage,
-            followUpContext,
-            settings,
-            subject,
-            buildPromptContext(),
-          );
+          reply = await chatWithTutorWithProvider(callOpts);
         } catch (firstError) {
           await new Promise((resolve) => window.setTimeout(resolve, 350));
-          reply = await chatWithTutorWithProvider(
-            historyBeforeCurrentTurn,
-            effectiveMessage,
-            followUpContext,
-            settings,
-            subject,
-            buildPromptContext(),
-          );
+          reply = await chatWithTutorWithProvider(callOpts);
           console.warn("Recovered follow-up chat after retry.", firstError);
         }
 
@@ -1108,14 +1111,14 @@ export default function App({ externalHistory }: AppProps) {
         return "A configured provider is needed before desk chat can run. Open Setup, add a key, and try again.";
       }
 
-      return chatWithTutorWithProvider(
+      return chatWithTutorWithProvider({
         history,
         message,
-        undefined,
+        followUpContext: undefined,
         settings,
-        options?.subject,
-        buildPromptContext(),
-      );
+        subject: options?.subject,
+        promptContext: buildPromptContext(),
+      });
     },
     [buildPromptContext, runtimeProviderReady, settings],
   );
@@ -1171,15 +1174,17 @@ export default function App({ externalHistory }: AppProps) {
       nextTextInput: textInput,
     });
   }, [hasRetryableInput, lastMode, runSolve, textInput]);
-  const lastFollowUpQuestion =
-    [...chatHistory].reverse().find((message) => message.role === "user")?.text ?? null;
+  const lastFollowUpMessage =
+    [...chatHistory].reverse().find((message) => message.role === "user") ?? null;
+  const lastFollowUpQuestion = lastFollowUpMessage?.text ?? null;
+  const lastFollowUpImage = lastFollowUpMessage?.imageBase64 ?? null;
   const handleRetryChat = useCallback(async () => {
-    if (!lastFollowUpQuestion) {
+    if (!lastFollowUpQuestion && !lastFollowUpImage) {
       return false;
     }
 
-    return handleSendChat(lastFollowUpQuestion, { retryLast: true });
-  }, [handleSendChat, lastFollowUpQuestion]);
+    return handleSendChat(lastFollowUpQuestion ?? "", lastFollowUpImage ?? undefined, { retryLast: true });
+  }, [handleSendChat, lastFollowUpQuestion, lastFollowUpImage]);
 
   const handleInstallApp = useCallback(async () => {
     if (!installPromptEvent) {
