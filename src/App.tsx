@@ -339,10 +339,10 @@ export default function App({ externalHistory }: AppProps) {
   const { theme, setTheme } = useDarkMode();
   const localHistory = useHistory();
   const history = externalHistory ?? localHistory;
-  const historyViewedAtRef = useRef<number>(Date.now());
+  const [historyViewedAt, setHistoryViewedAt] = useState(Date.now());
   const unreadHistoryCount = useMemo(
-    () => history.items.filter((item) => item.timestamp > historyViewedAtRef.current).length,
-    [history.items],
+    () => history.items.filter((item) => item.timestamp > historyViewedAt).length,
+    [history.items, historyViewedAt],
   );
   const appStateRef = useRef<AppState>("IDLE");
   const { settings, updateSettings, updateProviderSettings, replaceSettings, resetSettings } = useAISettings();
@@ -1292,7 +1292,7 @@ export default function App({ externalHistory }: AppProps) {
           setTheme={setTheme}
           onOpenHistory={() => {
             if (history.items.length > 0) {
-              historyViewedAtRef.current = Date.now();
+              setHistoryViewedAt(Date.now());
               setShowHistory(true);
             }
           }}

@@ -93,8 +93,7 @@ bun run dev
 
 1. Search the setup catalog for ChatGPT/OpenAI, Claude/Anthropic, Venice.ai, Ollama Cloud, xAI, DeepSeek, Groq, Together, Fireworks, Mistral, Perplexity, Cerebras, SambaNova, Cloudflare AI Gateway, Vercel AI Gateway, LiteLLM, LM Studio, localhost Ollama, and more.
 2. Pick a preset, paste that provider's key if required, and adjust the model ids if your account uses different names. Economy-tier and small-parameter models intentionally show **quality disclaimers** in the model dropdown notes.
-3. Local Ollama uses `http://localhost:11434/v1`, does not require a key, and only works when Ollama is running and reachable from the browser. **Ollama Cloud** is the HTTPS `ollama.com/v1` route with API key auth. CORS or network policies can block either depending on setup.
-4. Gateway presets often require editing the base URL to include your account, gateway, or proxy path.
+3. Gateway presets often require editing the base URL to include your account, gateway, or proxy path.
 
 ### Custom OpenAI-compatible
 

@@ -106,23 +106,7 @@ export function ProviderPicker({
             {provider.id === "openai_compatible" ? "Catalog" : provider.label}
           </button>
         ))}
-        <button
-          type="button"
-          onClick={() => {
-            const ollama = openAICompatiblePresets.find((preset) => preset.id === "ollama");
-            if (ollama) {
-              onSelectPreset(ollama);
-            }
-          }}
-          aria-pressed={selectedProviderId === "openai_compatible" && selectedPresetId === "ollama"}
-          className={`rounded-full border px-4 py-2 text-xs font-black uppercase tracking-[0.14em] transition ${
-            selectedProviderId === "openai_compatible" && selectedPresetId === "ollama"
-              ? "border-(--aqs-accent) bg-(--aqs-accent) text-white"
-              : "border-(--aqs-ink)/10 bg-white text-(--aqs-ink) hover:border-(--aqs-accent)/35 dark:border-white/10 dark:bg-slate-950 dark:text-white"
-          }`}
-        >
-          Ollama
-        </button>
+
 
       </fieldset>
 

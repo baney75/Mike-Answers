@@ -22,7 +22,6 @@ import { fetchNovitaCatalog } from "../services/catalogs/novita";
 import { fetchSiliconFlowCatalog } from "../services/catalogs/siliconflow";
 import { fetchVeniceCatalog } from "../services/catalogs/venice";
 import { fetchLMStudioCatalog } from "../services/catalogs/lmstudio";
-import { fetchLocalOllamaCatalog } from "../services/catalogs/localOllama";
 import { fetchLiteLLMCatalog } from "../services/catalogs/litellm";
 
 function getEffectiveCapabilities(settings: RuntimeAISettings) {
@@ -103,8 +102,6 @@ async function fetchForPreset(
       return fetchVeniceCatalog(apiKey, force);
     case "lmstudio":
       return fetchLMStudioCatalog(apiKey, force);
-    case "ollama":
-      return fetchLocalOllamaCatalog(apiKey, force);
     case "litellm":
       return fetchLiteLLMCatalog(apiKey, force);
     // Providers without a live model catalog endpoint

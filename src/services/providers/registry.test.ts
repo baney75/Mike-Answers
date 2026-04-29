@@ -134,14 +134,6 @@ describe("provider registry", () => {
     expect(defaults.openai_compatible.rememberKey).toBe(false);
   });
 
-  test("includes Ollama as a local OpenAI-compatible preset", () => {
-    const ollama = getOpenAICompatiblePreset("ollama");
-
-    expect(ollama?.defaultBaseUrl).toBe("http://localhost:11434/v1");
-    expect(ollama?.capabilities.requiresApiKey).toBe(false);
-    expect(ollama?.capabilities.isLocalOnly).toBe(true);
-  });
-
   test("marks the custom provider as manual and base-url configurable", () => {
     const custom = providerDescriptors.custom_openai;
 
@@ -196,7 +188,7 @@ describe("provider registry", () => {
       "sambanova", "deepinfra", "cohere", "novita", "huggingface", "nvidia-nim",
       "vertex-ai", "bedrock", "azure-openai", "hyperbolic", "siliconflow",
       "cloudflare-ai-gateway", "vercel-ai-gateway", "litellm",
-      "lmstudio", "ollama",
+      "lmstudio",
     ];
     for (const id of allPresets) {
       const preset = getOpenAICompatiblePreset(id);

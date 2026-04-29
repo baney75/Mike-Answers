@@ -1400,31 +1400,6 @@ export const openAICompatiblePresets: OpenAICompatiblePreset[] = [
     },
     aliases: ["local"],
   },
-  {
-    id: "ollama",
-    label: "Ollama",
-    group: "local",
-    shortDescription: "Local-first OpenAI-compatible route for models served by Ollama on this device.",
-    docsUrl: "https://github.com/ollama/ollama?tab=readme-ov-file",
-    apiKeyPlaceholder: "No key required for local Ollama",
-    defaultBaseUrl: "http://localhost:11434/v1",
-    defaultModels: { fastModel: "gemma3:4b", deepModel: "gemma3:12b" },
-    capabilities: {
-      ...providerDescriptors.openai_compatible.capabilities,
-      requiresApiKey: false,
-      supportsImageInputInBrowser: false,
-      supportsCustomBaseUrl: true,
-      isLocalOnly: true,
-      supportsModelCatalog: true,
-    },
-    policy: {
-      trustTier: "local_first",
-      privacySummary: "Runs against a local Ollama server when the browser can reach it.",
-      retentionSummary: "Retention depends on local Ollama/server logs.",
-      trainingSummary: "Local Ollama inference does not train a remote provider.",
-      legalNotice: "Ollama only works when the local server is running and reachable from the browser; CORS or network permissions may require local setup.",
-    },
-  },
 ];
 
 function cloneDefaultConfig(providerId: ProviderId): ProviderPreferenceConfig {

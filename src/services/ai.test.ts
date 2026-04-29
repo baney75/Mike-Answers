@@ -24,23 +24,23 @@ describe("provider readiness", () => {
     expect(getProviderReadinessLabel(settings)).toBe("Add Gemini key");
   });
 
-  test("defaults local Ollama style routes to no-key readiness when configured", () => {
+  test("defaults local LM Studio style routes to no-key readiness when configured", () => {
     const settings = createSettings("openai_compatible");
-    settings.providers.openai_compatible.options = { presetId: "ollama" };
-    settings.providers.openai_compatible.baseUrl = "http://localhost:11434/v1";
+    settings.providers.openai_compatible.options = { presetId: "lmstudio" };
+    settings.providers.openai_compatible.baseUrl = "http://localhost:1234/v1";
 
     expect(isRuntimeProviderReady(settings)).toBe(true);
-    expect(getProviderReadinessLabel(settings)).toBe("Ollama ready");
+    expect(getProviderReadinessLabel(settings)).toBe("LM Studio ready");
   });
 
-  test("allows no-key Ollama when its local base URL is configured", () => {
+  test("allows no-key local route when its base URL is configured", () => {
     const settings = createSettings("openai_compatible");
-    settings.providers.openai_compatible.options = { presetId: "ollama" };
-    settings.providers.openai_compatible.baseUrl = "http://localhost:11434/v1";
-    settings.providers.openai_compatible.models = { fastModel: "llama3.2", deepModel: "llama3.1" };
+    settings.providers.openai_compatible.options = { presetId: "lmstudio" };
+    settings.providers.openai_compatible.baseUrl = "http://localhost:1234/v1";
+    settings.providers.openai_compatible.models = { fastModel: "local-model", deepModel: "local-model" };
 
     expect(isRuntimeProviderReady(settings)).toBe(true);
-    expect(getProviderReadinessLabel(settings)).toBe("Ollama ready");
+    expect(getProviderReadinessLabel(settings)).toBe("LM Studio ready");
   });
 
   test("requires a base URL for custom OpenAI-compatible providers", () => {

@@ -2,6 +2,7 @@
   "name": "mike-answers",
   "private": true,
   "version": "0.0.0",
+  "license": "SEE LICENSE IN LICENSE",
   "type": "module",
   "scripts": {
     "assets:build": "python3 scripts/process-mike-assets.py",
@@ -16,7 +17,6 @@
     "cf:whoami": "wrangler whoami"
   },
   "dependencies": {
-    "@asciidoctor/core": "^3.0.4",
     "@google/genai": "^1.29.0",
     "@tailwindcss/typography": "^0.5.19",
     "html5-qrcode": "^2.3.8",
@@ -39,7 +39,6 @@
     "@types/qrcode": "^1.5.6",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.0.4",
-    "autoprefixer": "^10.4.21",
     "playwright": "^1.59.1",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",

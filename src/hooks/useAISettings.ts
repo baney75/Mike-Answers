@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type {
   LegacyProviderId,
@@ -47,8 +47,13 @@ const DEFAULT_SETTINGS: RuntimeAISettings = {
   providers: createDefaultProviderRuntimeConfigs(),
 };
 
-function getSecretStorageKey(providerId: ProviderId) {
-  return `aqs_secret_provider_${providerId}_v1`;
+function getSecretStorageKey(providerId: ProviderId, presetId?: string) {
+  // Preset-based providers (OpenAI, DeepSeek, Groq, etc.) get per-preset keys
+  if (presetId) {
+    return `aqs_s_p_${presetId}_v1`;
+  }
+  // Root providers (gemini, openrouter, custom_openai) use provider-based keys
+  return `aqs_s_provider_${providerId}_v1`;
 }
 
 function normalizeProviderId(providerId: LegacyProviderId | undefined): ProviderId {
@@ -120,15 +125,22 @@ function applySnapshot(snapshot: UserPreferencesSnapshot): RuntimeAISettings {
   };
 }
 
-function readStoredSecretValue(providerId: ProviderId) {
+function readStoredSecretValue(providerId: ProviderId, presetId?: string) {
   if (typeof window === "undefined") {
     return "";
   }
 
-  const key = getSecretStorageKey(providerId);
+  const newKey = getSecretStorageKey(providerId, presetId);
+  const oldKey = getSecretStorageKey(providerId); // No preset = old format for fallback
+
   return (
-    window.localStorage.getItem(key) ??
-    window.sessionStorage.getItem(key) ??
+    // Try new preset-specific key first
+    window.localStorage.getItem(newKey) ??
+    window.sessionStorage.getItem(newKey) ??
+    // Fall back to old provider-based key (for backward compatibility)
+    window.localStorage.getItem(oldKey) ??
+    window.sessionStorage.getItem(oldKey) ??
+    // Legacy gemini/openrouter keys
     (providerId === "gemini"
       ? window.localStorage.getItem(LEGACY_GEMINI_SECRET_STORAGE_KEY) ?? window.sessionStorage.getItem(LEGACY_GEMINI_SECRET_STORAGE_KEY)
       : providerId === "openrouter"
@@ -138,8 +150,8 @@ function readStoredSecretValue(providerId: ProviderId) {
   );
 }
 
-async function loadStoredSecret(providerId: ProviderId) {
-  const stored = readStoredSecretValue(providerId);
+async function loadStoredSecret(providerId: ProviderId, presetId?: string) {
+  const stored = readStoredSecretValue(providerId, presetId);
   if (!stored) {
     return "";
   }
@@ -151,12 +163,12 @@ async function loadStoredSecret(providerId: ProviderId) {
   }
 }
 
-async function persistSecret(providerId: ProviderId, value: string | undefined, remember: boolean) {
+async function persistSecret(providerId: ProviderId, value: string | undefined, remember: boolean, presetId?: string) {
   if (typeof window === "undefined") {
     return;
   }
 
-  const storageKey = getSecretStorageKey(providerId);
+  const storageKey = getSecretStorageKey(providerId, presetId);
 
   try {
     window.localStorage.removeItem(storageKey);
@@ -290,7 +302,13 @@ export function useAISettings(options: UseAISettingsOptions = {}) {
 
     void (async () => {
       const providerIds = providerOrder;
-      const secrets = await Promise.all(providerIds.map(async (providerId) => [providerId, await loadStoredSecret(providerId)] as const));
+      const secrets = await Promise.all(providerIds.map(async (providerId) => {
+        // For preset-based providers (openai_compatible), load key per preset
+        const presetId = providerId === "openai_compatible"
+          ? readStoredSettings().providers.openai_compatible?.options?.presetId
+          : undefined;
+        return [providerId, await loadStoredSecret(providerId, presetId)] as const;
+      }));
 
       if (cancelled) {
         return;
@@ -330,14 +348,45 @@ export function useAISettings(options: UseAISettingsOptions = {}) {
 
     void (async () => {
       for (const providerId of Object.keys(settings.providers) as ProviderId[]) {
+        const config = settings.providers[providerId];
+        // For preset-based providers, include the preset ID in the storage key
+        const presetId = providerId === "openai_compatible"
+          ? config?.options?.presetId
+          : undefined;
         await persistSecret(
           providerId,
-          settings.providers[providerId].apiKey,
-          Boolean(settings.providers[providerId].rememberKey),
+          config.apiKey,
+          Boolean(config.rememberKey),
+          presetId,
         );
       }
     })();
   }, [secretsHydrated, settings.providers]);
+
+  // When the openai_compatible preset changes, reload the correct API key
+  const prevPresetIdRef = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    const currentPresetId = settings.providers.openai_compatible?.options?.presetId;
+    if (!secretsHydrated || currentPresetId === prevPresetIdRef.current) {
+      prevPresetIdRef.current = currentPresetId;
+      return;
+    }
+
+    prevPresetIdRef.current = currentPresetId;
+    void (async () => {
+      const secret = await loadStoredSecret("openai_compatible", currentPresetId);
+      setSettings((current) => ({
+        ...current,
+        providers: {
+          ...current.providers,
+          openai_compatible: {
+            ...current.providers.openai_compatible,
+            apiKey: secret,
+          },
+        },
+      }));
+    })();
+  }, [settings.providers.openai_compatible?.options?.presetId, secretsHydrated]);
 
   useEffect(() => {
     if (!remoteSnapshot) {
