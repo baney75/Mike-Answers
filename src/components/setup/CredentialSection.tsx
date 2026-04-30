@@ -26,13 +26,13 @@ export function CredentialSection({
   return (
     <div className="space-y-5">
       {provider.id === "gemini" ? (
-        <div className="rounded-[1.35rem] border border-emerald-500/18 bg-emerald-50/85 px-4 py-4 text-sm leading-6 text-emerald-900 dark:border-emerald-400/20 dark:bg-emerald-950/20 dark:text-emerald-100">
+        <div className="rounded-xl bg-emerald-50/85 px-4 py-3 text-sm leading-6 text-emerald-900 dark:bg-emerald-950/20 dark:text-emerald-100">
           <strong>Student-friendly free path:</strong> Google documents a Gemini API Free tier with free input and output tokens for getting started. Create a key in Google AI Studio, keep Fast on <code>gemini-2.5-flash-lite</code>, and use Deep only when you need a harder walkthrough. Free-tier content may be used to improve Google products; use paid BYOK or another provider for sensitive work.
         </div>
       ) : null}
 
       {provider.id === "openrouter" ? (
-        <div className="rounded-[1.35rem] border border-(--aqs-accent)/16 bg-(--aqs-accent-soft)/75 px-4 py-4 text-sm leading-6 text-slate-700 dark:border-(--aqs-accent-dark)/20 dark:bg-[rgba(122,31,52,0.18)] dark:text-slate-200">
+        <div className="rounded-xl bg-(--aqs-accent-soft)/75 px-4 py-3 text-sm leading-6 text-slate-700 dark:bg-[rgba(122,31,52,0.18)] dark:text-slate-200">
           <strong>Best free OpenRouter setup:</strong> keep <code>Free only</code> turned on and leave the model pickers on auto-pick unless you want to pin a specific <code>:free</code> model yourself.
         </div>
       ) : null}
@@ -44,13 +44,13 @@ export function CredentialSection({
       ) : null}
 
       {preset?.capabilities.isGateway ? (
-        <div className="rounded-[1.35rem] border border-violet-400/25 bg-violet-50/85 px-4 py-4 text-sm leading-6 text-violet-950 dark:border-violet-300/20 dark:bg-violet-950/20 dark:text-violet-100">
+        <div className="rounded-xl bg-violet-50/85 px-4 py-3 text-sm leading-6 text-violet-950 dark:bg-violet-950/20 dark:text-violet-100">
           <strong>Gateway route:</strong> model ids usually include a provider prefix, such as <code>openai/gpt-5.4</code>, <code>anthropic/claude-sonnet-4.6</code>, or <code>xai/grok-4.1-fast-non-reasoning</code>. Check the gateway dashboard for enabled models and billing.
         </div>
       ) : null}
 
       {preset?.id === "venice" ? (
-        <div className="rounded-[1.35rem] border border-teal-400/28 bg-teal-50/85 px-4 py-4 text-sm leading-6 text-teal-950 dark:border-teal-300/22 dark:bg-teal-950/25 dark:text-teal-100">
+        <div className="rounded-xl bg-teal-50/85 px-4 py-3 text-sm leading-6 text-teal-950 dark:bg-teal-950/25 dark:text-teal-100">
           <strong>Venice search + cites:</strong> Mike merges{" "}
           <code className="rounded bg-white/65 px-1 py-0.5 text-xs dark:bg-teal-900/65">venice_parameters</code> on each chat request (
           <code className="text-xs">enable_web_search: auto</code>, citations on). That is separate from Mike&apos;s UI image/video search fallbacks (
@@ -59,18 +59,18 @@ export function CredentialSection({
       ) : null}
 
       {preset?.id === "bedrock" ? (
-        <div className="rounded-[1.35rem] border border-orange-400/30 bg-orange-50/85 px-4 py-4 text-sm leading-6 text-orange-950 dark:border-orange-300/25 dark:bg-orange-950/20 dark:text-orange-100">
+        <div className="rounded-xl bg-orange-50/85 px-4 py-3 text-sm leading-6 text-orange-950 dark:bg-orange-950/20 dark:text-orange-100">
           <strong>AWS Bedrock:</strong> requires an active AWS account with Bedrock access enabled. The base URL includes your AWS region (<code className="text-xs">us-east-1</code> shown). Authentication uses AWS IAM credentials (access key + secret key) passed as the API key. Model availability varies by region.
         </div>
       ) : null}
 
       {preset?.id === "azure-openai" ? (
-        <div className="rounded-[1.35rem] border border-sky-400/30 bg-sky-50/85 px-4 py-4 text-sm leading-6 text-sky-950 dark:border-sky-300/25 dark:bg-sky-950/20 dark:text-sky-100">
+        <div className="rounded-xl bg-sky-50/85 px-4 py-3 text-sm leading-6 text-sky-950 dark:bg-sky-950/20 dark:text-sky-100">
           <strong>Azure OpenAI:</strong> replace <code className="text-xs">YOUR_RESOURCE</code> in the base URL with your Azure OpenAI resource name. You can find the full endpoint URL (e.g. <code className="text-xs">https://my-resource.openai.azure.com</code>) in the Azure portal under "Keys and Endpoint".
         </div>
       ) : null}
 
-      <div className="rounded-3xl border border-(--aqs-ink)/10 bg-white/84 p-4 text-sm leading-7 text-slate-700 dark:border-white/10 dark:bg-slate-950/55 dark:text-slate-200">
+      <div className="rounded-xl bg-white/84 p-4 text-sm leading-7 text-slate-700 dark:bg-slate-950/55 dark:text-slate-200">
         <div>
           <strong>1.</strong> Open the official setup page for{" "}
           <a

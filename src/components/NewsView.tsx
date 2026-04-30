@@ -168,9 +168,9 @@ function LeadStory({
   onAsk: (article: NewsArticle) => void;
 }) {
   return (
-    <article className="studio-panel overflow-hidden bg-white p-5 dark:bg-slate-900 md:p-8">
+    <article className="rounded-2xl bg-white p-5 dark:bg-slate-900 md:p-6">
       <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-        <div className="group relative aspect-4/3 max-h-[min(32dvh,18rem)] overflow-hidden rounded-[1.8rem] border-2 border-(--aqs-border)">
+        <div className="group relative aspect-4/3 max-h-[min(32dvh,18rem)] overflow-hidden rounded-2xl">
           {article.thumbnail ? (
             <img
               src={article.thumbnail}
@@ -208,11 +208,8 @@ function LeadStory({
             <ArticleMeta article={article} />
 
             {article.contentText ? (
-              <div className="rounded-3xl bg-slate-50 p-6 dark:bg-slate-950/50">
-                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">
-                  Data Extract
-                </p>
-                <p className="mt-4 line-clamp-5 text-sm font-medium leading-relaxed text-slate-700 dark:text-slate-300">
+              <div className="rounded-xl bg-slate-50 p-4 dark:bg-slate-950/50">
+                <p className="line-clamp-5 text-sm font-medium leading-relaxed text-slate-700 dark:text-slate-300">
                   {article.contentText}
                 </p>
               </div>
@@ -652,7 +649,7 @@ ${userMessage}`;
               <p className="text-lg font-medium text-slate-500 dark:text-slate-400">Syncing verified editorial feeds...</p>
             </div>
           ) : error ? (
-            <div className="flex h-full min-h-0 flex-col items-center justify-center gap-6 rounded-[2.2rem] border-2 border-(--aqs-border)/10 bg-white p-10 dark:bg-slate-900">
+            <div className="flex h-full min-h-0 flex-col items-center justify-center gap-6 rounded-2xl bg-white p-10 dark:bg-slate-900">
               <p className="text-center text-xl font-bold text-(--aqs-ink) dark:text-white">{error}</p>
               <button
                 type="button"
@@ -664,7 +661,7 @@ ${userMessage}`;
               </button>
             </div>
           ) : filteredArticles.length === 0 || !leadArticle ? (
-            <div className="flex h-full min-h-0 flex-col items-center justify-center gap-6 rounded-[2.2rem] border-2 border-(--aqs-border)/10 bg-white p-10 dark:bg-slate-900">
+            <div className="flex h-full min-h-0 flex-col items-center justify-center gap-6 rounded-2xl bg-white p-10 dark:bg-slate-900">
               <Newspaper className="h-12 w-12 text-slate-300" />
               <p className="text-center text-xl font-bold text-slate-500 dark:text-slate-400">
                 No matching reports in the current desk set.

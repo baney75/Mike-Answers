@@ -1,0 +1,24 @@
+# Mike Answers
+
+## Description
+Mike Answers is a private, bring-your-own-key AI tutoring and research assistant. Browser-first SPA with no account requirement. Supports Gemini, OpenAI, Claude, OpenRouter, and 30+ AI providers.
+
+## Key Features
+- Private AI tutoring — all API keys stay on-device (session or encrypted local storage)
+- Conservative Christian tutoring posture for worldview, moral, and theological questions
+- Multi-provider: Gemini, ChatGPT/OpenAI, Claude/Anthropic, xAI, Venice.ai, OpenRouter, local Ollama/LM Studio
+- Image solving via screenshots and paste
+- Voice input and audio transcription (Gemini)
+- Current events, Word of the Day, Verse of the Day
+- Peer-to-peer workspace sync via encrypted QR or WebRTC
+- PWA installable with offline support
+- Free tier available via OpenRouter free models
+
+## Tech Stack
+React 19, TypeScript, Vite 6, Tailwind CSS 4, Cloudflare Workers
+
+## Deployment
+Static SPA deployed on Cloudflare Workers. No server-side runtime. All inference is browser-to-provider direct.
+
+## Homepage
+https://mike-net.top

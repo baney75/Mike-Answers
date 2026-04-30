@@ -565,14 +565,14 @@ export function Dropzone({
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         aria-label="Question input panel"
-        className={`flex flex-col overflow-hidden rounded-[1.4rem] border border-(--aqs-ink)/10 bg-white/62 backdrop-blur-sm dark:border-white/10 dark:bg-slate-900/50 md:rounded-[1.6rem] ${
+        className={`flex flex-col overflow-hidden rounded-[1rem] bg-white/30 dark:bg-transparent ${
           isDragging
-            ? "border-(--aqs-accent) ring-4 ring-[rgba(139,30,63,0.1)]"
+            ? "ring-4 ring-[rgba(139,30,63,0.1)]"
             : ""
         }`}
       >
         {/* Toolbar: upload, voice, subject, paste hint */}
-        <div className="flex flex-wrap items-center gap-2 border-b border-(--aqs-ink)/8 bg-(--aqs-paper-strong) px-2.5 py-2 dark:border-white/10 dark:bg-slate-950/40 md:flex-nowrap md:px-4 md:py-2.5">
+        <div className="flex flex-wrap items-center gap-2 px-2.5 py-2 md:flex-nowrap md:px-4 md:py-2.5">
           <button
             type="button"
             onClick={triggerFilePicker}
@@ -665,7 +665,7 @@ export function Dropzone({
         </div>
 
         {/* Action buttons */}
-        <div className="grid grid-cols-2 gap-2 border-t border-(--aqs-ink)/5 px-2.5 py-2 dark:border-white/8 md:grid-cols-[minmax(0,1fr)_10rem] md:px-4 md:py-2.5">
+        <div className="grid grid-cols-2 gap-2 px-2.5 py-2 md:grid-cols-[minmax(0,1fr)_10rem] md:px-4 md:py-2.5">
           <button
             type="button"
             onClick={() => handleTextSubmit("fast")}

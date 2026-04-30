@@ -196,7 +196,7 @@ export function SetupGuide({
                   Most students should start with Gemini because Google AI Studio offers a free Gemini API tier and Mike can use it for text, screenshots, grounding, and audio. ChatGPT, Claude, xAI, DeepInfra, Hugging Face, Cohere, and local routes are below — or search the full catalog for more.
                 </p>
               </div>
-              <div className="rounded-[1.35rem] border border-(--aqs-accent)/16 bg-(--aqs-accent-soft)/75 px-4 py-4 text-sm leading-6 text-slate-700 dark:border-(--aqs-accent-dark)/20 dark:bg-[rgba(122,31,52,0.18)] dark:text-slate-200">
+              <div className="rounded-xl bg-(--aqs-accent-soft)/75 px-4 py-3 text-sm leading-6 text-slate-700 dark:bg-[rgba(122,31,52,0.18)] dark:text-slate-200">
                 <strong className="text-(--aqs-ink) dark:text-white">Recommended for students:</strong> Gemini is the easiest high-quality default now. The free tier has usage limits and Google says free-tier content may be used to improve products, so use paid BYOK or another provider for sensitive work.
               </div>
               <div className="grid gap-3 md:grid-cols-2">
@@ -206,7 +206,7 @@ export function SetupGuide({
                     onUpdateSettings({ selectedProviderId: "gemini" });
                     goToStep(2);
                   }}
-                  className="rounded-[1.2rem] border border-emerald-500/28 bg-emerald-50/80 px-4 py-4 text-left transition hover:border-emerald-600/50 hover:bg-emerald-50 dark:border-emerald-400/20 dark:bg-emerald-950/20"
+                  className="rounded-xl bg-emerald-50/80 px-4 py-3 text-left transition hover:bg-emerald-100 dark:bg-emerald-950/20 dark:hover:bg-emerald-950/40"
                 >
                   <div className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-700 dark:text-emerald-200">
                     Best free start
@@ -221,7 +221,7 @@ export function SetupGuide({
                 <button
                   type="button"
                   onClick={() => selectOpenAICompatiblePreset("openai")}
-                  className="rounded-[1.2rem] border border-(--aqs-accent)/40 bg-(--aqs-accent-soft) px-4 py-4 text-left transition hover:border-(--aqs-accent) hover:bg-(--aqs-accent-soft-strong) dark:border-(--aqs-accent-dark)/30 dark:bg-[rgba(122,31,52,0.18)] dark:hover:bg-[rgba(122,31,52,0.24)]"
+                  className="rounded-xl bg-(--aqs-accent-soft) px-4 py-3 text-left transition hover:bg-(--aqs-accent-soft-strong) dark:bg-[rgba(122,31,52,0.18)] dark:hover:bg-[rgba(122,31,52,0.24)]"
                 >
                   <div className="text-[11px] font-black uppercase tracking-[0.2em] text-(--aqs-accent-strong) dark:text-(--aqs-accent-dark)">
                     ChatGPT route
@@ -234,7 +234,7 @@ export function SetupGuide({
                 <button
                   type="button"
                   onClick={() => selectOpenAICompatiblePreset("anthropic")}
-                  className="rounded-[1.2rem] border border-(--aqs-ink)/10 bg-white px-4 py-4 text-left transition hover:border-(--aqs-accent)/30 hover:bg-(--aqs-paper-strong) dark:border-white/10 dark:bg-slate-950 dark:hover:bg-slate-900"
+                  className="rounded-xl bg-white px-4 py-3 text-left transition hover:bg-slate-50 dark:bg-slate-950 dark:hover:bg-slate-900"
                 >
                   <div className="text-[11px] font-black uppercase tracking-[0.2em] text-(--aqs-accent-strong) dark:text-(--aqs-accent-dark)">
                     Claude route
@@ -247,7 +247,7 @@ export function SetupGuide({
                 <button
                   type="button"
                   onClick={() => selectOpenAICompatiblePreset("xai")}
-                  className="rounded-[1.2rem] border border-(--aqs-ink)/10 bg-white px-4 py-4 text-left transition hover:border-(--aqs-accent)/30 hover:bg-(--aqs-paper-strong) dark:border-white/10 dark:bg-slate-950 dark:hover:bg-slate-900"
+                  className="rounded-xl bg-white px-4 py-3 text-left transition hover:bg-slate-50 dark:bg-slate-950 dark:hover:bg-slate-900"
                 >
                   <div className="text-[11px] font-black uppercase tracking-[0.2em] text-(--aqs-accent-strong) dark:text-(--aqs-accent-dark)">
                     xAI route
@@ -260,7 +260,7 @@ export function SetupGuide({
                 <button
                   type="button"
                   onClick={() => selectOpenAICompatiblePreset("deepinfra")}
-                  className="rounded-[1.2rem] border border-(--aqs-ink)/10 bg-white px-4 py-4 text-left transition hover:border-(--aqs-accent)/30 hover:bg-(--aqs-paper-strong) dark:border-white/10 dark:bg-slate-950 dark:hover:bg-slate-900"
+                  className="rounded-xl bg-white px-4 py-3 text-left transition hover:bg-slate-50 dark:bg-slate-950 dark:hover:bg-slate-900"
                 >
                   <div className="text-[11px] font-black uppercase tracking-[0.2em] text-(--aqs-accent-strong) dark:text-(--aqs-accent-dark)">
                     Open-source hub
@@ -273,7 +273,7 @@ export function SetupGuide({
                 <button
                   type="button"
                   onClick={() => selectOpenAICompatiblePreset("huggingface")}
-                  className="rounded-[1.2rem] border border-(--aqs-ink)/10 bg-white px-4 py-4 text-left transition hover:border-(--aqs-accent)/30 hover:bg-(--aqs-paper-strong) dark:border-white/10 dark:bg-slate-950 dark:hover:bg-slate-900"
+                  className="rounded-xl bg-white px-4 py-3 text-left transition hover:bg-slate-50 dark:bg-slate-950 dark:hover:bg-slate-900"
                 >
                   <div className="text-[11px] font-black uppercase tracking-[0.2em] text-(--aqs-accent-strong) dark:text-(--aqs-accent-dark)">
                     Community catalog
@@ -286,7 +286,7 @@ export function SetupGuide({
                 <button
                   type="button"
                   onClick={() => selectOpenAICompatiblePreset("cohere")}
-                  className="rounded-[1.2rem] border border-(--aqs-ink)/10 bg-white px-4 py-4 text-left transition hover:border-(--aqs-accent)/30 hover:bg-(--aqs-paper-strong) dark:border-white/10 dark:bg-slate-950 dark:hover:bg-slate-900"
+                  className="rounded-xl bg-white px-4 py-3 text-left transition hover:bg-slate-50 dark:bg-slate-950 dark:hover:bg-slate-900"
                 >
                   <div className="text-[11px] font-black uppercase tracking-[0.2em] text-(--aqs-accent-strong) dark:text-(--aqs-accent-dark)">
                     Enterprise RAG
@@ -299,7 +299,7 @@ export function SetupGuide({
                 <button
                   type="button"
                   onClick={() => selectOpenAICompatiblePreset("bedrock")}
-                  className="rounded-[1.2rem] border border-(--aqs-ink)/10 bg-white px-4 py-4 text-left transition hover:border-(--aqs-accent)/30 hover:bg-(--aqs-paper-strong) dark:border-white/10 dark:bg-slate-950 dark:hover:bg-slate-900"
+                  className="rounded-xl bg-white px-4 py-3 text-left transition hover:bg-slate-50 dark:bg-slate-950 dark:hover:bg-slate-900"
                 >
                   <div className="text-[11px] font-black uppercase tracking-[0.2em] text-(--aqs-accent-strong) dark:text-(--aqs-accent-dark)">
                     AWS enterprise
@@ -312,7 +312,7 @@ export function SetupGuide({
                 <button
                   type="button"
                   onClick={() => selectOpenAICompatiblePreset("hyperbolic")}
-                  className="rounded-[1.2rem] border border-(--aqs-ink)/10 bg-white px-4 py-4 text-left transition hover:border-(--aqs-accent)/30 hover:bg-(--aqs-paper-strong) dark:border-white/10 dark:bg-slate-950 dark:hover:bg-slate-900"
+                  className="rounded-xl bg-white px-4 py-3 text-left transition hover:bg-slate-50 dark:bg-slate-950 dark:hover:bg-slate-900"
                 >
                   <div className="text-[11px] font-black uppercase tracking-[0.2em] text-(--aqs-accent-strong) dark:text-(--aqs-accent-dark)">
                     Privacy first
@@ -363,7 +363,7 @@ export function SetupGuide({
                 onConfigChange={(patch) => onUpdateProviderSettings(selectedProviderId, patch)}
               />
               {selectedProviderId === "openrouter" ? (
-                <div className="rounded-[1.2rem] border border-(--aqs-accent)/18 bg-(--aqs-accent-soft)/75 px-4 py-4 text-sm leading-6 text-slate-700 dark:border-(--aqs-accent-dark)/25 dark:bg-[rgba(122,31,52,0.18)] dark:text-slate-200">
+                <div className="rounded-xl bg-(--aqs-accent-soft)/75 px-4 py-3 text-sm leading-6 text-slate-700 dark:bg-[rgba(122,31,52,0.18)] dark:text-slate-200">
                   <div className="text-[11px] font-black uppercase tracking-[0.2em] text-(--aqs-accent-strong) dark:text-(--aqs-accent-dark)">
                     Secure free mode
                   </div>
@@ -457,7 +457,7 @@ export function SetupGuide({
               {(() => {
                 const usesCatalog = selectedPreset?.capabilities.supportsModelCatalog ?? selectedProvider.capabilities.supportsModelCatalog;
                 return usesCatalog ? (
-                  <div className="space-y-5 rounded-3xl border border-(--aqs-ink)/10 bg-white/84 p-5 dark:border-white/10 dark:bg-slate-950/55">
+                  <div className="space-y-5 rounded-2xl bg-white/84 p-4 dark:bg-slate-950/55">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div>
                         <div className="text-sm font-semibold text-(--aqs-ink) dark:text-white">Model catalog</div>
@@ -518,7 +518,7 @@ export function SetupGuide({
                     />
                   </div>
                 ) : (
-                  <div className="space-y-5 rounded-3xl border border-(--aqs-ink)/10 bg-white/84 p-5 dark:border-white/10 dark:bg-slate-950/55">
+                  <div className="space-y-5 rounded-2xl bg-white/84 p-4 dark:bg-slate-950/55">
                     <ModelProfileEditor
                       provider={selectedProvider}
                       models={selectedConfig.models}

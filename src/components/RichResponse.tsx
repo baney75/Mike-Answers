@@ -290,8 +290,8 @@ function DefinitionCard({ content, compact = false }: { content: string; compact
 
   return (
     <div
-      className={`neo-border neo-shadow my-6 rounded-3xl bg-amber-50 p-5 dark:bg-amber-950/20 ${
-        compact ? "" : "md:p-8"
+      className={`my-6 rounded-2xl bg-amber-50 p-5 dark:bg-amber-950/20 ${
+        compact ? "" : "md:p-6"
       }`}
     >
       <div className="mb-5 flex items-baseline gap-4">
@@ -306,7 +306,7 @@ function DefinitionCard({ content, compact = false }: { content: string; compact
       <div className="space-y-6">
         {partsOfSpeech.map((part, index) => (
           <div key={`${part.type}-${index}`} className="relative">
-            <span className="neo-border-thin mb-3 inline-block rounded-lg bg-amber-200 px-3 py-1 font-mono text-xs font-black uppercase text-amber-900 dark:bg-amber-800 dark:text-amber-100">
+            <span className="mb-3 inline-block rounded-lg bg-amber-200 px-3 py-1 font-mono text-xs font-black uppercase text-amber-900 dark:bg-amber-800 dark:text-amber-100">
               {part.type}
             </span>
             <ol className="ml-4 list-outside list-decimal space-y-3">
@@ -326,7 +326,7 @@ function DefinitionCard({ content, compact = false }: { content: string; compact
       </div>
 
       {synonyms.length ? (
-        <div className="mt-6 border-t-2 border-amber-200 pt-4 dark:border-amber-800/40">
+        <div className="mt-5 border-t border-amber-200 pt-3 dark:border-amber-800/40">
           <p className="text-sm text-amber-900 dark:text-amber-200">
             <span className="font-black uppercase tracking-wider">Synonyms:</span> {synonyms.join(", ")}
           </p>
@@ -766,7 +766,7 @@ function WeatherResult({ query, compact = false }: { query: string; compact?: bo
   }
 
   return (
-    <section className="neo-border neo-shadow-sm my-8 rounded-[2rem] bg-white p-6 dark:bg-[#230f18] dark:ring-1 dark:ring-white/10">
+    <section className="my-6 rounded-2xl bg-white p-5 dark:bg-[#230f18]">
       <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
         <div>
           <span className="patch">Local Weather</span>
@@ -809,7 +809,7 @@ function WeatherResult({ query, compact = false }: { query: string; compact?: bo
 
 function MapResult({ query }: { query: string }) {
   return (
-    <section className="neo-border neo-shadow-sm my-8 rounded-[2rem] bg-(--aqs-paper) p-6 dark:bg-slate-900">
+    <section className="my-6 rounded-2xl bg-(--aqs-paper) p-5 dark:bg-slate-900">
       <span className="patch">Map Brief</span>
       <h3 className="mt-4 text-xl font-black text-(--aqs-ink) dark:text-white">{query}</h3>
       <div className="mt-6 grid gap-4 sm:grid-cols-3">
@@ -847,7 +847,7 @@ function SourcesPanel({ sources, compact = false }: { sources: SolutionSource[];
             href={source.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="neo-border-thin rounded-xl bg-white px-3 py-2 transition-all hover:-translate-y-0.5 active:translate-y-px dark:bg-slate-900"
+            className="rounded-xl bg-white px-3 py-2 transition hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800"
           >
             <div className="font-bold text-gray-900 dark:text-gray-100">
               <span className="text-(--aqs-accent)">[{source.index}]</span> {source.title}
@@ -862,39 +862,34 @@ function SourcesPanel({ sources, compact = false }: { sources: SolutionSource[];
   }
 
   return (
-    <section className="neo-border mb-10 rounded-[1.8rem] bg-(--aqs-accent-soft) p-6 dark:bg-[#1a0b12] dark:ring-1 dark:ring-white/10">
-      <div className="mb-6 flex flex-col gap-2">
-        <h3 className="text-xl font-black tracking-tight text-(--aqs-ink) dark:text-white">
-          Verified Sources
+    <section className="mb-8 rounded-2xl bg-(--aqs-accent-soft) p-5 dark:bg-[#1a0b12]">
+      <div className="mb-4">
+        <h3 className="text-lg font-black tracking-tight text-(--aqs-ink) dark:text-white">
+          Sources
         </h3>
-        <p className="text-sm font-medium leading-relaxed text-slate-700 dark:text-slate-300">
-          Automatically filtered toward official, scholarly, and high-trust reporting sources.
-        </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-3 md:grid-cols-2">
         {sources.map((source) => (
           <a
             key={`${source.index}-${source.url}`}
             href={source.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="neo-border-thin neo-shadow-sm rounded-2xl bg-white p-4 text-left transition-all hover:-translate-y-1 hover:shadow-[5px_5px_0px_0px_var(--aqs-border)] dark:bg-[#230f18] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.1)] dark:hover:shadow-[5px_5px_0px_0px_rgba(255,255,255,0.2)] dark:border-[#4a1829]"
+            className="flex items-start gap-3 rounded-xl bg-white px-4 py-3 text-left transition hover:bg-slate-50 dark:bg-[#230f18] dark:hover:bg-[#2e1420]"
           >
-            <div className="flex items-start gap-4">
-              <span className="neo-border-thin flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-(--aqs-accent-soft-strong) font-mono text-sm font-black text-(--aqs-accent-strong) dark:border-white/20 dark:bg-[#3f1322] dark:text-white">
-                {source.index}
-              </span>
-              <div className="min-w-0">
-                <div className="text-base font-bold leading-6 text-gray-900 dark:text-gray-100">
-                  {source.title}
-                </div>
-                <div className="mt-2 font-mono text-xs font-bold text-slate-500 uppercase tracking-widest dark:text-slate-400">{source.host}</div>
-                <div className="mt-2">
-                  <span className="patch dark:bg-[#4a1829] dark:text-[#f0a3b6] dark:border-[#64112a] dark:shadow-none">
-                    {source.category}
-                  </span>
-                </div>
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-(--aqs-accent-soft-strong) text-sm font-black text-(--aqs-accent-strong) dark:bg-[#3f1322] dark:text-white">
+              {source.index}
+            </span>
+            <div className="min-w-0">
+              <div className="text-sm font-bold leading-5 text-gray-900 dark:text-gray-100">
+                {source.title}
+              </div>
+              <div className="mt-2 font-mono text-xs font-bold text-slate-500 uppercase tracking-widest dark:text-slate-400">{source.host}</div>
+              <div className="mt-2">
+                <span className="patch dark:bg-[#4a1829] dark:text-[#f0a3b6] dark:border-[#64112a] dark:shadow-none">
+                  {source.category}
+                </span>
               </div>
             </div>
           </a>

@@ -681,24 +681,7 @@ export default function App({ externalHistory }: AppProps) {
             trimmedText,
           );
         } else if (trimmedText) {
-          if (isVerseOfTheDayRequest(trimmedText)) {
-            setDailyDeskView("verse");
-            setAppState("WOTD");
-            return;
-          }
-
-          if (isWordOfTheDayRequest(trimmedText)) {
-            setDailyDeskView("word");
-            setAppState("WOTD");
-            return;
-          }
-
-          if (isNewsRequest(trimmedText)) {
-            setNewsQuery(deriveNewsQuery(trimmedText));
-            setAppState("NEWS");
-            return;
-          }
-
+          // NOTE: WOTD/news checks already handled above for text-only.
           const response = await solveTextQuestionWithProvider(
             trimmedText,
             mode,
