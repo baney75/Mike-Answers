@@ -23,6 +23,8 @@ interface SolveWorkspaceProps {
   chatPrefill: { id: number; text: string } | null;
   onConsumePrefill: () => void;
   starterPrompts: string[];
+  canAcceptImages?: boolean;
+  imageUnavailableMessage?: string;
 }
 
 export function SolveWorkspace({
@@ -45,6 +47,8 @@ export function SolveWorkspace({
   chatPrefill,
   onConsumePrefill,
   starterPrompts,
+  canAcceptImages,
+  imageUnavailableMessage,
 }: SolveWorkspaceProps) {
   const shouldShowFollowUp =
     chatHistory.length > 0 || isChatLoading || Boolean(chatPrefill?.text) || starterPrompts.length > 0;
@@ -81,6 +85,9 @@ export function SolveWorkspace({
             prefillText={chatPrefill}
             onConsumePrefill={onConsumePrefill}
             starterPrompts={starterPrompts}
+            canAcceptImages={canAcceptImages}
+            imageUnavailableMessage={imageUnavailableMessage}
+            onEscape={onClear}
           />
         ) : null}
 

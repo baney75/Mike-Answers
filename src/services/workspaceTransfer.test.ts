@@ -4,10 +4,14 @@ import {
   assembleTransferQrChunks,
   buildWorkspaceTransferBundle,
   createTransferQrChunks,
+  decryptTransferString,
   decryptWorkspaceTransfer,
+  encryptTransferString,
   parseTransferQrChunk,
   prepareWorkspaceTransfer,
 } from "./workspaceTransfer";
+
+const MINIMAL_PASSPHRASE = "correct horse battery staple";
 
 describe("workspaceTransfer", () => {
   test("encrypts and decrypts a workspace bundle", async () => {
@@ -74,8 +78,8 @@ describe("workspaceTransfer", () => {
       ],
     );
 
-    const prepared = await prepareWorkspaceTransfer(bundle, "correct horse battery staple");
-    const decrypted = await decryptWorkspaceTransfer(prepared.serialized, "correct horse battery staple");
+    const prepared = await prepareWorkspaceTransfer(bundle, MINIMAL_PASSPHRASE);
+    const decrypted = await decryptWorkspaceTransfer(prepared.serialized, MINIMAL_PASSPHRASE);
 
     expect(decrypted.settings.providers.gemini.apiKey).toBe("AIza-test");
     expect(decrypted.settings.providers.openrouter.apiKey).toBe("sk-or-test");
@@ -91,5 +95,44 @@ describe("workspaceTransfer", () => {
 
     expect(parsed.every(Boolean)).toBe(true);
     expect(assembleTransferQrChunks(parsed.filter(Boolean) as NonNullable<(typeof parsed)[number]>[])).toBe("x".repeat(2400));
+  });
+
+  test("rejects wrong passphrase", async () => {
+    const encrypted = await encryptTransferString("secret data", MINIMAL_PASSPHRASE);
+    await expect(decryptTransferString(JSON.stringify(encrypted), "wrong passphrase 123")).rejects.toThrow();
+  });
+
+  test("rejects corrupted ciphertext", async () => {
+    const encrypted = await encryptTransferString("secret data", MINIMAL_PASSPHRASE);
+    const corrupted = { ...encrypted, ciphertext: "AAAA" + encrypted.ciphertext.slice(4) };
+    await expect(decryptTransferString(JSON.stringify(corrupted), MINIMAL_PASSPHRASE)).rejects.toThrow();
+  });
+
+  test("rejects version mismatch", async () => {
+    const encrypted = await encryptTransferString("secret data", MINIMAL_PASSPHRASE);
+    const badVersion = { ...encrypted, version: 999 };
+    await expect(decryptTransferString(JSON.stringify(badVersion), MINIMAL_PASSPHRASE)).rejects.toThrow("Unsupported transfer package version");
+  });
+
+  test("rejects short passphrase", async () => {
+    await expect(encryptTransferString("data", "short")).rejects.toThrow("at least 12 characters");
+  });
+
+  test("rejects passphrase without non-alpha character", async () => {
+    await expect(encryptTransferString("data", "twelvecharacter")).rejects.toThrow("at least one number or symbol");
+  });
+
+  test("rejects empty QR chunk assembly", () => {
+    // @ts-expect-error: toThrow exists in Bun runtime but not in type defs
+    expect(() => { assembleTransferQrChunks([]); }).toThrow();
+  });
+
+  test("rejects inconsistent QR chunk assembly", () => {
+    const chunks = createTransferQrChunks("hello", 900);
+    const parsed1 = parseTransferQrChunk(chunks[0]);
+    const chunks2 = createTransferQrChunks("world", 900);
+    const parsed2 = parseTransferQrChunk(chunks2[0]);
+    // @ts-expect-error: toThrow exists in Bun runtime but not in type defs
+    expect(() => { assembleTransferQrChunks([parsed1!, parsed2!]); }).toThrow();
   });
 });

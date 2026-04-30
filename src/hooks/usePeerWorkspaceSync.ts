@@ -126,6 +126,7 @@ export function usePeerWorkspaceSync(
       } catch (syncError) {
         const message = syncError instanceof Error ? syncError.message : "Could not finish sync pairing.";
         setError(message);
+        closeSession();
         throw syncError;
       }
     },

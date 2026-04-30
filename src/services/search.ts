@@ -5,7 +5,7 @@
  */
 const GOOGLE_API_KEY = import.meta.env.GOOGLE_API_KEY;
 const SEARCH_API_KEY = GOOGLE_API_KEY || import.meta.env.GEMINI_API_KEY;
-const SEARCH_ENGINE_ID = '017576662512468239146:2152321705'; // Public search engine ID
+const SEARCH_ENGINE_ID = (import.meta.env.VITE_SEARCH_ENGINE_ID as string) || '017576662512468239146:2152321705';
 const SEARCH_REQUEST_TIMEOUT_MS = 10_000;
 const JINA_FETCH_PREFIX = "https://r.jina.ai/http://";
 

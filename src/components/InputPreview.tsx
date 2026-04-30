@@ -61,9 +61,18 @@ export function InputPreview({
                 className="max-h-[min(34dvh,24rem)] w-full object-contain rounded-[1.6rem]"
               />
             </div>
-            <p className="text-center text-sm font-medium leading-relaxed text-slate-600 dark:text-slate-300">
-              Mike will inspect the image first. If your work is already shown, it will be validated before corrections.
-            </p>
+            {textInput !== null ? (
+              <div className="neo-border-thin rounded-[1.4rem] bg-white p-3 dark:bg-slate-950">
+                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-slate-400">Question text</p>
+                <p className="mt-1.5 text-sm font-medium leading-relaxed text-(--aqs-ink) dark:text-white line-clamp-4">
+                  {textInput}
+                </p>
+              </div>
+            ) : (
+              <p className="text-center text-sm font-medium leading-relaxed text-slate-600 dark:text-slate-300">
+                Mike will inspect the image first. If your work is already shown, it will be validated before corrections.
+              </p>
+            )}
           </div>
         )}
         {textInput !== null && !imagePreviewUrl && (

@@ -105,6 +105,7 @@ export default defineConfig({
   // Expose GEMINI_* and GOOGLE_* env vars to client code via import.meta.env
   envPrefix: ['VITE_', 'GEMINI_', 'GOOGLE_'],
   build: {
+    sourcemap: false,
     rollupOptions: {
       output: {
         manualChunks(id) {

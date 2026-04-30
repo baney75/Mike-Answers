@@ -1,5 +1,6 @@
 import type { ModelCatalogEntry } from "../../types";
 import { parseModelListResponse, sortModelCatalog } from "../modelCatalog";
+import { fetchJson } from "../../utils/fetch";
 
 const LM_STUDIO_V1 = "http://localhost:1234/v1";
 const CACHE_TTL_MS = 30 * 1000; // 30 seconds — local models change frequently
@@ -18,22 +19,22 @@ export async function fetchLMStudioCatalog(
     return cache.items;
   }
 
-  const response = await globalThis.fetch(`${LM_STUDIO_V1}/models`, {
-    headers: { "Content-Type": "application/json" },
-  });
-
-  if (!response.ok) {
-    if (response.status === 401 || response.status === 403) {
+  let payload: { data?: unknown[] };
+  try {
+    payload = await fetchJson<{ data?: unknown[] }>(`${LM_STUDIO_V1}/models`, {
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (fetchError) {
+    const message = fetchError instanceof Error ? fetchError.message : "";
+    if (message.includes("401") || message.includes("403") || message.includes("denied")) {
       throw new Error("LM Studio catalog access denied. Check your server auth settings.");
     }
-    // 502/connection refused = server not running
-    if (response.type === "opaque" || response.status === 0) {
+    if (message.includes("timeout") || message.includes("refused")) {
       throw new Error("LM Studio server is not reachable. Make sure it is running on localhost:1234.");
     }
-    throw new Error(`LM Studio catalog failed (${response.status}).`);
+    throw new Error(`LM Studio catalog is not reachable (${message}).`);
   }
 
-  const payload = (await response.json()) as { data?: unknown[] };
   if (!Array.isArray(payload.data)) {
     throw new Error("Unexpected LM Studio catalog format.");
   }

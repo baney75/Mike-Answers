@@ -6,6 +6,7 @@ import {
 } from "./gemini";
 import { isLikelyHomeworkRequest, shouldAskClarifyingQuestions } from "../utils/request";
 import { normalizeProviderBaseUrl } from "../utils/urlSafety";
+import { fetchJson } from "../utils/fetch";
 import {
   buildFollowUpContextText,
   type FollowUpContextPayload,
@@ -115,16 +116,23 @@ async function postChatCompletion(
   body: Record<string, unknown>,
 ) {
   const requestBody = mergeOpenAICompatibleRequestBody(options.baseUrl, body);
-  const response = await fetch(`${normalizeProviderBaseUrl(options.baseUrl)}/chat/completions`, {
-    method: "POST",
-    headers: buildHeaders(options),
-    body: JSON.stringify(requestBody),
-  });
 
-  const responsePayload = (await response.json().catch(() => ({}))) as OpenAICompatibleChatResponse;
-  if (!response.ok) {
-    const message = responsePayload.error?.message ?? `${options.providerLabel ?? options.providerId} request failed (${response.status}).`;
-    throw new Error(message);
+  let responsePayload: OpenAICompatibleChatResponse;
+  try {
+    responsePayload = await fetchJson<OpenAICompatibleChatResponse>(
+      `${normalizeProviderBaseUrl(options.baseUrl)}/chat/completions`,
+      {
+        method: "POST",
+        body: JSON.stringify(requestBody),
+        headers: buildHeaders(options),
+      },
+    );
+  } catch (fetchError) {
+    const message = fetchError instanceof Error ? fetchError.message : "";
+    if (message.includes("401") || message.includes("403")) {
+      throw new Error(`Check your ${options.providerLabel ?? options.providerId} API key.`);
+    }
+    throw new Error(`${options.providerLabel ?? options.providerId} request failed. ${message}`);
   }
 
   const text = normalizeContent(responsePayload.choices);

@@ -17,11 +17,16 @@ export interface DictionaryEntry {
 
 const BASE = "https://api.dictionaryapi.dev/api/v2/entries/en";
 
+import { fetchJson } from "../utils/fetch";
+
 export async function lookupWord(word: string): Promise<DictionaryEntry[]> {
-  const res = await fetch(`${BASE}/${encodeURIComponent(word.trim())}`);
-  if (!res.ok) {
-    if (res.status === 404) throw new Error(`No definition found for "${word}".`);
+  try {
+    return await fetchJson<DictionaryEntry[]>(`${BASE}/${encodeURIComponent(word.trim())}`);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (message.includes("404") || message.includes("failed (404")) {
+      throw new Error(`No definition found for "${word}".`);
+    }
     throw new Error("Dictionary lookup failed. Please try again.");
   }
-  return res.json();
 }

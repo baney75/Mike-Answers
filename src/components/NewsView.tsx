@@ -573,7 +573,7 @@ ${userMessage}`;
               <button
                 type="button"
                 onClick={() => setShowChat((value) => !value)}
-                className={`studio-card px-4 py-2.5 text-xs font-black transition-all md:text-sm ${
+                className={`studio-card px-4 py-2.5 text-xs font-black outline-none transition-all focus-visible:ring-4 focus-visible:ring-[rgba(139,30,63,0.14)] md:text-sm ${
                   showChat
                     ? "bg-(--aqs-accent) text-white"
                     : "bg-white text-(--aqs-ink) dark:bg-slate-900 dark:text-white"
@@ -588,7 +588,7 @@ ${userMessage}`;
                 type="button"
                 onClick={() => void loadNews(query, true)}
                 disabled={refreshing}
-                className="studio-card bg-white px-4 py-2.5 text-xs font-black text-(--aqs-ink) dark:bg-slate-900 dark:text-white md:text-sm"
+                className="studio-card bg-white px-4 py-2.5 text-xs font-black outline-none transition focus-visible:ring-4 focus-visible:ring-[rgba(139,30,63,0.14)] disabled:opacity-50 text-(--aqs-ink) dark:bg-slate-900 dark:text-white md:text-sm"
               >
                 <RefreshCw className={`mr-2 inline h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
                 Refresh Feed

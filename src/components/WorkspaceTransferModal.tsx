@@ -1,6 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
-import { Camera, Download, QrCode, RefreshCw, ShieldCheck, Smartphone, Upload, X } from "lucide-react";
+import { Camera, Download, QrCode, ShieldCheck, Smartphone, Upload, X } from "lucide-react";
 import { PeerSyncPanel } from "./PeerSyncPanel";
 import type { PeerSyncPreparedSignal } from "../hooks/usePeerWorkspaceSync";
 
@@ -49,7 +49,7 @@ export function WorkspaceTransferModal({
   const [importPassphrase, setImportPassphrase] = useState("");
   const [importPayloadText, setImportPayloadText] = useState("");
   const [importChunks, setImportChunks] = useState<Record<number, ParsedQrChunk>>({});
-  const [importTransferId, setImportTransferId] = useState<string | null>(null);
+  const [_importTransferId, setImportTransferId] = useState<string | null>(null);
   const [importTotalChunks, setImportTotalChunks] = useState(0);
   const [scannerActive, setScannerActive] = useState(false);
   const [importStatus, setImportStatus] = useState<string | null>(null);
@@ -276,6 +276,7 @@ export function WorkspaceTransferModal({
           <button
             type="button"
             onClick={onClose}
+            aria-label="Close transfer dialog"
             className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-(--aqs-ink)/10 bg-white text-(--aqs-ink) dark:border-white/10 dark:bg-slate-950 dark:text-white"
           >
             <X className="h-5 w-5" />

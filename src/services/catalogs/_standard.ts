@@ -1,5 +1,6 @@
 import type { ModelCatalogEntry } from "../../types";
 import { parseModelListResponse, sortModelCatalog } from "../modelCatalog";
+import { fetchJson } from "../../utils/fetch";
 
 /**
  * Factory for standard OpenAI-compatible /v1/models catalog fetchers.
@@ -33,16 +34,17 @@ export function createStandardFetcher(config: {
       headers.Authorization = `Bearer ${trimmedKey}`;
     }
 
-    const response = await globalThis.fetch(`${baseUrl}/models`, { headers });
-
-    if (!response.ok) {
-      if (response.status === 401 || response.status === 403) {
+    let payload: { data?: unknown[] };
+    try {
+      payload = await fetchJson<{ data?: unknown[] }>(`${baseUrl}/models`, { headers });
+    } catch (fetchError) {
+      const message = fetchError instanceof Error ? fetchError.message : "";
+      if (message.includes("401") || message.includes("403") || message.includes("denied")) {
         throw new Error(`${label} catalog access denied. Check your API key.`);
       }
-      throw new Error(`${label} catalog failed (${response.status}).`);
+      throw new Error(`${label} catalog is not reachable right now. Check your network or provider status.`);
     }
 
-    const payload = (await response.json()) as { data?: unknown[] };
     if (!Array.isArray(payload.data)) {
       throw new Error(`Unexpected ${label} catalog format.`);
     }

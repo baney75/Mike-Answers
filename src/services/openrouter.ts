@@ -1,5 +1,6 @@
 import type { OpenRouterModelSummary, SolveMode } from "../types";
 import type { FollowUpContextPayload } from "../utils/followUpContext";
+import { fetchJson } from "../utils/fetch";
 import {
   chatWithOpenAICompatible,
   solveImageQuestionWithOpenAICompatible,
@@ -57,12 +58,7 @@ export async function fetchOpenRouterModels(force = false) {
     return cachedModels.items;
   }
 
-  const response = await fetch(`${OPENROUTER_BASE_URL}/models`);
-  if (!response.ok) {
-    throw new Error(`Unable to load OpenRouter models (${response.status}).`);
-  }
-
-  const payload = (await response.json()) as OpenRouterModelResponse;
+  const payload = await fetchJson<OpenRouterModelResponse>(`${OPENROUTER_BASE_URL}/models`);
   const items = (payload.data ?? [])
     .map((model): OpenRouterModelSummary | null => {
       if (!model.id) {

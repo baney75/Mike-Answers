@@ -42,7 +42,7 @@ export class PeerWorkspaceSyncSession {
   private pendingChunks = new Map<string, { total: number; chunks: Map<number, string> }>();
 
   constructor(
-    private readonly initiator: boolean,
+    initiator: boolean,
     private readonly onBundle: (bundle: WorkspaceTransferBundle) => void | Promise<void>,
     private readonly onConnectionState?: (state: RTCPeerConnectionState) => void,
   ) {
@@ -68,10 +68,19 @@ export class PeerWorkspaceSyncSession {
   }
 
   private async handleMessage(raw: string) {
-    const message = JSON.parse(raw) as PeerMessage;
+    let message: PeerMessage;
+    try {
+      message = JSON.parse(raw) as PeerMessage;
+    } catch {
+      return;
+    }
 
     if (message.type === "snapshot") {
-      await this.onBundle(JSON.parse(message.payload) as WorkspaceTransferBundle);
+      try {
+        await this.onBundle(JSON.parse(message.payload) as WorkspaceTransferBundle);
+      } catch {
+        return;
+      }
       return;
     }
 
@@ -92,7 +101,11 @@ export class PeerWorkspaceSyncSession {
     if (pending.chunks.size === pending.total) {
       const joined = Array.from({ length: pending.total }, (_, index) => pending.chunks.get(index + 1) ?? "").join("");
       this.pendingChunks.delete(message.transferId);
-      await this.onBundle(JSON.parse(joined) as WorkspaceTransferBundle);
+      try {
+        await this.onBundle(JSON.parse(joined) as WorkspaceTransferBundle);
+      } catch {
+        return;
+      }
     }
   }
 

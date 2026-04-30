@@ -7,6 +7,7 @@ coverage/
 *.log
 .env*
 !.env.example
+!.env.*.example
 patch.diff
 *.orig
 .playwright-cli/
@@ -16,3 +17,29 @@ _archive_screenshots/
 .wrangler/
 .codex/
 .github/workflows/
+
+# Security: never commit key files or credentials
+*.key
+*.pem
+*.p12
+*.pfx
+*.cert
+*.crt
+secrets.*
+credentials.*
+*.cred
+*.credentialdump
+ServiceAccount.json
+service-account.json
+
+# IDE and editor files
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Raw source image assets (processed WebP versions are in src/assets/mike/processed/)
+mike assets/

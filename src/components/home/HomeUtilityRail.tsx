@@ -77,7 +77,7 @@ export function HomeUtilityRail({
               key={prompt}
               type="button"
               onClick={() => onPrefillPrompt(prompt)}
-              className="w-full rounded-[0.9rem] border border-(--aqs-ink)/8 bg-(--aqs-paper-strong) px-3 py-2.5 text-left text-sm font-semibold leading-snug text-(--aqs-ink) transition hover:border-(--aqs-accent)/24 hover:bg-white dark:border-white/10 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800"
+              className="w-full rounded-[0.9rem] border border-(--aqs-ink)/8 bg-(--aqs-paper-strong) px-3 py-2.5 text-left text-sm font-semibold leading-snug text-(--aqs-ink) outline-none transition hover:border-(--aqs-accent)/24 hover:bg-white focus-visible:ring-4 focus-visible:ring-[rgba(139,30,63,0.14)] dark:border-white/10 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800"
             >
               {prompt}
             </button>

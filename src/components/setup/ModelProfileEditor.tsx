@@ -140,7 +140,7 @@ function SearchableModelSelect({
               filteredOptions.map((model) => {
                 const catalogModel = model as CatalogModel;
                 const staticModel = model as ProviderModelOption;
-                const modelId = catalogModel.id ?? staticModel.id;
+                const modelId = catalogModel.id ?? staticModel.id ?? "";
                 const modelLabel = isOpenRouter
                   ? catalogModel.name
                   : staticModel.label;

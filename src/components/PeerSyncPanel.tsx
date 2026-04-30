@@ -1,9 +1,9 @@
 import { useEffect, useId, useRef, useState } from "react";
 import QRCode from "qrcode";
-import { Camera, Link2, Smartphone, Upload } from "lucide-react";
+import { Camera, Link2, Lock, Smartphone, Upload } from "lucide-react";
 
 import type { PeerSyncPreparedSignal } from "../hooks/usePeerWorkspaceSync";
-import { assembleTransferQrChunks, createTransferQrChunks, parseTransferQrChunk, type ParsedQrChunk } from "../services/workspaceTransfer";
+import { assembleTransferQrChunks, parseTransferQrChunk, type ParsedQrChunk } from "../services/workspaceTransfer";
 
 interface PeerSyncPanelProps {
   connectionState: RTCPeerConnectionState;
@@ -33,7 +33,6 @@ export function PeerSyncPanel({
   const [status, setStatus] = useState<string | null>(null);
   const [scanTarget, setScanTarget] = useState<ScanTarget>(null);
   const [scannedChunks, setScannedChunks] = useState<Record<number, ParsedQrChunk>>({});
-  const [scannedTransferId, setScannedTransferId] = useState<string | null>(null);
   const [scannedTotal, setScannedTotal] = useState(0);
   const [qrIndex, setQrIndex] = useState(0);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
@@ -53,11 +52,18 @@ export function PeerSyncPanel({
       margin: 1,
       width: 300,
       color: { dark: "#2f2927ff", light: "#ffffffff" },
-    }).then((url) => {
-      if (!cancelled) {
-        setQrDataUrl(url);
-      }
-    });
+    })
+      .then((url) => {
+        if (!cancelled) {
+          setQrDataUrl(url);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setQrDataUrl(null);
+          setStatus("Could not render the QR frame.");
+        }
+      });
 
     return () => {
       cancelled = true;
@@ -118,7 +124,6 @@ export function PeerSyncPanel({
               const next = { ...current, [parsed.index]: parsed };
               const nextCount = Object.keys(next).length;
               transferIdRef.current = parsed.transferId;
-              setScannedTransferId(parsed.transferId);
               setScannedTotal(parsed.total);
               setStatus(`Captured ${nextCount} of ${parsed.total} pairing frames.`);
 
@@ -185,7 +190,7 @@ export function PeerSyncPanel({
   async function finishHost() {
     setStatus("Finishing peer sync handshake…");
     await onFinishHost(answerText.trim(), passphrase);
-    setStatus("Handshake complete. Waiting for the data channel to finish connecting.");
+    setStatus("Handshake complete. Data channel encrypted — workspace sync will begin automatically.");
   }
 
   return (
@@ -225,7 +230,6 @@ export function PeerSyncPanel({
           type="button"
           onClick={() => {
             setScannedChunks({});
-            setScannedTransferId(null);
             setScannedTotal(0);
             transferIdRef.current = null;
             setScanTarget("offer");
@@ -258,7 +262,13 @@ export function PeerSyncPanel({
             {status ?? "Pair the two devices by scanning the host offer, then scanning the joiner answer back on the host."}
           </div>
           <div className="rounded-[1.25rem] border border-(--aqs-ink)/10 bg-white/80 px-4 py-3 text-sm text-slate-600 dark:border-white/10 dark:bg-slate-950/55 dark:text-slate-300">
-            Connection state: <strong>{connectionState}</strong>
+            {connectionState === "connected" ? (
+              <span className="inline-flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300">
+                <Lock className="h-3.5 w-3.5" /> <strong>Connected</strong> — end-to-end encrypted
+              </span>
+            ) : (
+              <>Connection state: <strong>{connectionState}</strong></>
+            )}
             {scannedTotal ? ` • Captured ${Object.keys(scannedChunks).length} of ${scannedTotal} pairing frames.` : ""}
           </div>
           <label className="block space-y-2">
@@ -273,7 +283,6 @@ export function PeerSyncPanel({
               type="button"
               onClick={() => {
                 setScannedChunks({});
-                setScannedTransferId(null);
                 setScannedTotal(0);
                 transferIdRef.current = null;
                 setScanTarget("answer");

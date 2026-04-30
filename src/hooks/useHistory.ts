@@ -22,9 +22,27 @@ function normalizeHistoryItem(item: HistoryItem): HistoryItem {
 export function useHistory() {
   const [items, setItems] = useState<HistoryItem[]>([]);
 
+  const STORAGE_WARN_THRESHOLD_BYTES = 4_000_000; // 80% of ~5MB localStorage limit
+
+  function checkStorageQuota(serialized: string) {
+    if (typeof navigator === "undefined" || !navigator.storage?.estimate) {
+      return;
+    }
+
+    const approxBytes = new TextEncoder().encode(serialized).length + serialized.length; // rough overhead
+    if (approxBytes > STORAGE_WARN_THRESHOLD_BYTES) {
+      console.warn(
+        `History storage is nearing the browser localStorage limit (≈${Math.round(approxBytes / 1_000_000)}MB). ` +
+          "Consider clearing old history items to avoid data loss. Images in solved questions increase storage use significantly.",
+      );
+    }
+  }
+
   const persistItems = useCallback((next: HistoryItem[]) => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      const serialized = JSON.stringify(next);
+      checkStorageQuota(serialized);
+      localStorage.setItem(STORAGE_KEY, serialized);
     } catch {
       /* storage may be unavailable or full */
     }

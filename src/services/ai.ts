@@ -45,11 +45,19 @@ function getSelectedProviderId(settings: RuntimeAISettings): ProviderId {
 }
 
 function getSelectedProviderConfig(settings: RuntimeAISettings) {
-  return settings.providers[getSelectedProviderId(settings)];
+  const config = settings.providers[getSelectedProviderId(settings)];
+  if (!config) {
+    throw new Error(`The selected provider (${settings.selectedProviderId}) is not configured. Open Setup and try again.`);
+  }
+
+  return config;
 }
 
 function getProviderApiKey(settings: RuntimeAISettings, providerId = getSelectedProviderId(settings)) {
   const config = settings.providers[providerId];
+  if (!config) {
+    throw new Error(`Provider "${providerId}" is not configured. Open Setup and try again.`);
+  }
 
   if (providerId === "gemini") {
     return resolveGeminiApiKey(config.apiKey);
@@ -120,6 +128,11 @@ function requireProviderApiKey(settings: RuntimeAISettings, providerId = getSele
 }
 
 function getProviderBaseUrl(settings: RuntimeAISettings, providerId = getSelectedProviderId(settings)) {
+  const config = settings.providers[providerId];
+  if (!config) {
+    throw new Error(`Provider "${providerId}" is not configured. Open Setup and try again.`);
+  }
+
   const descriptor = getProviderDescriptor(providerId);
   const configured = settings.providers[providerId].baseUrl?.trim();
   if (providerId === "openai_compatible") {
@@ -192,6 +205,10 @@ function getConfiguredOpenAIModel(
   mode: Exclude<SolveMode, "research">,
 ) {
   const config = settings.providers[providerId];
+  if (!config) {
+    throw new Error(`Provider "${providerId}" is not configured. Open Setup and try again.`);
+  }
+
   const descriptor = getProviderDescriptor(providerId);
 
   return (

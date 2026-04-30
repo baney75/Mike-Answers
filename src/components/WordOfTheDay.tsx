@@ -315,8 +315,16 @@ export function WordOfTheDay({
   }, []);
 
   const formattedDate = useMemo(() => {
-    const fallback = new Date().toISOString();
-    return new Date(word?.date ?? fallback).toLocaleDateString("en-US", {
+    const parsed = new Date(word?.date ?? new Date().toISOString());
+    if (Number.isNaN(parsed.getTime())) {
+      return new Date().toLocaleDateString("en-US", {
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      });
+    }
+    return parsed.toLocaleDateString("en-US", {
       weekday: "long",
       month: "long",
       day: "numeric",
@@ -694,7 +702,7 @@ Answer directly. Stay anchored to the supplied Daily Desk content. If the user a
           <button
             type="button"
             onClick={() => setActiveView("word")}
-            className="studio-card bg-white p-4 text-left dark:bg-slate-900 2xl:min-h-60"
+            className="studio-card bg-white p-4 text-left outline-none transition focus-visible:ring-4 focus-visible:ring-[rgba(139,30,63,0.14)] dark:bg-slate-900 2xl:min-h-60"
           >
             <div className="flex items-center justify-between gap-3">
               <p className="text-[10px] font-black uppercase tracking-[0.32em] text-(--aqs-accent-strong)">
@@ -718,7 +726,7 @@ Answer directly. Stay anchored to the supplied Daily Desk content. If the user a
           <button
             type="button"
             onClick={() => setActiveView("verse")}
-            className="studio-card bg-white p-4 text-left dark:bg-slate-900 2xl:min-h-60"
+            className="studio-card bg-white p-4 text-left outline-none transition focus-visible:ring-4 focus-visible:ring-[rgba(139,30,63,0.14)] dark:bg-slate-900 2xl:min-h-60"
           >
             <div className="flex items-center justify-between gap-3">
               <p className="text-[10px] font-black uppercase tracking-[0.32em] text-(--aqs-gold)">
@@ -742,7 +750,7 @@ Answer directly. Stay anchored to the supplied Daily Desk content. If the user a
           <button
             type="button"
             onClick={() => setActiveView("news")}
-            className="studio-card bg-white p-4 text-left dark:bg-slate-900 xl:col-span-2 2xl:col-span-1 2xl:min-h-60"
+            className="studio-card bg-white p-4 text-left outline-none transition focus-visible:ring-4 focus-visible:ring-[rgba(139,30,63,0.14)] dark:bg-slate-900 xl:col-span-2 2xl:col-span-1 2xl:min-h-60"
           >
             <div className="flex items-center justify-between gap-3">
               <p className="text-[10px] font-black uppercase tracking-[0.32em] text-slate-500 dark:text-slate-400">
@@ -1364,7 +1372,7 @@ Answer directly. Stay anchored to the supplied Daily Desk content. If the user a
                     type="button"
                     onClick={() => setActiveView(scene.id)}
                     aria-pressed={activeView === scene.id}
-                    className={`neo-border-thin neo-shadow-sm shrink-0 rounded-2xl px-3.5 py-2 text-[11px] font-black uppercase tracking-[0.24em] transition ${
+                    className={`neo-border-thin neo-shadow-sm shrink-0 rounded-2xl px-3.5 py-2 text-[11px] font-black uppercase tracking-[0.24em] outline-none transition focus-visible:ring-4 focus-visible:ring-[rgba(139,30,63,0.14)] ${
                       activeView === scene.id
                         ? "bg-(--aqs-accent) text-white"
                         : "bg-white text-(--aqs-ink) hover:bg-slate-50 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800"
@@ -1380,7 +1388,7 @@ Answer directly. Stay anchored to the supplied Daily Desk content. If the user a
                   <button
                     type="button"
                     onClick={() => cycleScene(-1)}
-                    className="studio-card h-10 w-10 bg-white hover:bg-slate-50 dark:bg-slate-950 dark:hover:bg-slate-800"
+                    className="studio-card h-10 w-10 bg-white outline-none transition hover:bg-slate-50 focus-visible:ring-4 focus-visible:ring-[rgba(139,30,63,0.14)] active:translate-y-px dark:bg-slate-950 dark:hover:bg-slate-800"
                     aria-label="Previous Daily Desk scene"
                   >
                     <ArrowLeft className="mx-auto h-4 w-4" />
@@ -1388,7 +1396,7 @@ Answer directly. Stay anchored to the supplied Daily Desk content. If the user a
                   <button
                     type="button"
                     onClick={() => cycleScene(1)}
-                    className="studio-card h-10 w-10 bg-white hover:bg-slate-50 dark:bg-slate-950 dark:hover:bg-slate-800"
+                    className="studio-card h-10 w-10 bg-white outline-none transition hover:bg-slate-50 focus-visible:ring-4 focus-visible:ring-[rgba(139,30,63,0.14)] active:translate-y-px dark:bg-slate-950 dark:hover:bg-slate-800"
                     aria-label="Next Daily Desk scene"
                   >
                     <ArrowRight className="mx-auto h-4 w-4" />

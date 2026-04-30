@@ -3,6 +3,13 @@ import { History, X, Search } from "lucide-react";
 import type { HistoryItem } from "../types";
 import { stripSolutionClientArtifacts } from "../utils/solution";
 
+function formatHistoryTimestamp(timestamp: number | string | undefined) {
+  if (timestamp === undefined || timestamp === null) return "Unknown time";
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return "Unknown time";
+  return date.toLocaleString();
+}
+
 interface HistorySidebarProps {
   items: HistoryItem[];
   onSelect: (item: HistoryItem) => void;
@@ -87,7 +94,7 @@ export function HistorySidebar({ items, onSelect, onClose }: HistorySidebarProps
               <button
                 type="button"
                 key={item.id}
-                className="w-full rounded-[1.2rem] border border-(--aqs-ink)/10 bg-white p-4 text-left transition hover:-translate-y-0.5 hover:bg-slate-50 dark:border-white/10 dark:bg-gray-800 dark:hover:bg-gray-700"
+                className="w-full rounded-[1.2rem] border border-(--aqs-ink)/10 bg-white p-4 text-left outline-none transition hover:-translate-y-0.5 hover:bg-slate-50 focus-visible:ring-4 focus-visible:ring-[rgba(139,30,63,0.14)] active:translate-y-px dark:border-white/10 dark:bg-gray-800 dark:hover:bg-gray-700"
                 onClick={() => onSelect(item)}
               >
                 <div className="flex justify-between items-center mb-2">
@@ -95,7 +102,7 @@ export function HistorySidebar({ items, onSelect, onClose }: HistorySidebarProps
                     {item.type === "grade" ? "WORK CHECK" : "ANSWER"}
                   </span>
                   <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">
-                    {new Date(item.timestamp).toLocaleString()}
+                    {formatHistoryTimestamp(item.timestamp)}
                   </span>
                 </div>
                 <div className="mt-3 text-sm font-medium leading-relaxed dark:text-gray-200 line-clamp-3">

@@ -122,8 +122,13 @@ export function buildWorkspaceTransferBundle(settings: RuntimeAISettings, histor
 }
 
 export async function encryptTransferString(raw: string, passphrase: string) {
-  if (passphrase.trim().length < 8) {
-    throw new Error("Use a transfer passphrase with at least 8 characters.");
+  const trimmed = passphrase.trim();
+  if (trimmed.length < 12) {
+    throw new Error("Use a transfer passphrase with at least 12 characters.");
+  }
+
+  if (!/[^a-zA-Z]/.test(trimmed)) {
+    throw new Error("Add at least one number or symbol to the transfer passphrase.");
   }
 
   const salt = crypto.getRandomValues(new Uint8Array(16));

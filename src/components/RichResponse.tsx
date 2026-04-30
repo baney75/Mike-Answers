@@ -171,42 +171,25 @@ function SmilesRenderer({ smiles }: { smiles: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [renderError, setRenderError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [isDark, setIsDark] = useState(false);
-
-  useEffect(() => {
-    const checkDark = () => {
-      setIsDark(document.documentElement.classList.contains("dark"));
-    };
-    checkDark();
-    const observer = new MutationObserver(checkDark);
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
-    return () => observer.disconnect();
-  }, []);
 
   const renderSmiles = useCallback(() => {
-    if (!canvasRef.current || !smiles) return;
-    setRenderError(null);
+    if (!canvasRef.current) return;
 
-    void (async () => {
-      try {
-        const drawer = new SmilesDrawer();
-        await drawer.draw(smiles.trim(), canvasRef.current!, isDark ? "dark" : "light");
-      } catch (err) {
-        console.error("SMILES render failed:", err);
-        setRenderError(err instanceof Error ? err.message : "Failed to render molecule");
-      }
-    })();
-  }, [smiles, isDark]);
+    try {
+      const drawer = new SmilesDrawer({ width: 500, height: 300 });
+      void drawer.draw(smiles, canvasRef.current, "light").then(() => {
+        setRenderError(null);
+      }).catch(() => {
+        setRenderError("Could not draw the molecule structure.");
+      });
+    } catch {
+      setRenderError("Could not parse the SMILES notation.");
+    }
+  }, [smiles]);
 
   useEffect(() => {
-    let active = true;
-    if (canvasRef.current && smiles) {
-      renderSmiles();
-    }
-    return () => {
-      active = false;
-    };
-  }, [smiles, renderSmiles]);
+    renderSmiles();
+  }, [renderSmiles]);
 
   const handleCopy = async () => {
     try {
@@ -647,6 +630,7 @@ function VideoSearchResult({ query, compact = false }: { query: string; compact?
 function WebSearchResult({ query, compact = false }: { query: string; compact?: boolean }) {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -654,15 +638,16 @@ function WebSearchResult({ query, compact = false }: { query: string; compact?: 
     async function loadResults() {
       setLoading(true);
       setResults([]);
+      setError(null);
 
       try {
         const response = await searchWeb(query, compact ? 2 : 3);
         if (active) {
           setResults(response.items.slice(0, compact ? 2 : 3));
         }
-      } catch {
+      } catch (searchError) {
         if (active) {
-          setResults([]);
+          setError(searchError instanceof Error ? searchError.message : "Web search was unavailable.");
         }
       } finally {
         if (active) {
@@ -686,8 +671,20 @@ function WebSearchResult({ query, compact = false }: { query: string; compact?: 
     );
   }
 
+  if (error) {
+    return (
+      <div className="neo-border-thin my-6 rounded-2xl bg-rose-50 px-5 py-4 text-sm font-medium leading-relaxed text-rose-700 dark:bg-rose-950/20 dark:text-rose-200">
+        Web search unavailable. {error}
+      </div>
+    );
+  }
+
   if (!results.length) {
-    return null;
+    return (
+      <div className="neo-border-thin my-6 rounded-2xl bg-gray-50 px-5 py-4 text-sm font-medium leading-relaxed text-gray-600 dark:bg-gray-900 dark:text-gray-300">
+        No web results found for this query.
+      </div>
+    );
   }
 
   return (

@@ -321,6 +321,11 @@ export default function App({ externalHistory }: AppProps) {
 
   // ── Inline state helpers (replaces useAppState hook) ─────────────────
   const toIdle = useCallback(() => {
+    idleDraftBufferRef.current = "";
+    if (idleDraftCaptureTimeoutRef.current !== null) {
+      window.clearTimeout(idleDraftCaptureTimeoutRef.current);
+      idleDraftCaptureTimeoutRef.current = null;
+    }
     setAppState("IDLE");
     setErrorMsg(null);
     setSolution(null);
@@ -330,6 +335,11 @@ export default function App({ externalHistory }: AppProps) {
   }, []);
 
   const clearInput = useCallback(() => {
+    idleDraftBufferRef.current = "";
+    if (idleDraftCaptureTimeoutRef.current !== null) {
+      window.clearTimeout(idleDraftCaptureTimeoutRef.current);
+      idleDraftCaptureTimeoutRef.current = null;
+    }
     setImageFile(null);
     setTextInput(null);
     setSubject("Auto-detect");
@@ -752,6 +762,10 @@ export default function App({ externalHistory }: AppProps) {
 
         const finalSolution = cleanText || result;
 
+        if (!finalSolution) {
+          throw new Error("The AI returned an empty response. Please try again.");
+        }
+
         if (appStateRef.current === "NEWS" || appStateRef.current === "WOTD") {
           setBackgroundTasks((prev) => [
             ...prev.filter((t) => t.id !== taskId),
@@ -832,14 +846,17 @@ export default function App({ externalHistory }: AppProps) {
       return;
     }
 
-    void replaceHistoryItem(snapshot);
+    Promise.resolve(replaceHistoryItem(snapshot)).catch(() => {
+      /* history persistence may fail silently (e.g. localStorage full) */
+    });
   }, [appState, buildHistoryItemSnapshot, replaceHistoryItem]);
 
   const handleSolve = useCallback(
     (mode: Exclude<SolveMode, "research">, detailed = false) => {
+      if (isChatLoading) return;
       void runSolve({ mode, detailed });
     },
-    [runSolve],
+    [isChatLoading, runSolve],
   );
 
   const handleQuickTextSubmit = useCallback(
@@ -949,6 +966,13 @@ export default function App({ externalHistory }: AppProps) {
           return;
         }
 
+        if (appState === "LOADING") {
+          event.preventDefault();
+          currentTaskIdRef.current = `${Date.now()}-cancelled-${Math.random().toString(36).slice(2)}`;
+          toIdle();
+          return;
+        }
+
         if (appState === "IDLE") {
           return;
         }
@@ -974,7 +998,7 @@ export default function App({ externalHistory }: AppProps) {
 
     window.addEventListener("keydown", handleGlobalKeys);
     return () => window.removeEventListener("keydown", handleGlobalKeys);
-  }, [appState, showHistory, showSetup, resetAll, isChatLoading, isReturning, backgroundTasks, handleReturnToPrevious]);
+  }, [appState, showHistory, showSetup, resetAll, isChatLoading, isReturning, backgroundTasks, handleReturnToPrevious, toIdle]);
 
   useEffect(() => {
     if (appState !== "PREVIEWING") {
@@ -1111,14 +1135,18 @@ export default function App({ externalHistory }: AppProps) {
         return "A configured provider is needed before desk chat can run. Open Setup, add a key, and try again.";
       }
 
-      return chatWithTutorWithProvider({
-        history,
-        message,
-        followUpContext: undefined,
-        settings,
-        subject: options?.subject,
-        promptContext: buildPromptContext(),
-      });
+      try {
+        return await chatWithTutorWithProvider({
+          history,
+          message,
+          followUpContext: undefined,
+          settings,
+          subject: options?.subject,
+          promptContext: buildPromptContext(),
+        });
+      } catch {
+        return "I couldn't answer that right now. Please try again.";
+      }
     },
     [buildPromptContext, runtimeProviderReady, settings],
   );
@@ -1525,6 +1553,8 @@ export default function App({ externalHistory }: AppProps) {
                   chatPrefill={chatPrefill}
                   onConsumePrefill={() => setChatPrefill(null)}
                   starterPrompts={buildFollowUpStarters(solution, solutionHideAnswerDefault)}
+                  canAcceptImages={providerCanSolveImages}
+                  imageUnavailableMessage={imageUnavailableMessage}
                 />
               </Suspense>
             )}

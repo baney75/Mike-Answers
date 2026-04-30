@@ -8,7 +8,7 @@ interface ErrorStateProps {
 
 export function ErrorState({ message, onRetry, onClear }: ErrorStateProps) {
   return (
-    <div className="paper-panel flex h-full min-h-0 flex-col items-center justify-center bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(255,241,244,0.92))] p-6 text-center animate-in fade-in slide-in-from-bottom-4 duration-500 no-print dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.92),rgba(62,15,28,0.82))]">
+    <div role="alert" className="paper-panel flex h-full min-h-0 flex-col items-center justify-center bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(255,241,244,0.92))] p-6 text-center animate-in fade-in slide-in-from-bottom-4 duration-500 no-print dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.92),rgba(62,15,28,0.82))]">
       <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-(--aqs-accent-soft) text-(--aqs-accent) dark:bg-red-900/30">
         <X className="h-6 w-6" />
       </div>

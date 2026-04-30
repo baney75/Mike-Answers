@@ -33,7 +33,7 @@ export function DictionaryResult({ entries }: DictionaryResultProps) {
                 </span>
               )}
               {entry.phonetics?.map(
-                (p, j) =>
+                (p, _j) =>
                   p.audio && (
                     <button
                       key={`audio-${p.audio}`}
@@ -49,7 +49,7 @@ export function DictionaryResult({ entries }: DictionaryResultProps) {
             </div>
 
             {/* Meanings */}
-            {entry.meanings.map((meaning) => (
+            {entry.meanings?.map((meaning) => (
               <div key={`${meaning.partOfSpeech}-${entry.word}`} className="mb-4">
                 <span className="mb-2 inline-block rounded border border-(--aqs-accent) bg-(--aqs-accent-soft) px-2 py-1 text-xs font-bold font-mono uppercase text-(--aqs-accent-strong) dark:border-(--aqs-accent-dark) dark:bg-[color:rgba(122,31,52,0.2)] dark:text-(--aqs-accent-dark)">
                   {meaning.partOfSpeech}

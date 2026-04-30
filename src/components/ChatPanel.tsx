@@ -17,6 +17,8 @@ interface FollowUpPanelProps {
   onConsumePrefill?: () => void;
   starterPrompts?: string[];
   onEscape?: () => void;
+  canAcceptImages?: boolean;
+  imageUnavailableMessage?: string;
 }
 
 interface FollowUpTranscriptProps {
@@ -197,6 +199,8 @@ export function FollowUpDock({
   onConsumePrefill,
   starterPrompts = [],
   onEscape,
+  canAcceptImages = true,
+  imageUnavailableMessage = "This provider does not support images in follow-up.",
 }: FollowUpDockProps) {
   const [input, setInput] = useState("");
   const [attachedImage, setAttachedImage] = useState<string | null>(null);
@@ -371,8 +375,9 @@ export function FollowUpDock({
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            disabled={isLoading || attaching}
+            disabled={isLoading || attaching || !canAcceptImages}
             aria-label="Attach image"
+            title={canAcceptImages ? "Attach an image" : imageUnavailableMessage}
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-(--aqs-ink)/10 bg-white text-(--aqs-ink) transition-all hover:bg-slate-50 disabled:opacity-40 dark:border-white/10 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800"
           >
             <ImagePlus className="h-4.5 w-4.5" />

@@ -104,13 +104,29 @@ Last updated: 2026-04-28
 - `src/hooks/useProviderCatalog.ts`
   Routes to the correct per-provider catalog fetcher via explicit switch statement. Handles OpenRouter, OpenAI, Ollama Cloud, DeepSeek, Groq, Together, Fireworks, Mistral, xAI, Cerebras, SambaNova, DeepInfra, Cohere, Hyperbolic, HuggingFace, NVIDIA NIM, Novita, SiliconFlow, Venice.
 
+## Security & Compliance Baseline
+
+- CSP enforced in `index.html` with directives: `form-action 'self'`, `base-uri 'self'`, `frame-ancestors 'none'`, `upgrade-insecure-requests`
+- Security headers deployed via `public/_headers` for Cloudflare Workers: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Strict-Transport-Security`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy`
+- Source maps disabled in production (`vite.config.ts`: `sourcemap: false`)
+- API keys encrypted at rest using AES-GCM with Web Crypto (non-extractable key in IndexedDB)
+- Session-only vs. remember-key choice on every provider
+- Legal notice shown inline in Setup Guide (free mode section) before acceptance
+- Dependency vulnerability scanning via `bun audit` — any high+ must be fixed before deploy
+- Overrides in `package.json` for transitive dependency vulns (serialize-javascript, lodash, brace-expansion, postcss, protobufjs, picomatch)
+- Never hardcode secrets or API keys in source; externalize through env vars or provider registries
+- `.gitignore` covers: `.env*`, `*.key`, `*.pem`, `*.p12`, `*.pfx`, `*.cert`, `secrets.*`, `credentials.*`
+- For secret scan: `grep -rn "api_key\|secret\|token\|password\|private_key\|AKIA\|ghp_\|sk-" src/`
+
 ## Verification Commands
 
 Run these after code changes unless the task makes one impossible:
 
 - `bun lint`
-- `bun test src/utils/image.test.ts src/utils/input.test.ts src/utils/solution.test.ts src/utils/request.test.ts src/services/gemini.test.ts src/services/ai.test.ts src/services/openaiCompatible.test.ts src/services/providers/registry.test.ts src/services/news.test.ts src/services/wotd.test.ts`
+- `bun audit` (zero high+ vulnerabilities expected)
+- `bun test`
 - `bun run build`
+- Verify no `.map` files in `dist/` for production builds
 
 ## Browser Verification
 

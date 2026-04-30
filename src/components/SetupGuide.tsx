@@ -391,6 +391,23 @@ export function SetupGuide({
                           ? "Free mode on"
                           : "Enable free mode"}
                     </button>
+                    <div className="rounded-2xl border-2 border-amber-200 bg-amber-50 p-4 text-xs leading-6 text-amber-900 dark:border-amber-800/50 dark:bg-amber-950/40 dark:text-amber-100">
+                      <p className="mb-2 font-bold uppercase tracking-wide">Legal notice</p>
+                      <p className="mb-1">
+                        Mike Answers is an <strong>educational tutoring assistant</strong>. It is not a law firm,
+                        medical practice, financial advisor, or licensed counseling provider. Users remain responsible
+                        for final decisions, submissions, and compliance obligations.
+                      </p>
+                      <p className="mb-1">
+                        Provider requests may be processed by third-party model vendors you select. Data handling,
+                        retention, and training policies vary by provider. Review each provider's privacy policy before
+                        sharing sensitive data.
+                      </p>
+                      <p>
+                        Free-mode quality and availability may vary. Your API keys stay on your device when using
+                        session-only mode. Remembered keys are encrypted at rest in your browser.
+                      </p>
+                    </div>
                     <button
                       type="button"
                       onClick={() => onUpdateSettings({ legalAcceptedAt: Date.now() })}
@@ -402,14 +419,6 @@ export function SetupGuide({
                     >
                       {settings.legalAcceptedAt ? "Legal notice accepted" : "Accept legal notice"}
                     </button>
-                    <a
-                      href="https://github.com/baney75/Mike-Answers/blob/main/LEGAL_SAFETY.md"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="rounded-full border border-(--aqs-ink)/12 bg-white px-3 py-1.5 text-xs font-black uppercase tracking-[0.14em] text-(--aqs-ink) dark:border-white/15 dark:bg-slate-950 dark:text-white"
-                    >
-                      Read safety doc
-                    </a>
                   </div>
                   {!settings.legalAcceptedAt ? (
                     <p className="mt-2 text-xs font-semibold text-rose-700 dark:text-rose-300">
@@ -633,7 +642,7 @@ export function SetupGuide({
           {transferControls ? <div>{transferControls}</div> : null}
         </aside>
       </div>
-      <div className="fixed bottom-4 left-6 right-6 z-60 rounded-3xl border border-(--aqs-ink)/10 bg-white/94 px-4 py-4 shadow-[0_18px_50px_rgba(31,23,28,0.22)] backdrop-blur dark:border-white/10 dark:bg-slate-950/90 md:left-10 md:right-10 lg:hidden">
+      <div className="fixed bottom-4 left-6 right-6 z-50 rounded-3xl border border-(--aqs-ink)/10 bg-white/94 px-4 py-4 shadow-[0_18px_50px_rgba(31,23,28,0.22)] backdrop-blur dark:border-white/10 dark:bg-slate-950/90 md:left-10 md:right-10 lg:hidden">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="text-xs font-semibold leading-5 text-slate-600 dark:text-slate-300">
             {step === 1
